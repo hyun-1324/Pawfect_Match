@@ -7,16 +7,16 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"matchMe/pkg/handlers"
+	"matchMe/pkg/api"
 )
 
 func main() {
 	const (
-		host     = "localhost"
-		port     = 5432
+		dbname   = "matchMe"
 		user     = "donghyun"
 		password = ""
-		dbname   = "matchMe"
+		host     = "localhost"
+		port     = 5432
 	)
 
 	psqlInfo := fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%d sslmode=disable", dbname, user, password, host, port)
@@ -26,15 +26,22 @@ func main() {
 	}
 	defer database.Close()
 
-	dbHandler := &handlers.App{
+	userAPI := &api.UserAPI{
 		DB: database,
 	}
 
-	buildPath := filepath.Join("..", "frontend", "build")
+	buildPath := filepath.Join("..", "..", "..", "frontend", "build")
 	fs := http.FileServer(http.Dir(buildPath))
 	http.Handle("/", fs)
 
-	http.HandleFunc("/api/recommendations", dbHandler.Recommendation)
+	http.Handle("/users/{id}", userAPI.UserInfo)
+	http.Handle("/users/{id}/profile", userAPI.UserProfile)
+	http.Handle("/users/{id}/bio", userAPI.UserBio)
+	http.Handle("/me", userAPI.UserBio)
+	http.Handle("/me/profile", userAPI.UserBio)
+	http.Handle("/me/bio", userAPI.UserBio)
+	http.Handle("/recommendations", userAPI.RecommendationList)
+	http.Handle("/connections", userAPI.ConnectionList)
 
 	log.Println("Staring server on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
