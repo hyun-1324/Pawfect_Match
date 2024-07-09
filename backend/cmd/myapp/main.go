@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log"
 	"matchMe/pkg/db"
+	"matchMe/pkg/middleware"
 	"net/http"
 	"path/filepath"
 
-	"matchMe/pkg/api"
+	"matchMe/pkg/handlers"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	}
 	defer database.Close()
 
-	userAPI := &api.UserAPI{
+	app := &handlers.App{
 		DB: database,
 	}
 
@@ -34,14 +35,14 @@ func main() {
 	fs := http.FileServer(http.Dir(buildPath))
 	http.Handle("/", fs)
 
-	http.Handle("/users/{id}", userAPI.UserInfo)
-	http.Handle("/users/{id}/profile", userAPI.UserProfile)
-	http.Handle("/users/{id}/bio", userAPI.UserBio)
-	http.Handle("/me", userAPI.UserBio)
-	http.Handle("/me/profile", userAPI.UserBio)
-	http.Handle("/me/bio", userAPI.UserBio)
-	http.Handle("/recommendations", userAPI.RecommendationList)
-	http.Handle("/connections", userAPI.ConnectionList)
+	http.Handle("/users/{id}", middleware.AuthMiddleware(http.HandlerFunc(app.User)))
+	http.Handle("/users/{id}/profile", middleware.AuthMiddleware(http.HandlerFunc(app.UserProfile)))
+	http.Handle("/users/{id}/bio", middleware.AuthMiddleware(http.HandlerFunc(app.UserBio)))
+	http.Handle("/me", middleware.AuthMiddleware(http.HandlerFunc(app.GetMe)))
+	http.Handle("/me/profile", middleware.AuthMiddleware(http.HandlerFunc(app.GetMeProfile)))
+	http.Handle("/me/bio", middleware.AuthMiddleware(http.HandlerFunc(app.GetMeBio)))
+	http.Handle("/recommendations", middleware.AuthMiddleware(http.HandlerFunc(app.Recommendations)))
+	http.Handle("/connections", middleware.AuthMiddleware(http.HandlerFunc(app.Connections)))
 
 	log.Println("Staring server on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
