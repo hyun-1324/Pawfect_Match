@@ -1,0 +1,156 @@
+package middleware
+
+import (
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+)
+
+type contextKey string
+
+const UserIDKey contextKey = "userID"
+const secretKeyEnv = "JWT_SECRET"
+
+type JWTHeader struct {
+	Alg string `json:"alg"`
+	Typ string `json:"typ"`
+}
+
+type JWTPayload struct {
+	Sub string `json:"sub"`
+	Exp int64  `json:"exp"`
+}
+
+func base64Encode(data []byte) string {
+	return strings.TrimRight(base64.URLEncoding.EncodeToString(data), "=")
+}
+func base64Decode(s string) ([]byte, error) {
+	return base64.URLEncoding.DecodeString(strings.TrimRight(s, "="))
+
+}
+
+func GenerateJWT(userID string) (string, error) {
+	header := JWTHeader{
+		Alg: "HS256",
+		Typ: "JWT",
+	}
+
+	payload := JWTPayload{
+		Sub: userID,
+		Exp: time.Now().Add(time.Hour * 24).Unix(),
+	}
+
+	// Encode the header and payload in JSON
+	headerJson, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+
+	payloadJson, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode the header and payload in base64
+	encodedHeader := base64Encode(headerJson)
+	encodedPayload := base64Encode(payloadJson)
+
+	// Generate the signature
+	signature := generateSignature(encodedHeader, encodedPayload)
+
+	// Combine the encoded header, payload, and signature
+	jwt := fmt.Sprintf("%s.%s.%s", encodedHeader, encodedPayload, signature)
+	return jwt, nil
+}
+
+func generateSignature(header, payload string) string {
+	secretKey := []byte(getSecretKey())
+	mac := hmac.New(sha256.New, secretKey)
+	mac.Write([]byte(header + "." + payload))
+	return base64Encode(mac.Sum(nil))
+}
+
+func getSecretKey() string {
+	secretKey := os.Getenv(secretKeyEnv)
+	if secretKey == "" {
+		log.Fatal("JWT_SECRET environment variable not set")
+	}
+	return secretKey
+}
+
+func validateJWT(token string) (string, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("invalid token")
+	}
+
+	header, err := base64Decode(parts[0])
+	if err != nil {
+		return "", err
+	}
+
+	var jwtHeader JWTHeader
+	if err := json.Unmarshal(header, &jwtHeader); err != nil {
+		return "", err
+	}
+
+	if jwtHeader.Alg != "HS256" {
+		return "", fmt.Errorf("invalid algorithm")
+	}
+
+	payload, err := base64Decode(parts[1])
+	if err != nil {
+		return "", err
+	}
+	var jwtPayload JWTPayload
+	if err := json.Unmarshal(payload, &jwtPayload); err != nil {
+		return "", err
+	}
+
+	if time.Now().Unix() > jwtPayload.Exp {
+		return "", fmt.Errorf("token expired")
+	}
+
+	signature := parts[2]
+	expectedSignature := generateSignature(parts[0], parts[1])
+	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		return "", fmt.Errorf("invalid signature")
+	}
+
+	return jwtPayload.Sub, nil
+}
+
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "authorization header required", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		userID, err := validateJWT(tokenString)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), UserIDKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func GetUserID(r *http.Request) string {
+	if userID, ok := r.Context().Value(UserIDKey).(string); ok {
+		return userID
+	}
+	return ""
+}
