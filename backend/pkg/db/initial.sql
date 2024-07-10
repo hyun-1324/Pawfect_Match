@@ -1,20 +1,20 @@
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
-  email VARCHAR(50),
-  password VARCHAR(50),
+  email VARCHAR(50) NOT NULL,
+  password VARCHAR(50) NOT NULL,
   picture BYTEA,
   AboutMe VARCHAR(255),
-  dog_name VARCHAR(50),
+  dog_name VARCHAR(30) NOT NULL,
   location VARCHAR(100),
-  dog_gender VARCHAR(10),
-  dog_netured BOOLEAN,
-  dog_size FLOAT,
-  dog_energy_level VARCHAR(10),
-  dog_favorite_play_style VARCHAR(15),
-  dog_age INTEGER,
-  preferred_distance INTEGER,
-  preferred_gender VARCHAR(10),
-  preferred_netured BOOLEAN
+  dog_gender VARCHAR(10) NOT NULL,
+  dog_netured BOOLEAN NOT NULL,
+  dog_size FLOAT NOT NULL,
+  dog_energy_level VARCHAR(10) NOT NULL,
+  dog_favorite_play_style VARCHAR(15) NOT NULL,
+  dog_age INTEGER NOT NULL,
+  preferred_distance INTEGER NOT NULL,
+  preferred_gender VARCHAR(10) NOT NULL,
+  preferred_netured BOOLEAN NOT NULL
 );
 
 CREATE TABLE jwt_blacklist (
