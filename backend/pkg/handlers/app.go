@@ -30,7 +30,7 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	var profile models.UserProfileResponse
-	err := app.DB.QueryRow("SELECT profile FROM users WHERE id = $1", userID).Scan(&profile.Profile)
+	err := app.DB.QueryRow("SELECT profile FROM users WHERE id = $1", userID).Scan(&profile.AboutMe)
 	if err != nil {
 		http.Error(w, "Profile not found", http.StatusNotFound)
 		return
@@ -43,7 +43,7 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	var bio models.UserBioResponse
-	err := app.DB.QueryRow("SELECT bio FROM users WHERE id = $1", userID).Scan(&bio.Bio)
+	err := app.DB.QueryRow("SELECT bio FROM users WHERE id = $1", userID).Scan(&bio.Location)
 	if err != nil {
 		http.Error(w, "Bio not found", http.StatusNotFound)
 		return

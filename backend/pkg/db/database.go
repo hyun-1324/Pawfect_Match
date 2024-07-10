@@ -41,7 +41,7 @@ func shouldRunMigration(db *sql.DB) bool {
 }
 
 func runMigration(db *sql.DB) {
-	migrationFile := filepath.Join("..", "..", "pkg", "db", "migration.sql")
+	migrationFile := filepath.Join("..", "..", "pkg", "db", "initial.sql")
 	migrationSQL, err := os.ReadFile(migrationFile)
 	if err != nil {
 		log.Fatalf("Failed to read migration file: %v", err)
