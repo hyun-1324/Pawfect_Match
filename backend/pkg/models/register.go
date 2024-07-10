@@ -3,10 +3,9 @@ package models
 import "html/template"
 
 type Register1 struct {
-	UserName          string  `json:"user_name"`
 	Email             string  `json:"email"`
 	Password          string  `json:"password"`
-	PetName           string  `json:"pet_name"`
+	DogName           string  `json:"dog_name"`
 	Location          string  `json:"location"`
 	Gender            string  `json:"gender"`
 	Neutered          bool    `json:"neutered"`

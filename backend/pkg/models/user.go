@@ -4,14 +4,13 @@ import "html/template"
 
 type User struct {
 	Id       string `json:"id"`
-	UserName string `json:"user_name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 type UserResponse struct {
 	Id      string       `json:"id"`
-	Name    string       `json:"name"`
+	DogName string       `json:"dog_name"`
 	Picture template.URL `json:"picture"`
 }
 
@@ -21,15 +20,17 @@ type UserProfileResponse struct {
 }
 
 type UserBioResponse struct {
-	Id          string  `json:"id"`
-	PetName     string  `json:"pet_name"`
-	Location    string  `json:"location"`
-	Gender      string  `json:"gender"`
-	Neutered    bool    `json:"neutered"`
-	Size        float32 `json:"size"`
-	EnergyLevel string  `json:"energy_level"`
-	PlayStyle   string  `json:"play_style"`
-	Age         int     `json:"age"`
+	Id                string  `json:"id"`
+	Location          string  `json:"location"`
+	Gender            string  `json:"gender"`
+	Neutered          bool    `json:"neutered"`
+	Size              float32 `json:"size"`
+	EnergyLevel       string  `json:"energy_level"`
+	PlayStyle         string  `json:"play_style"`
+	Age               int     `json:"age"`
+	PreferredDistance int     `json:"preferred_distance"`
+	PreferredGender   string  `json:"preferred_gender"`
+	PreferredNeutered bool    `json:"preferred_neutered"`
 }
 
 type RecommendationResponse struct {
