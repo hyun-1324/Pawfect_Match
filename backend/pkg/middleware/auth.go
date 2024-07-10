@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -32,9 +33,9 @@ type JWTPayload struct {
 func base64Encode(data []byte) string {
 	return strings.TrimRight(base64.URLEncoding.EncodeToString(data), "=")
 }
+
 func base64Decode(s string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(strings.TrimRight(s, "="))
-
 }
 
 func GenerateJWT(userID string) (string, error) {
@@ -86,49 +87,59 @@ func getSecretKey() string {
 	return secretKey
 }
 
-func validateJWT(token string) (string, error) {
+func validateJWT(db *sql.DB, token string) (string, int64, error) {
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM jwt_blacklist WHERE token = $1)", token).Scan(&exists)
+	if err != nil {
+		return "", 0, fmt.Errorf("database error: %v", err)
+	}
+	if exists {
+		return "", 0, fmt.Errorf("token is blacklisted")
+	}
+
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return "", fmt.Errorf("invalid token")
+		return "", 0, fmt.Errorf("invalid token")
 	}
 
 	header, err := base64Decode(parts[0])
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	var jwtHeader JWTHeader
 	if err := json.Unmarshal(header, &jwtHeader); err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	if jwtHeader.Alg != "HS256" {
-		return "", fmt.Errorf("invalid algorithm")
+		return "", 0, fmt.Errorf("invalid algorithm")
 	}
 
 	payload, err := base64Decode(parts[1])
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
+
 	var jwtPayload JWTPayload
 	if err := json.Unmarshal(payload, &jwtPayload); err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	if time.Now().Unix() > jwtPayload.Exp {
-		return "", fmt.Errorf("token expired")
+		return "", 0, fmt.Errorf("token expired")
 	}
 
 	signature := parts[2]
 	expectedSignature := generateSignature(parts[0], parts[1])
 	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
-		return "", fmt.Errorf("invalid signature")
+		return "", 0, fmt.Errorf("invalid signature")
 	}
 
-	return jwtPayload.Sub, nil
+	return jwtPayload.Sub, jwtPayload.Exp, nil
 }
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
@@ -137,7 +148,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		userID, err := validateJWT(tokenString)
+		userID, _, err := validateJWT(db, tokenString)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -146,6 +157,22 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), UserIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func Logout(db *sql.DB, token string) error {
+	_, expirationTime, err := validateJWT(db, token)
+	if err != nil {
+		return err
+	}
+
+	expTime := time.Unix(expirationTime, 0)
+
+	_, err = db.Exec(`INSERT INTO jwt_blacklist (token, expires_at) VALUES ($1, $2)`, token, expTime)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GetUserID(r *http.Request) string {

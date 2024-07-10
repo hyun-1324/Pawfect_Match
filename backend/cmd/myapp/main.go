@@ -35,14 +35,17 @@ func main() {
 	fs := http.FileServer(http.Dir(buildPath))
 	http.Handle("/", fs)
 
-	http.Handle("/users/{id}", middleware.AuthMiddleware(http.HandlerFunc(app.User)))
-	http.Handle("/users/{id}/profile", middleware.AuthMiddleware(http.HandlerFunc(app.UserProfile)))
-	http.Handle("/users/{id}/bio", middleware.AuthMiddleware(http.HandlerFunc(app.UserBio)))
-	http.Handle("/me", middleware.AuthMiddleware(http.HandlerFunc(app.GetMe)))
-	http.Handle("/me/profile", middleware.AuthMiddleware(http.HandlerFunc(app.GetMeProfile)))
-	http.Handle("/me/bio", middleware.AuthMiddleware(http.HandlerFunc(app.GetMeBio)))
-	http.Handle("/recommendations", middleware.AuthMiddleware(http.HandlerFunc(app.Recommendations)))
-	http.Handle("/connections", middleware.AuthMiddleware(http.HandlerFunc(app.Connections)))
+	http.Handle("/users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
+	http.Handle("/users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
+	http.Handle("/users/{id}/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserBio)))
+	http.Handle("/me", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMe)))
+	http.Handle("/me/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeProfile)))
+	http.Handle("/me/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeBio)))
+	http.Handle("/recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.Recommendations)))
+	http.Handle("/connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.Connections)))
+
+	http.Handle("/register1", middleware.AuthMiddleware(database, http.HandlerFunc(app.Register1)))
+	http.Handle("/register2", middleware.AuthMiddleware(database, http.HandlerFunc(app.Register1)))
 
 	log.Println("Staring server on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

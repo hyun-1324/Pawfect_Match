@@ -14,10 +14,14 @@ type App struct {
 	DB *sql.DB
 }
 
+type contextKey string
+
+const UserIDKey contextKey = "userID"
+
 func (app *App) User(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	var user models.UserResponse
-	err := app.DB.QueryRow("SELECT name, profile_photo_link FROM users WHERE id = $1", userID).Scan(&user.Name, &user.ProfilePhotoLink)
+	err := app.DB.QueryRow("SELECT name, profile_photo_link FROM users WHERE id = $1", userID).Scan(&user.DogName, &user.Picture)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
@@ -30,7 +34,7 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	var profile models.UserProfileResponse
-	err := app.DB.QueryRow("SELECT profile FROM users WHERE id = $1", userID).Scan(&profile.Profile)
+	err := app.DB.QueryRow("SELECT profile FROM users WHERE id = $1", userID).Scan(&profile.AboutMe)
 	if err != nil {
 		http.Error(w, "Profile not found", http.StatusNotFound)
 		return
@@ -43,7 +47,7 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	var bio models.UserBioResponse
-	err := app.DB.QueryRow("SELECT bio FROM users WHERE id = $1", userID).Scan(&bio.Bio)
+	err := app.DB.QueryRow("SELECT bio FROM users WHERE id = $1", userID).Scan(&bio.Location)
 	if err != nil {
 		http.Error(w, "Bio not found", http.StatusNotFound)
 		return
@@ -59,7 +63,7 @@ func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	r = r.WithContext(context.WithValue(r.Context(), "userID", userID))
+	r = r.WithContext(context.WithValue(r.Context(), UserIDKey, userID))
 	app.User(w, r)
 
 }
@@ -70,7 +74,7 @@ func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	r = r.WithContext(context.WithValue(r.Context(), "userID", userID))
+	r = r.WithContext(context.WithValue(r.Context(), UserIDKey, userID))
 	app.UserProfile(w, r)
 }
 
@@ -80,7 +84,7 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	r = r.WithContext(context.WithValue(r.Context(), "userID", userID))
+	r = r.WithContext(context.WithValue(r.Context(), UserIDKey, userID))
 	app.UserBio(w, r)
 }
 
@@ -104,7 +108,7 @@ func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.RecommendationResponse{IDs: ids})
+	json.NewEncoder(w).Encode(models.RecommendationResponse{Ids: ids})
 }
 
 func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
@@ -127,5 +131,5 @@ func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.ConnectionResponse{IDs: ids})
+	json.NewEncoder(w).Encode(models.ConnectionResponse{Ids: ids})
 }

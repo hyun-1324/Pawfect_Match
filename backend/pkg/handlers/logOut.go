@@ -1,7 +1,5 @@
 package handlers
 
-import ()
-
-func LogOut() {
+func Logout() {
 
 }
