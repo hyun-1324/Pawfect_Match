@@ -1,5 +1,7 @@
 package models
 
+import "html/template"
+
 type User struct {
 	Id       string `json:"id"`
 	UserName string `json:"user_name"`
@@ -8,9 +10,9 @@ type User struct {
 }
 
 type UserResponse struct {
-	Id               string `json:"id"`
-	Name             string `json:"name"`
-	ProfilePhotoLink string `json:"profile_photo_link"`
+	Id      string       `json:"id"`
+	Name    string       `json:"name"`
+	Picture template.URL `json:"picture"`
 }
 
 type UserProfileResponse struct {
