@@ -17,7 +17,7 @@ type App struct {
 func (app *App) User(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
 	var user models.UserResponse
-	err := app.DB.QueryRow("SELECT name, profile_photo_link FROM users WHERE id = $1", userID).Scan(&user.Name, &user.ProfilePhotoLink)
+	err := app.DB.QueryRow("SELECT name, profile_photo_link FROM users WHERE id = $1", userID).Scan(&user.Name, &user.Picture)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
