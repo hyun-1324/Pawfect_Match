@@ -1,24 +1,20 @@
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
-  username VARCHAR(50),
   email VARCHAR(50),
   password VARCHAR(50),
-  photo BYTEA,
+  picture BYTEA,
+  AboutMe VARCHAR(255),
   dog_name VARCHAR(50),
   location VARCHAR(100),
-  AboutMe VARCHAR(255),
   dog_gender VARCHAR(10),
   dog_netured BOOLEAN,
   dog_size FLOAT,
   dog_energy_level VARCHAR(10),
   dog_favorite_play_style VARCHAR(15),
-  dog_age INTEGER
-  preference_gender VARCHAR(10),
-  preference_netured BOOLEAN,
-  -- CONSTRAINT username_or_email_not_null CHECK (
-  --   (username IS NOT NULL AND email IS NULL) OR
-  --   (username IS NULL AND email IS NOT NULL) OR
-  --   (username IS NOT NULL AND email IS NOT NULL)
+  dog_age INTEGER,
+  preferred_distance INTEGER,
+  preferred_gender VARCHAR(10),
+  preferred_netured BOOLEAN
 );
 
 CREATE TABLE jwt_blacklist (

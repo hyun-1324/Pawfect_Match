@@ -21,6 +21,8 @@ func (app *App) Register1(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.DB.Exec("INSERT INTO users (email, password) VALUES ($1, $2)", req.Email, req.Password)
+
 }
 
 func (app *App) Register2(w http.ResponseWriter, r *http.Request) {

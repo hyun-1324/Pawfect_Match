@@ -11,7 +11,7 @@ type Register1 struct {
 	Neutered          bool    `json:"neutered"`
 	Size              float32 `json:"size"`
 	EnergyLevel       string  `json:"energy_level"`
-	PlayStyle         string  `json:"play_style"`
+	FavoritePlayStyle string  `json:"favorite_play_style"`
 	Age               int     `json:"age"`
 	PreferredDistance int     `json:"preferred_distance"`
 	PreferredGender   string  `json:"preferred_gender"`
