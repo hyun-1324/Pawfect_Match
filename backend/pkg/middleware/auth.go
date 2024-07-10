@@ -33,9 +33,9 @@ type JWTPayload struct {
 func base64Encode(data []byte) string {
 	return strings.TrimRight(base64.URLEncoding.EncodeToString(data), "=")
 }
+
 func base64Decode(s string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(strings.TrimRight(s, "="))
-
 }
 
 func GenerateJWT(userID string) (string, error) {
