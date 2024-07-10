@@ -20,6 +20,7 @@ type UserProfileResponse struct {
 
 type UserBioResponse struct {
 	Id          string  `json:"id"`
+	PetName     string  `json:"pet_name"`
 	Location    string  `json:"location"`
 	Gender      string  `json:"gender"`
 	Neutered    bool    `json:"neutered"`
@@ -30,9 +31,9 @@ type UserBioResponse struct {
 }
 
 type RecommendationResponse struct {
-	IDs []int `json:"ids"`
+	Ids []int `json:"ids"`
 }
 
 type ConnectionResponse struct {
-	IDs []int `json:"ids"`
+	Ids []int `json:"ids"`
 }

@@ -104,7 +104,7 @@ func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.RecommendationResponse{IDs: ids})
+	json.NewEncoder(w).Encode(models.RecommendationResponse{Ids: ids})
 }
 
 func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
@@ -127,5 +127,5 @@ func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.ConnectionResponse{IDs: ids})
+	json.NewEncoder(w).Encode(models.ConnectionResponse{Ids: ids})
 }
