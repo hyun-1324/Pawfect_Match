@@ -19,7 +19,7 @@ type contextKey string
 const UserIDKey contextKey = "userID"
 
 func (app *App) User(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := middleware.GetUserId(r)
 	var user models.UserResponse
 	err := app.DB.QueryRow("SELECT name, profile_photo_link FROM users WHERE id = $1", userID).Scan(&user.DogName, &user.Picture)
 	if err != nil {
@@ -32,7 +32,7 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := middleware.GetUserId(r)
 	var profile models.UserProfileResponse
 	err := app.DB.QueryRow("SELECT profile FROM users WHERE id = $1", userID).Scan(&profile.AboutMe)
 	if err != nil {
@@ -45,7 +45,7 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := middleware.GetUserId(r)
 	var bio models.UserBioResponse
 	err := app.DB.QueryRow("SELECT bio FROM users WHERE id = $1", userID).Scan(&bio.Location)
 	if err != nil {
@@ -58,7 +58,7 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := middleware.GetUserId(r)
 	if userID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -69,7 +69,7 @@ func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := middleware.GetUserId(r)
 	if userID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -79,7 +79,7 @@ func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserID(r)
+	userID := middleware.GetUserId(r)
 	if userID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return

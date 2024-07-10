@@ -1,0 +1,33 @@
+package models
+
+type Register struct {
+	Email             string  `json:"email"`
+	Password          string  `json:"password"`
+	ConfirmPassword   string  `json:"confirm_password"`
+	DogName           string  `json:"dog_name"`
+	Location          string  `json:"location"`
+	Gender            string  `json:"gender"` // male, female
+	Neutered          bool    `json:"neutered"`
+	Size              float32 `json:"size"`                // 0-100
+	EnergyLevel       string  `json:"energy_level"`        // low, medium, high
+	FavoritePlayStyle string  `json:"favorite_play_style"` //wrestling, lonely wolf, cheerleading, chasing, tugging, ripping, soft touch, body slamming
+	Age               int     `json:"age"`                 // 0-30
+	PreferredDistance int     `json:"preferred_distance"`  // 0-100
+	PreferredGender   string  `json:"preferred_gender"`    // male, female, any
+	PreferredNeutered bool    `json:"preferred_neutered"`
+	AboutMe           string  `json:"about_me"`
+	Picture           string  `json:"picture"`
+}
+
+type Login struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type AllowedMimeTypes map[string]bool
+
+var AllowedMimeType = AllowedMimeTypes{
+	"image/jpeg": true,
+	"image/png":  true,
+	"image/gif":  true,
+}
