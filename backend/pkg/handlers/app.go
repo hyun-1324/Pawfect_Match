@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -16,76 +15,115 @@ type App struct {
 
 type contextKey string
 
-const UserIDKey contextKey = "userID"
+const UserIDKey contextKey = "userId"
 
 func (app *App) User(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserId(r)
 	var user models.UserResponse
-	err := app.DB.QueryRow("SELECT name, profile_photo_link FROM users WHERE id = $1", userID).Scan(&user.DogName, &user.Picture)
+	user.Id = r.PathValue("id")
+
+	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	err = json.NewEncoder(w).Encode(user)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }
 
 func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserId(r)
 	var profile models.UserProfileResponse
-	err := app.DB.QueryRow("SELECT profile FROM users WHERE id = $1", userID).Scan(&profile.AboutMe)
+	profile.Id = r.PathValue("id")
+	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
 	if err != nil {
 		http.Error(w, "Profile not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(profile)
+	err = json.NewEncoder(w).Encode(profile)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }
 
 func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserId(r)
 	var bio models.UserBioResponse
-	err := app.DB.QueryRow("SELECT bio FROM users WHERE id = $1", userID).Scan(&bio.Location)
+	bio.Id = r.PathValue("id")
+	err := app.DB.QueryRow(`SELECT location, dog_gender, dog_neutered, dog_size, 
+	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
+	preferred_gender, preferred_neutered FROM biographical_data WHERE user_id = $1`,
+		bio.Id).Scan(&bio.Location, &bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
+		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
 	if err != nil {
 		http.Error(w, "Bio not found", http.StatusNotFound)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(bio)
+	err = json.NewEncoder(w).Encode(bio)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }
 
 func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserId(r)
-	if userID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	var user models.UserResponse
+	userId := middleware.GetUserId(r)
+	user.Id = userId
+
+	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
-	r = r.WithContext(context.WithValue(r.Context(), UserIDKey, userID))
-	app.User(w, r)
 
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(user)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }
 
 func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserId(r)
-	if userID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	var profile models.UserProfileResponse
+	userId := middleware.GetUserId(r)
+	profile.Id = userId
+	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
+	if err != nil {
+		http.Error(w, "Profile not found", http.StatusNotFound)
 		return
 	}
-	r = r.WithContext(context.WithValue(r.Context(), UserIDKey, userID))
-	app.UserProfile(w, r)
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(profile)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }
 
 func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
-	userID := middleware.GetUserId(r)
-	if userID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+	var bio models.UserBioResponse
+	userId := middleware.GetUserId(r)
+	bio.Id = userId
+	err := app.DB.QueryRow(`SELECT location, dog_gender, dog_neutered, dog_size, 
+	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
+	preferred_gender, preferred_neutered FROM biographical_data WHERE user_id = $1`,
+		bio.Id).Scan(&bio.Location, &bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
+		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
+	if err != nil {
+		http.Error(w, "Bio not found", http.StatusNotFound)
 		return
 	}
-	r = r.WithContext(context.WithValue(r.Context(), UserIDKey, userID))
-	app.UserBio(w, r)
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(bio)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }
 
 func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +146,10 @@ func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.RecommendationResponse{Ids: ids})
+	err = json.NewEncoder(w).Encode(models.RecommendationResponse{Ids: ids})
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }
 
 func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
@@ -131,5 +172,8 @@ func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.ConnectionResponse{Ids: ids})
+	err = json.NewEncoder(w).Encode(models.ConnectionResponse{Ids: ids})
+	if err != nil {
+		http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+	}
 }

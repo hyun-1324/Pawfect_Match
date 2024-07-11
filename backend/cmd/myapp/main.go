@@ -35,17 +35,17 @@ func main() {
 	fs := http.FileServer(http.Dir(buildPath))
 	http.Handle("/", fs)
 
-	http.Handle("/users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
-	http.Handle("/users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
-	http.Handle("/users/{id}/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserBio)))
-	http.Handle("/me", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMe)))
-	http.Handle("/me/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeProfile)))
-	http.Handle("/me/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeBio)))
-	http.Handle("/recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.Recommendations)))
-	http.Handle("/connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.Connections)))
-
-	http.Handle("/register", middleware.RedirectIfAuthenticatedMiddleware(database, http.HandlerFunc(app.Register)))
+	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
+	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
+	http.Handle("GET /users/{id}/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserBio)))
+	http.Handle("GET /me", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMe)))
+	http.Handle("GET /me/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeProfile)))
+	http.Handle("GET /me/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeBio)))
+	http.Handle("GET /recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.Recommendations)))
+	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.Connections)))
+	http.Handle("/logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
 	http.Handle("/login", middleware.RedirectIfAuthenticatedMiddleware(database, http.HandlerFunc(app.Login)))
+	http.Handle("/register", middleware.RedirectIfAuthenticatedMiddleware(database, http.HandlerFunc(app.Register)))
 
 	log.Println("Staring server on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

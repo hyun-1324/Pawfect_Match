@@ -27,11 +27,13 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid password", http.StatusBadRequest)
 		return
 	}
+
 	if req.ConfirmPassword != req.Password {
 		http.Error(w, "passwords do not match", http.StatusBadRequest)
 		return
 	}
-	err := validateEmailData(req.Email)
+
+	err := ValidateEmailData(req.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -129,7 +131,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func validateEmailData(email string) error {
+func ValidateEmailData(email string) error {
 	emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
 	isValid := regexp.MustCompile(emailRegex).MatchString(email)
 	if !isValid || email == "" || len([]byte(email)) > 50 {
