@@ -1,10 +1,14 @@
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(50) NOT NULL,
-  password VARCHAR(50) NOT NULL,
-  profile_picture_id INTEGER,
+  password VARCHAR(60) NOT NULL,
   about_me VARCHAR(255),
   dog_name VARCHAR(30) NOT NULL,
+);
+
+CREATE TABLE biographical_data (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
   location VARCHAR(100),
   dog_gender VARCHAR(10) NOT NULL CHECK (dog_gender IN ('male', 'female')),
   dog_neutered BOOLEAN NOT NULL,
@@ -14,15 +18,18 @@ CREATE TABLE users (
   dog_age INTEGER NOT NULL,
   preferred_distance INTEGER NOT NULL,
   preferred_gender VARCHAR(10) NOT NULL CHECK (preferred_gender IN ('male', 'female', 'any')),
-  preferred_netured BOOLEAN NOT NULL
-  FOREIGN KEY ("picture_id") REFERENCES "pictures"("id") ON DELETE SET 0
+  preferred_netured BOOLEAN NOT NULL,
+  FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 
 CREATE TABLE profile_pictures (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE,
   file_name TEXT NOT NULL,
   file_type TEXT NOT NULL CHECK (file_type IN ('image/jpeg', 'image/png', 'image/gif')),
-  file_data BYTEA NOT NULL
+  file_data BYTEA NOT NULL,
+  file_url TEXT,
+  FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 
 CREATE TABLE jwt_blacklist (
@@ -71,7 +78,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-&& LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER ensure_user_ids_order_trigger
 BEFORE INSERT OR UPDATE ON matches
