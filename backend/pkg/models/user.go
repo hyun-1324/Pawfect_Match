@@ -31,6 +31,11 @@ type RecommendationResponse struct {
 	Ids []int `json:"ids"`
 }
 
+type LocationInfo struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 type ConnectionResponse struct {
 	Ids []int `json:"ids"`
 }

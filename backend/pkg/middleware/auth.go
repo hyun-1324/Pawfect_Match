@@ -143,15 +143,21 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("jwt_token")
 		if err != nil {
-			if err != nil {
+			if err != http.ErrNoCookie {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
 
-		tokenString := cookie.Value
-		userId, _, err := validateJWT(db, tokenString)
+		token := cookie.Value
+
+		if checkTokenFromBlacklist(db, token) {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		userId, _, err := validateJWT(db, token)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
@@ -160,6 +166,16 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), UserIDKey, userId)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func checkTokenFromBlacklist(db *sql.DB, token string) bool {
+	var exists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM jwt_blacklist WHERE token = $1)", token).Scan(&exists)
+	if err != nil {
+		log.Printf("Error checking token from blacklist: %v", err)
+		return true
+	}
+	return exists
 }
 
 func AddTokenToBlacklist(db *sql.DB, token string) error {
@@ -180,8 +196,8 @@ func AddTokenToBlacklist(db *sql.DB, token string) error {
 }
 
 func GetUserId(r *http.Request) string {
-	if userID, ok := r.Context().Value(UserIDKey).(string); ok {
-		return userID
+	if userId, ok := r.Context().Value(UserIDKey).(string); ok {
+		return userId
 	}
 	return ""
 }

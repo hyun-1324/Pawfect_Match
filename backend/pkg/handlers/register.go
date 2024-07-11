@@ -33,7 +33,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := ValidateEmailData(req.Email)
+	err := validateEmailData(req.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -131,7 +131,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func ValidateEmailData(email string) error {
+func validateEmailData(email string) error {
 	emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
 	isValid := regexp.MustCompile(emailRegex).MatchString(email)
 	if !isValid || email == "" || len([]byte(email)) > 50 {
@@ -179,16 +179,8 @@ func processProfilePictureData(r *http.Request, app *App, userId int32) error {
 	}
 	newFileName := hex.EncodeToString(buf) + filepath.Ext(fileHeader.Filename)
 
-	// Create directory if not exists
-	uploadDir := "../../uploads"
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		err = os.Mkdir(uploadDir, 0755)
-		if err != nil {
-			return err
-		}
-	}
-
 	// Save file to local filesystem
+	uploadDir := filepath.Join("..", "..", "uploads")
 	filePath := filepath.Join(uploadDir, newFileName)
 	outFile, err := os.Create(filePath)
 	if err != nil {
@@ -212,8 +204,10 @@ func processProfilePictureData(r *http.Request, app *App, userId int32) error {
 		return err
 	}
 
-	query := `INSERT INTO profile_pictures(user_id, file_name, file_data, file_type) VALUES ($1, $2, $3, $4)`
-	_, err = app.DB.Exec(query, userId, newFileName, fileBytes, mimeType)
+	fileURL := "localhost:8080/uploads/" + newFileName
+
+	query := `INSERT INTO profile_pictures(user_id, file_name, file_data, file_type, file_url) VALUES ($1, $2, $3, $4, $5)`
+	_, err = app.DB.Exec(query, userId, newFileName, fileBytes, mimeType, fileURL)
 	if err != nil {
 		return err
 	}

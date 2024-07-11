@@ -5,7 +5,6 @@ type Register struct {
 	Password          string  `json:"password"`
 	ConfirmPassword   string  `json:"confirm_password"`
 	DogName           string  `json:"dog_name"`
-	Location          string  `json:"location"`
 	Gender            string  `json:"gender"` // male, female
 	Neutered          bool    `json:"neutered"`
 	Size              float32 `json:"size"`                // 0-100
@@ -16,7 +15,6 @@ type Register struct {
 	PreferredGender   string  `json:"preferred_gender"`    // male, female, any
 	PreferredNeutered bool    `json:"preferred_neutered"`
 	AboutMe           string  `json:"about_me"`
-	Picture           string  `json:"picture"`
 }
 
 type Login struct {
