@@ -78,8 +78,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = validateUserStringData(req.AboutMe, 255)
-	if err != nil {
+	if len([]byte(req.AboutMe)) > 255 {
 		http.Error(w, "invalid about me", http.StatusBadRequest)
 		return
 	}
