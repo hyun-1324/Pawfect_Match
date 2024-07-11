@@ -175,9 +175,20 @@ func Logout(db *sql.DB, token string) error {
 	return nil
 }
 
-func GetUserID(r *http.Request) string {
+func GetUserId(r *http.Request) string {
 	if userID, ok := r.Context().Value(UserIDKey).(string); ok {
 		return userID
 	}
 	return ""
+}
+
+func RedirectIfAuthenticatedMiddleware(db *sql.DB, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID := GetUserId(r)
+		if userID != "" {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

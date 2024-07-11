@@ -44,8 +44,8 @@ func main() {
 	http.Handle("/recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.Recommendations)))
 	http.Handle("/connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.Connections)))
 
-	http.Handle("/register1", middleware.AuthMiddleware(database, http.HandlerFunc(app.Register1)))
-	http.Handle("/register2", middleware.AuthMiddleware(database, http.HandlerFunc(app.Register1)))
+	http.Handle("/register", middleware.RedirectIfAuthenticatedMiddleware(database, http.HandlerFunc(app.Register)))
+	http.Handle("/login", middleware.RedirectIfAuthenticatedMiddleware(database, http.HandlerFunc(app.Login)))
 
 	log.Println("Staring server on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
