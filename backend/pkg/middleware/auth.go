@@ -141,20 +141,23 @@ func validateJWT(db *sql.DB, token string) (string, int64, error) {
 
 func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "authorization header required", http.StatusUnauthorized)
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		userID, _, err := validateJWT(db, tokenString)
+		cookie, err := r.Cookie("jwt_token")
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			if err != nil {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+
+		tokenString := cookie.Value
+		userId, _, err := validateJWT(db, tokenString)
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserIDKey, userID)
+		ctx := context.WithValue(r.Context(), UserIDKey, userId)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

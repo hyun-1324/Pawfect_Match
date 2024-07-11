@@ -25,7 +25,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if loginInfo.Password == "" || len([]byte(loginInfo.Password)) > 60 {
-		http.Error(w, "invalid password", http.StatusBadRequest)
+		http.Error(w, "e-mail or password is not correct", http.StatusBadRequest)
 		return
 	}
 
@@ -35,13 +35,13 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	query := "SELECT id, password FROM users WHERE email = ?"
 	err = app.DB.QueryRow(query, loginInfo.Email).Scan(&userId, &hashedPassword)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		http.Error(w, "e-mail or password is not correct", http.StatusNotFound)
 		return
 	}
 
 	// Check if the password is correct
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginInfo.Password)); err != nil {
-		http.Error(w, "Invalid password", http.StatusUnauthorized)
+		http.Error(w, "e-mail or password is not correct", http.StatusUnauthorized)
 		return
 	}
 
