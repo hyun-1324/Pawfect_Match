@@ -159,7 +159,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 	})
 }
 
-func Logout(db *sql.DB, token string) error {
+func AddTokenToBlacklist(db *sql.DB, token string) error {
 	_, expirationTime, err := validateJWT(db, token)
 	if err != nil {
 		return err
@@ -167,7 +167,8 @@ func Logout(db *sql.DB, token string) error {
 
 	expTime := time.Unix(expirationTime, 0)
 
-	_, err = db.Exec(`INSERT INTO jwt_blacklist (token, expires_at) VALUES ($1, $2)`, token, expTime)
+	_, err = db.Exec(`INSERT INTO jwt_blacklist (token, expires_at) VALUES ($1, $2)`,
+		token, expTime)
 	if err != nil {
 		return err
 	}

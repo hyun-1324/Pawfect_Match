@@ -18,7 +18,7 @@ CREATE TABLE biographical_data (
   dog_age INTEGER NOT NULL,
   preferred_distance INTEGER NOT NULL,
   preferred_gender VARCHAR(10) NOT NULL CHECK (preferred_gender IN ('male', 'female', 'any')),
-  preferred_netured BOOLEAN NOT NULL,
+  preferred_neutered BOOLEAN NOT NULL,
   FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 
