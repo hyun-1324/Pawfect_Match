@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"matchMe/pkg/models"
 	"net/http"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -176,6 +177,33 @@ func processProfilePictureData(r *http.Request, app *App, userId int32) error {
 		return err
 	}
 	newFileName := hex.EncodeToString(buf) + filepath.Ext(fileHeader.Filename)
+
+	// Create directory if not exists
+	uploadDir := "../../uploads"
+	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
+		err = os.Mkdir(uploadDir, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Save file to local filesystem
+	filePath := filepath.Join(uploadDir, newFileName)
+	outFile, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	_, err = profilePicture.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+
+	_, err = outFile.ReadFrom(profilePicture)
+	if err != nil {
+		return err
+	}
 
 	// Insert file into database
 	fileBytes := make([]byte, fileHeader.Size)
