@@ -18,8 +18,10 @@ type Register struct {
 }
 
 type Login struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email     string  `json:"email"`
+	Password  string  `json:"password"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type AllowedMimeTypes map[string]bool

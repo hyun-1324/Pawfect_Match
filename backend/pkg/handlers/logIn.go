@@ -39,6 +39,14 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Insert the location of the user
+	query = `INSERT INTO locations (user_id, latitude, longitude) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET latitude = $2, longitude = $3;`
+	_, err = app.DB.Exec(query, userId, loginInfo.Latitude, loginInfo.Longitude)
+	if err != nil {
+		http.Error(w, "failed to insert location", http.StatusInternalServerError)
+		return
+	}
+
 	// Check if the password is correct
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginInfo.Password)); err != nil {
 		http.Error(w, "e-mail or password is not correct", http.StatusUnauthorized)
