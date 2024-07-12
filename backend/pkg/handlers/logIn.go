@@ -18,7 +18,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := ValidateEmailData(loginInfo.Email)
+	err := validateEmailData(loginInfo.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -15,7 +15,8 @@ type UserProfileResponse struct {
 
 type UserBioResponse struct {
 	Id                string  `json:"id"`
-	Location          string  `json:"location"`
+	PreferredGender   string  `json:"preferred_gender"`
+	PreferredNeutered bool    `json:"preferred_neutered"`
 	Gender            string  `json:"gender"`
 	Neutered          bool    `json:"neutered"`
 	Size              float32 `json:"size"`
@@ -23,8 +24,7 @@ type UserBioResponse struct {
 	FavoritePlayStyle string  `json:"play_style"`
 	Age               int     `json:"age"`
 	PreferredDistance int     `json:"preferred_distance"`
-	PreferredGender   string  `json:"preferred_gender"`
-	PreferredNeutered bool    `json:"preferred_neutered"`
+	LocationOption    string  `json:"location_option"`
 }
 
 type RecommendationResponse struct {

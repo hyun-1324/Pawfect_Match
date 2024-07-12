@@ -1,11 +1,12 @@
 package models
 
 type Register struct {
+	Id                int     `json:"userId"`
 	Email             string  `json:"email"`
 	Password          string  `json:"password"`
 	ConfirmPassword   string  `json:"confirm_password"`
+	LocationOptions   string  `json:"location_options"`
 	DogName           string  `json:"dog_name"`
-	Location          string  `json:"location"`
 	Gender            string  `json:"gender"` // male, female
 	Neutered          bool    `json:"neutered"`
 	Size              float32 `json:"size"`                // 0-100
@@ -16,12 +17,16 @@ type Register struct {
 	PreferredGender   string  `json:"preferred_gender"`    // male, female, any
 	PreferredNeutered bool    `json:"preferred_neutered"`
 	AboutMe           string  `json:"about_me"`
-	Picture           string  `json:"picture"`
 }
 
 type Login struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type LiveLocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 type AllowedMimeTypes map[string]bool
