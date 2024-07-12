@@ -202,7 +202,7 @@ func GetUserId(r *http.Request) string {
 	return ""
 }
 
-func RedirectIfAuthenticatedMiddleware(db *sql.DB, next http.Handler) http.Handler {
+func RedirectIfAuthenticated(db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := GetUserId(r)
 		if userID != "" {

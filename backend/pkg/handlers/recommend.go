@@ -212,22 +212,3 @@ func abs(x int) int {
 	}
 	return x
 }
-
-// func calculateRecommendationScore(app *App, r *http.Request) error {
-// 	userId := middleware.GetUserId(r)
-
-// 	numUserId, err := strconv.Atoi(userId)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	userBioData, err := getUserBioData(app)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	executeRecommendationAlgorithm(app, numUserId, userBioData)
-
-// 	return nil
-
-// }
