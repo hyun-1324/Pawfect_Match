@@ -23,7 +23,7 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 
 	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
 	if err != nil {
-		http.Error(w, "user not found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -34,12 +34,34 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
+	userId := middleware.GetUserId(r)
+
+	fileName := r.PathValue("fileName")
+
+	if fileName == "" {
+		http.Error(w, "invalid file name", http.StatusBadRequest)
+		return
+	}
+
+	var data []byte
+	var mimeType string
+	err := app.DB.QueryRow("SELECT file_data, mime_type FROM profile_pictures WHERE user_id = $1 AND file_name = $2", userId, fileName).Scan(&data, &mimeType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+
+	}
+	w.Header().Set("Content-Type", mimeType)
+	w.Write(data)
+}
+
 func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	var profile models.UserProfileResponse
 	profile.Id = r.PathValue("id")
 	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
 	if err != nil {
-		http.Error(w, "profile not found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -55,11 +77,11 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	bio.Id = r.PathValue("id")
 	err := app.DB.QueryRow(`SELECT dog_gender, dog_neutered, dog_size, 
 	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
-	preferred_gender, preferred_neutered FROM biographical_data WHERE user_id = $1`,
+	preferred_gender, preferred_neutered, option FROM biographical_data JOIN locations ON locations.user_id = biographical_data.user_id WHERE biographical_data.user_id = $1`,
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
-		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
+		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.LocationOption)
 	if err != nil {
-		http.Error(w, "bio not found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -77,7 +99,7 @@ func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
 	if err != nil {
-		http.Error(w, "user not found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -94,7 +116,7 @@ func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
 	profile.Id = userId
 	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
 	if err != nil {
-		http.Error(w, "profile not found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -115,7 +137,7 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
 	if err != nil {
-		http.Error(w, "bio not found", http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -129,7 +151,7 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
 	rows, err := app.DB.Query("SELECT id FROM recommendations LIMIT 10")
 	if err != nil {
-		http.Error(w, "failed to fetch recommendations", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -155,7 +177,7 @@ func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
 func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
 	rows, err := app.DB.Query("SELECT id FROM connections")
 	if err != nil {
-		http.Error(w, "failed to fetch connections", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()

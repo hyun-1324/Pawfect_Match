@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"matchMe/pkg/models"
 	"net/http"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -86,10 +85,12 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = app.DB.Exec(`INSERT INTO locations (user_id, option, latitude, longitude) VALUES ($1, $2, $3)`, req.Id, req.LocationOptions, latitude, longitude)
-	if err != nil {
-		http.Error(w, "failed to insert location", http.StatusInternalServerError)
-		return
+	if latitude != 0 && longitude != 0 {
+		_, err = app.DB.Exec(`INSERT INTO locations (user_id, option, latitude, longitude) VALUES ($1, $2, $3, $4)`, req.Id, req.LocationOptions, latitude, longitude)
+		if err != nil {
+			http.Error(w, "failed to insert location", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	err = processProfilePictureData(r, app, req.Id)
@@ -217,32 +218,13 @@ func processProfilePictureData(r *http.Request, app *App, userId int) error {
 	}
 	newFileName := hex.EncodeToString(buf) + filepath.Ext(fileHeader.Filename)
 
-	// Save file to local filesystem
-	uploadDir := filepath.Join("..", "..", "uploads")
-	filePath := filepath.Join(uploadDir, newFileName)
-	outFile, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	_, err = profilePicture.Seek(0, 0)
-	if err != nil {
-		return err
-	}
-
-	_, err = outFile.ReadFrom(profilePicture)
-	if err != nil {
-		return err
-	}
-
 	// Insert file into database
 	fileBytes := make([]byte, fileHeader.Size)
 	if _, err = profilePicture.Read(fileBytes); err != nil {
 		return err
 	}
 
-	fileURL := "localhost:8080/uploads/" + newFileName
+	fileURL := "localhost:3000/images/" + newFileName
 
 	query := `INSERT INTO profile_pictures (user_id, file_name, file_data, file_type, file_url)
 VALUES ($1, $2, $3, $4, $5)

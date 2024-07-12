@@ -28,6 +28,20 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	latitude, longitude, err := checkLocationData(req.LocationOptions)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if latitude != 0 && longitude != 0 {
+		_, err = app.DB.Exec(`UPDATE locations set option=$1 latitude=$2 longitude=$3 WHERE user_id = $4`, req.LocationOptions, latitude, longitude, req.Id)
+		if err != nil {
+			http.Error(w, "failed to insert location", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	_, err = app.DB.Exec(`UPDATE users SET about_me = $1, dog_name = $2 WHERE users.id = $3`, req.AboutMe, req.DogName, numId)
 	if err != nil {
 		http.Error(w, "failed to update user data", http.StatusInternalServerError)

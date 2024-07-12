@@ -47,6 +47,7 @@ func main() {
 	http.Handle("GET /me/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeBio)))
 	http.Handle("GET /recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.Recommendations)))
 	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.Connections)))
+	http.Handle("GET /images/{fileName}", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetProfilePicture)))
 	http.Handle("/live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
 	http.Handle("/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
 	http.Handle("/logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))

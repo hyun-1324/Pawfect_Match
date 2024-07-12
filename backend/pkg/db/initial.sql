@@ -3,7 +3,7 @@ CREATE TABLE users (
   email VARCHAR(50) NOT NULL,
   password VARCHAR(60) NOT NULL,
   about_me VARCHAR(255),
-  dog_name VARCHAR(30) NOT NULL,
+  dog_name VARCHAR(30) NOT NULL
 );
 
 CREATE TABLE biographical_data (
