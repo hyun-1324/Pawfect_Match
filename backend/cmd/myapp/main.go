@@ -35,10 +35,6 @@ func main() {
 	fs := http.FileServer(http.Dir(buildPath))
 	http.Handle("/", fs)
 
-	uploadPath := filepath.Join("..", "..", "uploads")
-	uploadsFs := http.FileServer(http.Dir(uploadPath))
-	http.Handle("/uploads/", http.StripPrefix("/uploads/", uploadsFs))
-
 	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
 	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
 	http.Handle("GET /users/{id}/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserBio)))
