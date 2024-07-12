@@ -1,9 +1,11 @@
 package models
 
 type Register struct {
+	Id                int     `json:"userId"`
 	Email             string  `json:"email"`
 	Password          string  `json:"password"`
 	ConfirmPassword   string  `json:"confirm_password"`
+	LocationOptions   string  `json:"location_options"`
 	DogName           string  `json:"dog_name"`
 	Gender            string  `json:"gender"` // male, female
 	Neutered          bool    `json:"neutered"`

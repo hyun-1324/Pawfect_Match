@@ -24,8 +24,9 @@ CREATE TABLE biographical_data (
 CREATE TABLE locations (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
-  latitude DOUBLE PRECISION NOT NULL,
-  longitude DOUBLE PRECISION NOT NULL,
+  option VARCHAR(15) NOT NULL CHECK (option IN ('Live', 'Helsinki', 'Tampere', 'Turku', 'Jyväskylä', 'Kuopio')),
+  latitude DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+  longitude DOUBLE PRECISION NOT NULL DEFAULT 0.0,
   geom GEOGRAPHY(POINT, 4326),
   FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
