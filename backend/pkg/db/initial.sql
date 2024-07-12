@@ -9,7 +9,6 @@ CREATE TABLE users (
 CREATE TABLE biographical_data (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
-  location VARCHAR(100),
   dog_gender VARCHAR(10) NOT NULL CHECK (dog_gender IN ('male', 'female')),
   dog_neutered BOOLEAN NOT NULL,
   dog_size INTEGER NOT NULL,
@@ -83,11 +82,13 @@ CREATE TABLE matches (
   id SERIAL PRIMARY KEY,
   user_id1 INTEGER NOT NULL,
   user_id2 INTEGER NOT NULL,
-  compatible_gender BOOLEAN DEFAULT FALSE,
   compatible_neutered BOOLEAN DEFAULT FALSE,
-  compatible_distance BOOLEAN DEFAULT FALSE,
+  compatible_gender BOOLEAN DEFAULT FALSE,
+  compatible_play_style BOLEAN DEFAULT FALSE,
+  compatible_size BOOLEAN DEFAULT FALSE,
   rejected BOOLEAN DEFAULT FALSE,
   match_score FLOAT,
+  compatible_distance BOOLEAN DEFAULT FALSE,
   FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
   CONSTRAINT unique_user_ids_pair UNIQUE (user_id1, user_id2)

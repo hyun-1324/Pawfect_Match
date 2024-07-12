@@ -53,10 +53,10 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
 	bio.Id = r.PathValue("id")
-	err := app.DB.QueryRow(`SELECT location, dog_gender, dog_neutered, dog_size, 
+	err := app.DB.QueryRow(`SELECT dog_gender, dog_neutered, dog_size, 
 	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
 	preferred_gender, preferred_neutered FROM biographical_data WHERE user_id = $1`,
-		bio.Id).Scan(&bio.Location, &bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
+		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
 	if err != nil {
 		http.Error(w, "bio not found", http.StatusNotFound)
@@ -109,10 +109,10 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
 	userId := middleware.GetUserId(r)
 	bio.Id = userId
-	err := app.DB.QueryRow(`SELECT location, dog_gender, dog_neutered, dog_size, 
+	err := app.DB.QueryRow(`SELECT dog_gender, dog_neutered, dog_size, 
 	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
 	preferred_gender, preferred_neutered FROM biographical_data WHERE user_id = $1`,
-		bio.Id).Scan(&bio.Location, &bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
+		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
 	if err != nil {
 		http.Error(w, "bio not found", http.StatusNotFound)

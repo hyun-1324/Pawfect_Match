@@ -102,7 +102,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var userId int32
+	var userId int
 	err = app.DB.QueryRow(`INSERT INTO users (email, password, about_me, dog_name) 
 	VALUES ($1, $2, $3, $4) RETURNING id`,
 		req.Email, hashedPassword, req.AboutMe, req.DogName).Scan(&userId)
@@ -128,6 +128,8 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	calculateRecommendationScore(app, userId)
+
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
@@ -150,7 +152,7 @@ func validateUserStringData(value string, maxlength int) error {
 	return nil
 }
 
-func processProfilePictureData(r *http.Request, app *App, userId int32) error {
+func processProfilePictureData(r *http.Request, app *App, userId int) error {
 	profilePicture, fileHeader, err := r.FormFile("profilePicture")
 	if err != nil {
 		if err == http.ErrMissingFile {
