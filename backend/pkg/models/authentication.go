@@ -5,6 +5,7 @@ type Register struct {
 	Email             string  `json:"email"`
 	Password          string  `json:"password"`
 	ConfirmPassword   string  `json:"confirm_password"`
+	AddPicture        bool    `json:"add_picture"`
 	LocationOptions   string  `json:"location_options"`
 	DogName           string  `json:"dog_name"`
 	Gender            string  `json:"gender"` // male, female

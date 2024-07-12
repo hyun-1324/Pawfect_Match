@@ -93,7 +93,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = processProfilePictureData(r, app, req.Id)
+	err = processProfilePictureData(r, app, req.Id, true)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -189,11 +189,18 @@ func checkLocationData(location string) (float64, float64, error) {
 
 }
 
-func processProfilePictureData(r *http.Request, app *App, userId int) error {
+func processProfilePictureData(r *http.Request, app *App, userId int, addFile bool) error {
 	profilePicture, fileHeader, err := r.FormFile("profilePicture")
 	if err != nil {
-		if err == http.ErrMissingFile {
+		if err == http.ErrMissingFile || addFile == false {
+			query := `DELETE FROM profile_pictures WHERE user_id = $1`
+			_, err = app.DB.Exec(query, userId)
+			if err != nil {
+				return err
+			}
 			return nil
+		} else {
+			return err
 		}
 	}
 

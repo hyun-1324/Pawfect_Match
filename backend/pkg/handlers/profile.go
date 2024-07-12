@@ -55,7 +55,7 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = processProfilePictureData(r, app, req.Id)
+	err = processProfilePictureData(r, app, req.Id, req.AddPicture)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
