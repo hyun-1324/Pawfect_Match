@@ -50,8 +50,8 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-
 	}
+
 	w.Header().Set("Content-Type", mimeType)
 	w.Write(data)
 }
@@ -69,6 +69,7 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(profile)
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -89,6 +90,7 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(bio)
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -107,6 +109,7 @@ func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(user)
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -124,6 +127,7 @@ func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(profile)
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -145,6 +149,7 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(bio)
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -181,9 +186,10 @@ func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(models.RecommendationResponse{Ids: ids})
+	err = json.NewEncoder(w).Encode(models.IdList{Ids: ids})
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -215,9 +221,10 @@ func (app *App) GetConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(models.ConnectionResponse{Ids: ids})
+	err = json.NewEncoder(w).Encode(models.IdList{Ids: ids})
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -233,5 +240,35 @@ func (app *App) SendConnectionRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetConnectionRequests(w http.ResponseWriter, r *http.Request) {
+	userId := middleware.GetUserId(r)
+	query := `SELECT from_id FROM requests WHERE to_id = $1 AND processed = FALSE`
+	rows, err := app.DB.Query(query, userId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
 
+	var ids []int
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			http.Error(w, "failed to scan connection requests", http.StatusInternalServerError)
+			return
+		}
+		ids = append(ids, id)
+	}
+
+	if err = rows.Err(); err != nil {
+		http.Error(w, "error occurred during rows iteration", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(models.IdList{Ids: ids})
+	if err != nil {
+		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
+		return
+	}
 }
