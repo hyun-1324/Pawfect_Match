@@ -67,8 +67,27 @@ CREATE TABLE connections (
   user_id1 INTEGER,
   user_id2 INTEGER,
   FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE,
-  FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE
+  FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
+  CONSTRAINT unique_user_ids_pair UNIQUE (user_id1, user_id2)
 );
+
+CREATE OR REPLACE FUNCTION ensure_user_ids_order()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.user_id1 > NEW.user_id2 THEN
+    DECLARE temp INTEGER;
+    temp := NEW.user_id1;
+    NEW.user_id1 := NEW.user_id2;
+    NEW.user_id2 := temp;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ensure_user_ids_order_trigger
+BEFORE INSERT OR UPDATE ON connections
+FOR EACH ROW
+EXECUTE FUNCTION ensure_user_ids_order();
 
 CREATE TABLE requests (
   id SERIAL PRIMARY KEY,
@@ -87,9 +106,9 @@ CREATE TABLE matches (
   compatible_gender BOOLEAN DEFAULT FALSE,
   compatible_play_style BOLEAN DEFAULT FALSE,
   compatible_size BOOLEAN DEFAULT FALSE,
+  compatible_distance BOOLEAN DEFAULT FALSE,
   rejected BOOLEAN DEFAULT FALSE,
   match_score FLOAT,
-  compatible_distance BOOLEAN DEFAULT FALSE,
   FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
   CONSTRAINT unique_user_ids_pair UNIQUE (user_id1, user_id2)
@@ -156,6 +175,12 @@ BEGIN
   FROM user_distance ud
   WHERE matches.id = ud.match_id
   AND ud.distance <= LEAST(ud.preferred_distance1_km, ud.preferred_distance2_km);
+
+  UPDATE matches
+  SET compatible_distance = FALSE
+  FROM user_distance ud
+  WHERE matches.id = ud.match_id
+  AND ud.distance > LEAST(ud.preferred_distance1_km, ud.preferred_distance2_km);
 
   RETURN NEW;
 END;

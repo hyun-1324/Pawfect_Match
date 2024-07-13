@@ -148,8 +148,21 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
-	rows, err := app.DB.Query("SELECT id FROM recommendations LIMIT 10")
+func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
+	userId := middleware.GetUserId(r)
+
+	query := `SELECT
+	CASE
+		WHEN user_id1 = $1 THEN user_id2
+		WHEN user_id2 = $1 THEN user_id1
+	END AS matched_user_id
+		FROM matches
+		WHERE (user_id1 = $1 OR user_id2 = $1) AND 
+		compatible_neutered = true AND compatible_gender = true AND
+		compatible_play_style = true AND compatible_size = true AND compatible_distance = true AND rejected = FALSE 
+		ORDER BY match_score DESC LIMIT 10
+		`
+	rows, err := app.DB.Query(query, userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -174,8 +187,16 @@ func (app *App) Recommendations(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
-	rows, err := app.DB.Query("SELECT id FROM connections")
+func (app *App) GetConnections(w http.ResponseWriter, r *http.Request) {
+	userId := middleware.GetUserId(r)
+	query := `SELECT
+	CASE
+		WHEN user_id1 = $1 THEN user_id2
+		WHEN user_id2 = $1 THEN user_id1
+	END AS connectied_user_id
+	FROM connections
+	WHERE user_id1 = $1 OR user_id2 = $1`
+	rows, err := app.DB.Query(query, userId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -198,4 +219,19 @@ func (app *App) Connections(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
 	}
+}
+
+func (app *App) SendConnectionRequest(w http.ResponseWriter, r *http.Request) {
+	fromId := middleware.GetUserId(r)
+	toId := r.FormValue("toId")
+
+	_, err := app.DB.Exec("INSERT INTO requests (from_id, to_id) VALUES ($1, $2)", fromId, toId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (app *App) GetConnectionRequests(w http.ResponseWriter, r *http.Request) {
+
 }
