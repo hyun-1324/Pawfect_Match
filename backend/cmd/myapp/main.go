@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"log"
 	"matchMe/pkg/db"
+	"matchMe/pkg/handlers"
 	"matchMe/pkg/middleware"
 	"net/http"
 	"path/filepath"
 
-	"matchMe/pkg/handlers"
+	socketio "github.com/googollee/go-socket.io"
 )
 
 func main() {
