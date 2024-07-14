@@ -32,9 +32,17 @@ func main() {
 		DB: database,
 	}
 
+	server := socketio.NewServer(nil)
+	handlers.RegisterSocketHandlers(server, database)
+
+	go server.Serve()
+	defer server.Close()
+
 	buildPath := filepath.Join("..", "..", "..", "frontend", "build")
 	fs := http.FileServer(http.Dir(buildPath))
 	http.Handle("/", fs)
+
+	http.Handle("/socket.io/", server)
 
 	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
 	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
@@ -45,10 +53,10 @@ func main() {
 	http.Handle("GET /recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetRecommendations)))
 	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetConnections)))
 	http.Handle("GET /images/{fileName}", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetProfilePicture)))
-	http.Handle("GET /get_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetConnectionRequests)))
-	http.Handle("POST /send_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.SendConnectionRequest)))
-	http.Handle("POST /accept_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.AcceptRequest)))
-	http.Handle("POST /decline_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.DeclineRequest)))
+	// http.Handle("GET /get_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetConnectionRequests)))
+	// http.Handle("POST /send_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.SendConnectionRequest)))
+	// http.Handle("POST /accept_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.AcceptRequest)))
+	// http.Handle("POST /decline_request", middleware.AuthMiddleware(database, http.HandlerFunc(app.DeclineRequest)))
 	http.Handle("POST /live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
 	http.Handle("POST /profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
 	http.Handle("POST /logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))

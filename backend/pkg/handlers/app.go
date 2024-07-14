@@ -164,7 +164,7 @@ func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 		FROM matches
 		WHERE (user_id1 = $1 OR user_id2 = $1) AND 
 		compatible_neutered = true AND compatible_gender = true AND
-		compatible_play_style = true AND compatible_size = true AND compatible_distance = true AND rejected = FALSE 
+		compatible_play_style = true AND compatible_size = true AND compatible_distance = true AND rejected = FALSE AND requested = FALSE
 		ORDER BY match_score DESC LIMIT 10
 		`
 	rows, err := app.DB.Query(query, userId)
