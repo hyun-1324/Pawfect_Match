@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	socketio "github.com/googollee/go-socket.io"
 )
@@ -47,10 +48,25 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 			return fmt.Errorf("failed to fetch friend requests: %v", err)
 		}
 
-		// unreadMessages := getUnreadMessages(db, userId)
-
 		s.Emit("friendRequests", friendRequests)
-		// s.Emit("unreadMessages", unreadMessages)
+
+		hasUnreadMessages, err := checkUnreadMessages(db, userId)
+		if err != nil {
+			s.Emit("error", "Failed to fetch unread messages")
+			return fmt.Errorf("failed to fetch unread messages: %v", err)
+		}
+
+		s.Emit("check_unread_messages", hasUnreadMessages)
+
+		rooms, err := getUserRooms(db, userId)
+		if err != nil {
+			s.Emit("error", "failed to fetch user rooms")
+			return fmt.Errorf("failed to fetch user rooms: %v", err)
+		}
+
+		for _, roomId := range rooms {
+			s.Join(roomId)
+		}
 
 		return nil
 	})
@@ -156,56 +172,140 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 
 		s.Emit("recommendation_update_notification", true)
 
+	})
+
+	server.OnEvent("/", "create_room", func(s socketio.Conn, msg map[string]interface{}) {
+		fromId := s.Context().(string)
+		toId, ok := msg["to_id"].(string)
+		if !ok {
+			s.Emit("error", "to_id is missing")
+			return
+		}
+
+		roomId, err := createRoom(db, fromId, toId)
+		if err != nil {
+			s.Emit("error", "failed to create room")
+			return
+		}
+
+		s.Join(roomId)
 		userConnections.RLock()
-		receiverConn, exists := userConnections.connections[fromId]
+		receiverConn, exists := userConnections.connections[toId]
 		userConnections.RUnlock()
 
 		if exists {
-			receiverConn.Emit("recommendation_update_notification", true)
+			receiverConn.Join(roomId)
 		}
+
+		s.Emit("roomCreated", roomId)
 	})
 
-	// server.OnEvent("/", "join", func(s socketio.Conn, room string) {
-	// 	userId := s.Context().(string)
-	// 	s.Join(room)
-	// 	fmt.Println("joined", userId, room)
-	// })
+	server.OnEvent("/", "send_message", func(s socketio.Conn, msg map[string]interface{}) {
+		fromId := s.Context().(string)
+		roomId, ok := msg["room_id"].(string)
+		if !ok {
+			s.Emit("error", "room_id is missing")
+			return
+		}
+		message, ok := msg["message"].(string)
+		if !ok {
+			s.Emit("error", "message is missing")
+			return
+		}
+		if len([]byte(message)) > 255 {
+			s.Emit("error", "message is too long")
+			return
+		}
 
-	// server.OnEvent("/", "message", func(s socketio.Conn, msg map[string]interface{}) {
-	// 	fromId := s.Context().(string)
-	// 	toId := msg["receiver_id"].(string)
-	// 	message := msg["message"].(string)
-	// 	room := fmt.Sprintf("%s-%s", fromId, toId)
+		toId, ok := msg["to_id"].(string)
+		if !ok {
+			s.Emit("error", "to_id is missing")
+			return
+		}
 
-	// 	server.BroadcastToRoom("/", room, "message", map[string]interface{}{
-	// 		"sender_id":   fromId,
-	// 		"message":     message,
-	// 		"receiver_id": toId,
-	// 	})
-	// })
+		messageId, err := saveMessage(db, roomId, fromId, toId, message)
+		if err != nil {
+			s.Emit("error", "failed to save message")
+			return
+		}
 
-	// server.OnEvent("/", "typing", func(s socketio.Conn, msg map[string]interface{}) {
-	// 	userId := s.Context().(string)
-	// 	toId := msg["receiver_id"].(string)
-	// 	room := fmt.Sprintf("%s-%s", userId, toId)
+		userConnections.RLock()
+		receiverConn, exists := userConnections.connections[toId]
+		userConnections.RUnlock()
 
-	// 	server.BroadcastToRoom("/", room, "typing", map[string]interface{}{
-	// 		"user_id": userId,
-	// 		"typing":  true,
-	// 	})
-	// })
+		if exists {
+			chatList, err := getChatList(db, toId)
+			if err != nil {
+				s.Emit("error", "failed to fetch chat list")
+				return
+			}
+			receiverConn.Emit("get_chat_list", chatList)
+		}
 
-	// server.OnEvent("/", "stop_typing", func(s socketio.Conn, msg map[string]interface{}) {
-	// 	userId := s.Context().(string)
-	// 	toId := msg["receiver_id"].(string)
-	// 	room := fmt.Sprintf("%s-%s", userId, toId)
+		server.BroadcastToRoom("/", roomId, "new_message", models.Message{
+			Id:      messageId,
+			RoomID:  roomId,
+			FromID:  fromId,
+			ToID:    toId,
+			Message: message,
+			SentAt:  time.Now(),
+		})
+	})
 
-	// 	server.BroadcastToRoom("/", room, "typing", map[string]interface{}{
-	// 		"user_id": userId,
-	// 		"typing":  false,
-	// 	})
-	// })
+	server.OnEvent("/", "get_messages", func(s socketio.Conn, msg map[string]interface{}) {
+		userId := s.Context().(string)
+		roomId, ok := msg["room_id"].(string)
+		if !ok {
+			s.Emit("error", "room_id is missing")
+			return
+		}
+		lastMessageId, ok := msg["last_message_id"].(int)
+		if !ok {
+			s.Emit("error", "last_message_id is missing")
+			return
+		}
 
+		messages, err := getMessagesForRoom(db, roomId, userId, lastMessageId)
+		if err != nil {
+			s.Emit("error", "Failed to fetch messages")
+			return
+		}
+
+		err = markMessagesAsRead(db, userId, roomId)
+		if err != nil {
+			s.Emit("error", "Failed to mark messages as read")
+			return
+		}
+
+		chatList, err := getChatList(db, userId)
+		if err != nil {
+			s.Emit("error", "failed to fetch chat list")
+			return
+		}
+		s.Emit("get_chat_list", chatList)
+
+		s.Emit("room_messages", messages)
+	})
+
+	server.OnEvent("/", "check_unread_message", func(s socketio.Conn) {
+		userId := s.Context().(string)
+		hasUnreadMessages, err := checkUnreadMessages(db, userId)
+		if err != nil {
+			s.Emit("error", "failed to check unread messages")
+			return
+		}
+		s.Emit("check_unread_message", hasUnreadMessages)
+	})
+
+	server.OnEvent("/", "get_chat_list", func(s socketio.Conn) {
+		userId := s.Context().(string)
+		chatList, err := getChatList(db, userId)
+		if err != nil {
+			s.Emit("error", "Failed to fetch unread messages")
+			return
+		}
+		s.Emit("get_unread_messages", chatList)
+	})
 }
 
 func extractJWTFromCookieHeader(cookieHeader string) string {
@@ -365,34 +465,166 @@ func rejectRecommendation(db *sql.DB, fromId, toId string) error {
 	return nil
 }
 
-func saveMessageToDB(db *sql.DB, fromId, toId, message string) error {
-	query := "INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)"
-	_, err := db.Exec(query, fromId, toId, message)
+func createRoom(db *sql.DB, fromId, toId string) (string, error) {
+	numFromId, err := strconv.Atoi(fromId)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	numToId, err := strconv.Atoi(toId)
+	if err != nil {
+		return "", err
+	}
+
+	smallId, largeId := util.OrderPair(numFromId, numToId)
+
+	var roomId string
+	err = db.QueryRow(`
+		INSERT INTO rooms (user_id1, user_id2) 
+		VALUES ($1, $2) 
+		ON CONFLICT (user_id1, user_id2) DO NOTHING 
+		RETURNING id`, smallId, largeId).Scan(&roomId)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to create or get room: %v", err)
+	}
+
+	return roomId, nil
 }
 
-func fetchChatHistoryFromDb(db *sql.DB, roomId string) ([]map[string]interface{}, error) {
-	query := "SELECT message FROM messages WHERE room_id = $1 ORDER BY sent_at ASD = ?"
-	rows, err := db.Query(query, roomId)
+func saveMessage(db *sql.DB, roomId, fromId, toId, message string) (int, error) {
+
+	var messageId int
+	err := db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message) VALUES ($1, $2, $3, $4) RETURNING id", roomId, fromId, toId, message).Scan(&messageId)
 	if err != nil {
-		return nil, err
+		return 0, fmt.Errorf("failed to save message: %v", err)
+	}
+
+	return messageId, nil
+}
+
+func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
+	query := `SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE)`
+
+	var exists bool
+	err := db.QueryRow(query, userId).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check unread messages: %v", err)
+	}
+
+	return exists, nil
+}
+
+func getChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
+	query := `
+SELECT 
+  room_id,
+  EXISTS (
+    SELECT 1
+    FROM messages m
+    WHERE m.room_id = messages.room_id AND m.read = FALSE
+  ) AS has_unread
+FROM messages 
+WHERE (to_id = $1 OR from_id = $1)
+GROUP BY room_id
+ORDER BY MAX(sent_at) DESC;
+	`
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
 	defer rows.Close()
 
-	var chatHistory []map[string]interface{}
+	var chatList []models.ChatList
 	for rows.Next() {
-		var fromId, message string
-		err := rows.Scan(&fromId, &message)
+		var msg models.ChatList
+		err := rows.Scan(&msg.RoomId, &msg.UnReadMessage)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
-		chatHistory = append(chatHistory, map[string]interface{}{
-			"sender_id": fromId,
-			"message":   message,
-		})
+		chatList = append(chatList, msg)
 	}
-	return chatHistory, nil
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return chatList, nil
+}
+
+func getUserRooms(db *sql.DB, userId string) ([]string, error) {
+	query := `
+		SELECT id 
+		FROM rooms 
+		WHERE user_id1 = $1 OR user_id2 = $1
+	`
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var rooms []string
+	for rows.Next() {
+		var roomId string
+		err := rows.Scan(&roomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		rooms = append(rooms, roomId)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return rooms, nil
+}
+
+func getMessagesForRoom(db *sql.DB, roomId string, userId string, lastMessageId int) ([]models.Message, error) {
+	limit := 10
+
+	query := `
+	SELECT id, room_id, from_id, to_id, message, sent_at
+	FROM messages
+	WHERE room_id = $1 AND (from_id = $2 OR to_id = $2) AND id < $3
+	ORDER BY sent_at DESC
+	LIMIT $4
+	`
+
+	rows, err := db.Query(query, roomId, userId, lastMessageId, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var messages []models.Message
+	for rows.Next() {
+		var msg models.Message
+		err := rows.Scan(&msg.Id, &msg.RoomID, &msg.FromID, &msg.ToID, &msg.Message, &msg.SentAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		messages = append(messages, msg)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return messages, nil
+}
+
+func markMessagesAsRead(db *sql.DB, userId, roomId string) error {
+	query := `
+	UPDATE messages
+	SET read = TRUE
+	WHERE to_id = $1 AND room_id = $2
+	`
+	_, err := db.Exec(query, userId, roomId)
+	if err != nil {
+		return fmt.Errorf("failed to mark messages as read: %v", err)
+	}
+
+	return nil
+
 }

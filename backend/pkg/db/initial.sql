@@ -74,24 +74,10 @@ CREATE TABLE connections (
   UNIQUE (user_id1, user_id2)
 );
 
-CREATE OR REPLACE FUNCTION ensure_user_ids_order()
-RETURNS TRIGGER AS $$
-DECLARE 
-  temp INTEGER;
-BEGIN
-  IF NEW.user_id1 > NEW.user_id2 THEN
-    temp := NEW.user_id1;
-    NEW.user_id1 := NEW.user_id2;
-    NEW.user_id2 := temp;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER ensure_user_ids_order_trigger_connections
-BEFORE INSERT OR UPDATE ON connections
-FOR EACH ROW
-EXECUTE FUNCTION ensure_user_ids_order();
+CREATE UNIQUE INDEX unique_request ON connections (
+  LEAST(from_id, to_id),
+  GREATEST(from_id, to_id)
+);
 
 CREATE TABLE requests (
   id SERIAL PRIMARY KEY,
@@ -127,10 +113,10 @@ CREATE TABLE matches (
   CONSTRAINT unique_user_ids_pair UNIQUE (user_id1, user_id2)
 );
 
-CREATE TRIGGER ensure_user_ids_order_trigger_matches
-BEFORE INSERT OR UPDATE ON matches
-FOR EACH ROW
-EXECUTE FUNCTION ensure_user_ids_order();
+CREATE UNIQUE INDEX unique_request ON matches (
+  LEAST(from_id, to_id),
+  GREATEST(from_id, to_id)
+);
 
 CREATE OR REPLACE FUNCTION update_matches() 
 RETURNS TRIGGER AS $$
@@ -191,14 +177,29 @@ AFTER INSERT OR UPDATE ON locations
 FOR EACH ROW
 EXECUTE FUNCTION update_compatible_distance();
 
+CREATE TABLE rooms (
+  id SERIAL PRIMARY KEY,
+  user_id1 INTEGER NOT NULL,
+  user_id2 INTEGER NOT NULL,
+  FOREIGN KEY (user_id1) REFERENCES users (id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id2) REFERENCES users (id) ON DELETE CASCADE,
+  UNIQUE (user_id1, user_id2)
+);
+
+CREATE UNIQUE INDEX unique_request ON rooms (
+  LEAST(from_id, to_id),
+  GREATEST(from_id, to_id)
+);
+
 CREATE TABLE messages (
   id SERIAL PRIMARY KEY,
-  room_id INTEGER NOT NULL, -- room_id = id1_id2 ( id1 < id2 )
+  room_id INTEGER NOT NULL,
   from_id INTEGER NOT NULL,
   to_id INTEGER NOT NULL,
   message TEXT NOT NULL,
   sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
   read BOOLEAN DEFAULT FALSE,
-  FOREIGN KEY("from_id") REFERENCES "users"("id") ON DELETE NULL,
-  FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE NULL
+  FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
+  FOREIGN KEY (from_id) REFERENCES users (id) ON DELETE SET NULL,
+  FOREIGN KEY (to_id) REFERENCES users (id) ON DELETE SET NULL
 );
