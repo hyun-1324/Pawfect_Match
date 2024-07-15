@@ -414,7 +414,7 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 
 	smallId, largeId := util.OrderPair(numToId, numFromId)
 
-	query := "UPDATE requests SET processed = TRUE WHERE from_id = $1 AND to_id = $2"
+	query := "UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2"
 	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
 		return err
@@ -451,7 +451,7 @@ func rejectRecommendation(db *sql.DB, fromId, toId string) error {
 
 	query = `
 	UPDATE requests 
-	SET processed = TRUE 
+	SET processed = TRUE, accepted = FALSE
 	WHERE (
 	(from_id = $1 AND to_id = $2) 
 	OR 

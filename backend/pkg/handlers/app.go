@@ -31,7 +31,7 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, user.Id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, pictureOwner)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -83,7 +83,7 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, profile.Id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, bio.Id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -143,20 +143,27 @@ func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId string)
 		LIMIT 10
 		) AS top_matches
 	WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)
-) AS recommendationExists,
- EXISTS(
+  ) AS recommendationExists,
+  EXISTS(
 	SELECT 1
-	FROM connections
-	WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)
-	) AS connectionExists`
+	  FROM connections
+	  WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)
+	) AS connectionExists,
+	EXISTS(
+	SELECT 1
+		FROM requests
+		WHERE (from_id = $2 AND to_id = $1)
+			AND processed = FALSE
+	) AS requestExists
+	`
 
-	var recommendationExists, connectionExists bool
+	var recommendationExists, connectionExists, requestExists bool
 	err := db.QueryRow(query, userId, targetId).Scan(&recommendationExists, connectionExists)
 	if err != nil {
 		return err
 	}
 
-	if recommendationExists || connectionExists {
+	if recommendationExists || connectionExists || requestExists {
 		return nil
 	} else {
 		return fmt.Errorf("unauthorized access")
