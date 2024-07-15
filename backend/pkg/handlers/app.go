@@ -3,11 +3,11 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
-	"matchMe/pkg/util"
 )
 
 type App struct {
@@ -52,9 +52,16 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var pictureOwner string
 	var data []byte
 	var mimeType string
-	err := app.DB.QueryRow("SELECT file_data, mime_type FROM profile_pictures WHERE user_id = $1 AND file_name = $2", userId, fileName).Scan(&data, &mimeType)
+	err := app.DB.QueryRow("SELECT user_id, file_data, mime_type FROM profile_pictures WHERE file_name = $1", fileName).Scan(&pictureOwner, &data, &mimeType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = checkRecommendationAndConnectionStatus(app.DB, userId, pictureOwner)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -116,13 +123,16 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId int) error {
-	smallId, largeId := util.OrderPair(userId, targetId)
+func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId string) error {
 
-	query := `SELECT EXISTS(
+	query := `SELECT 
+	EXISTS(
 	SELECT 1
-		FROM ( matches
-		WHERE compatible_neutered = true 
+		FROM (
+		SELECT user_id1, user_id2
+		FROM matches
+		WHERE (user_id1 = $1 OR user_id2 = $1)
+		  AND compatible_neutered = true 
 			AND compatible_gender = true 
 			AND compatible_play_style = true 
 			AND compatible_size = true 
@@ -133,14 +143,24 @@ func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId int) er
 		LIMIT 10
 		) AS top_matches
 	WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)
-		`
+) AS recommendationExists,
+ EXISTS(
+	SELECT 1
+	FROM connections
+	WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)
+	) AS connectionExists`
 
-	var RecommendationExists bool
-	err := db.QueryRow(query, userId, targetId).Scan(&RecommendationExists)
+	var recommendationExists, connectionExists bool
+	err := db.QueryRow(query, userId, targetId).Scan(&recommendationExists, connectionExists)
 	if err != nil {
 		return err
 	}
 
+	if recommendationExists || connectionExists {
+		return nil
+	} else {
+		return fmt.Errorf("unauthorized access")
+	}
 }
 
 func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
