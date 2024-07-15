@@ -13,7 +13,7 @@ CREATE TABLE biographical_data (
   user_id INTEGER NOT NULL,
   dog_gender VARCHAR(10) NOT NULL CHECK (dog_gender IN ('male', 'female')),
   dog_neutered BOOLEAN NOT NULL,
-  dog_size INTEGER NOT NULL,
+  dog_size REAL NOT NULL,
   dog_energy_level VARCHAR(10) NOT NULL CHECK (dog_energy_level IN ('low', 'medium', 'high')),
   dog_favorite_play_style VARCHAR(15) NOT NULL,
   dog_age INTEGER NOT NULL,
