@@ -7,6 +7,7 @@ import (
 
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
+	"matchMe/pkg/util"
 )
 
 type App struct {
@@ -19,9 +20,16 @@ const UserIDKey contextKey = "userId"
 
 func (app *App) User(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
+	userId := middleware.GetUserId(r)
 	user.Id = r.PathValue("id")
 
 	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = checkRecommendationAndConnectionStatus(app.DB, userId, user.Id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -58,8 +66,15 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	var profile models.UserProfileResponse
+	userId := middleware.GetUserId(r)
 	profile.Id = r.PathValue("id")
 	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = checkRecommendationAndConnectionStatus(app.DB, userId, profile.Id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -75,6 +90,7 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
+	userId := middleware.GetUserId(r)
 	bio.Id = r.PathValue("id")
 	err := app.DB.QueryRow(`SELECT dog_gender, dog_neutered, dog_size, 
 	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
@@ -86,12 +102,45 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = checkRecommendationAndConnectionStatus(app.DB, userId, bio.Id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(bio)
 	if err != nil {
 		http.Error(w, "failed to encode JSON", http.StatusInternalServerError)
 		return
 	}
+}
+
+func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId int) error {
+	smallId, largeId := util.OrderPair(userId, targetId)
+
+	query := `SELECT EXISTS(
+	SELECT 1
+		FROM ( matches
+		WHERE compatible_neutered = true 
+			AND compatible_gender = true 
+			AND compatible_play_style = true 
+			AND compatible_size = true 
+			AND compatible_distance = true 
+			AND rejected = FALSE 
+			AND requested = FALSE
+		ORDER BY match_score DESC 
+		LIMIT 10
+		) AS top_matches
+	WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)
+		`
+
+	var RecommendationExists bool
+	err := db.QueryRow(query, userId, targetId).Scan(&RecommendationExists)
+	if err != nil {
+		return err
+	}
+
 }
 
 func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {

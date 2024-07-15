@@ -16,7 +16,15 @@ import (
 
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	jsonFile, _, err := r.FormFile("json")
+	if err != nil {
+		http.Error(w, "Error reading JSON file", http.StatusInternalServerError)
+		return
+	}
+	defer jsonFile.Close()
+
+	if err := json.NewDecoder(jsonFile).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
