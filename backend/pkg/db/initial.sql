@@ -1,3 +1,5 @@
+CREATE EXTENSION postgis;
+
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(50) NOT NULL,
@@ -11,7 +13,7 @@ CREATE TABLE biographical_data (
   user_id INTEGER NOT NULL,
   dog_gender VARCHAR(10) NOT NULL CHECK (dog_gender IN ('male', 'female')),
   dog_neutered BOOLEAN NOT NULL,
-  dog_size INTEGER NOT NULL,
+  dog_size REAL NOT NULL,
   dog_energy_level VARCHAR(10) NOT NULL CHECK (dog_energy_level IN ('low', 'medium', 'high')),
   dog_favorite_play_style VARCHAR(15) NOT NULL,
   dog_age INTEGER NOT NULL,
@@ -36,7 +38,7 @@ CREATE INDEX idx_locations_geom ON locations USING GIST(geom);
 CREATE OR REPLACE FUNCTION update_geom()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+  NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::GEOGRAPHY;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -66,18 +68,33 @@ CREATE TABLE connections (
   id SERIAL PRIMARY KEY,
   user_id1 INTEGER,
   user_id2 INTEGER,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE,
-  FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE
+  FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
+  UNIQUE (user_id1, user_id2)
+);
+
+CREATE UNIQUE INDEX unique_request ON connections (
+  LEAST(from_id, to_id),
+  GREATEST(from_id, to_id)
 );
 
 CREATE TABLE requests (
   id SERIAL PRIMARY KEY,
-  from_id INTEGER,
-  to_id INTEGER,
+  from_id INTEGER NOT NULL,
+  to_id INTEGER NOT NULL,
+  accepted BOOLEAN DEFAULT FALSE,
   processed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY("from_id") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
+
+CREATE UNIQUE INDEX unique_request ON requests (
+  LEAST(from_id, to_id),
+  GREATEST(from_id, to_id)
+);
+
 
 CREATE TABLE matches (
   id SERIAL PRIMARY KEY,
@@ -85,49 +102,37 @@ CREATE TABLE matches (
   user_id2 INTEGER NOT NULL,
   compatible_neutered BOOLEAN DEFAULT FALSE,
   compatible_gender BOOLEAN DEFAULT FALSE,
-  compatible_play_style BOLEAN DEFAULT FALSE,
+  compatible_play_style BOOLEAN DEFAULT FALSE,
   compatible_size BOOLEAN DEFAULT FALSE,
+  compatible_distance BOOLEAN DEFAULT FALSE,
+  requested BOOLEAN DEFAULT FALSE,
   rejected BOOLEAN DEFAULT FALSE,
   match_score FLOAT,
-  compatible_distance BOOLEAN DEFAULT FALSE,
   FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
   CONSTRAINT unique_user_ids_pair UNIQUE (user_id1, user_id2)
 );
 
-CREATE OR REPLACE FUNCTION ensure_user_ids_order()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.user_id1 > NEW.user_id2 THEN
-    DECLARE temp INTEGER;
-    temp := NEW.user_id1;
-    NEW.user_id1 := NEW.user_id2;
-    NEW.user_id2 := temp;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER ensure_user_ids_order_trigger
-BEFORE INSERT OR UPDATE ON matches
-FOR EACH ROW
-EXECUTE FUNCTION ensure_user_ids_order();
+CREATE UNIQUE INDEX unique_request ON matches (
+  LEAST(from_id, to_id),
+  GREATEST(from_id, to_id)
+);
 
 CREATE OR REPLACE FUNCTION update_matches() 
 RETURNS TRIGGER AS $$
 BEGIN
-	INSERT INTO matches (user_id1, user_id2)
-	SELECT NEW.id, id
-	FROM users
-	WHERE id <> NEW.id;
+  INSERT INTO matches (user_id1, user_id2)
+  SELECT NEW.id, id
+  FROM users
+  WHERE id <> NEW.id;
 
-	RETURN NEW;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER after_user_insert
 AFTER INSERT ON users
-FOR EACH rows
+FOR EACH ROW
 EXECUTE FUNCTION update_matches();
 
 CREATE OR REPLACE FUNCTION update_compatible_distance()
@@ -139,8 +144,8 @@ BEGIN
       m.user_id1,
       m.user_id2,
       ST_Distance(
-        l1.geom::geography,
-        l2.geom::geography
+        l1.geom::GEOGRAPHY,
+        l2.geom::GEOGRAPHY
       ) / 1000 AS distance,
       bd1.preferred_distance AS preferred_distance1_km,
       bd2.preferred_distance AS preferred_distance2_km
@@ -157,6 +162,12 @@ BEGIN
   WHERE matches.id = ud.match_id
   AND ud.distance <= LEAST(ud.preferred_distance1_km, ud.preferred_distance2_km);
 
+  UPDATE matches
+  SET compatible_distance = FALSE
+  FROM user_distance ud
+  WHERE matches.id = ud.match_id
+  AND ud.distance > LEAST(ud.preferred_distance1_km, ud.preferred_distance2_km);
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -166,5 +177,29 @@ AFTER INSERT OR UPDATE ON locations
 FOR EACH ROW
 EXECUTE FUNCTION update_compatible_distance();
 
+CREATE TABLE rooms (
+  id SERIAL PRIMARY KEY,
+  user_id1 INTEGER NOT NULL,
+  user_id2 INTEGER NOT NULL,
+  FOREIGN KEY (user_id1) REFERENCES users (id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id2) REFERENCES users (id) ON DELETE CASCADE,
+  UNIQUE (user_id1, user_id2)
+);
 
-CREATE EXTENSION postgis;
+CREATE UNIQUE INDEX unique_request ON rooms (
+  LEAST(from_id, to_id),
+  GREATEST(from_id, to_id)
+);
+
+CREATE TABLE messages (
+  id SERIAL PRIMARY KEY,
+  room_id INTEGER NOT NULL,
+  from_id INTEGER NOT NULL,
+  to_id INTEGER NOT NULL,
+  message TEXT NOT NULL,
+  sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  read BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL,
+  FOREIGN KEY (from_id) REFERENCES users (id) ON DELETE SET NULL,
+  FOREIGN KEY (to_id) REFERENCES users (id) ON DELETE SET NULL
+);

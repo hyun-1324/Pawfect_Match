@@ -6,7 +6,7 @@ type Register struct {
 	Password          string  `json:"password"`
 	ConfirmPassword   string  `json:"confirm_password"`
 	AddPicture        bool    `json:"add_picture"`
-	LocationOptions   string  `json:"location_options"`
+	LocationOptions   string  `json:"location_options"` // Live, Helsinki, Tampere, Turku, Jyväskylä, Kuopio
 	DogName           string  `json:"dog_name"`
 	Gender            string  `json:"gender"` // male, female
 	Neutered          bool    `json:"neutered"`

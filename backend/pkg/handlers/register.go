@@ -169,7 +169,7 @@ func checkUserDataValidation(req models.Register) error {
 func checkLocationData(location string) (float64, float64, error) {
 	var latitude, longitude float64
 	switch {
-	case location == "live":
+	case location == "Live":
 		latitude, longitude = 0, 0
 	case location == "Helsinki":
 		latitude, longitude = 60.1695, 24.9354
@@ -192,7 +192,7 @@ func checkLocationData(location string) (float64, float64, error) {
 func processProfilePictureData(r *http.Request, app *App, userId int, addFile bool) error {
 	profilePicture, fileHeader, err := r.FormFile("profilePicture")
 	if err != nil {
-		if err == http.ErrMissingFile || addFile == false {
+		if err == http.ErrMissingFile || !addFile {
 			query := `DELETE FROM profile_pictures WHERE user_id = $1`
 			_, err = app.DB.Exec(query, userId)
 			if err != nil {

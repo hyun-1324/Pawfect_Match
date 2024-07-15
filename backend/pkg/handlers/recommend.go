@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"matchMe/pkg/models"
+	"matchMe/pkg/util"
 	"strconv"
 )
 
@@ -53,7 +54,7 @@ func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]mo
 		if dataId == userId {
 			continue
 		}
-		smallId, largeId := OrderPair(userId, dataId)
+		smallId, largeId := util.OrderPair(userId, dataId)
 
 		if (userBio.PreferredNeutered && !data.Neutered) || (!userBio.Neutered && data.PreferredNeutered) {
 			_, err := app.DB.Exec("INSERT INTO matches (compatible_neutered, user_id1, user_id2) VALUES ($1, $2, $3)", false, smallId, largeId)
@@ -139,7 +140,7 @@ func checkSizeCompatibility(size1, size2 float32) bool {
 	category2 := determineSizeCategory(size2, sizeThresholds)
 
 	// Check if the size difference is within one category
-	return abs(category1-category2) <= 1
+	return util.Abs(category1-category2) <= 1
 }
 
 func determineSizeCategory(size float32, thresholds []float32) int {
@@ -179,7 +180,7 @@ func calculateMatchScore(userBio1, userBio2 models.UserBioResponse) float64 {
 		score += 1
 	}
 
-	ageDiff := abs(userBio1.Age - userBio2.Age)
+	ageDiff := util.Abs(userBio1.Age - userBio2.Age)
 	switch {
 	case ageDiff <= 3:
 		score += 1
@@ -196,19 +197,4 @@ func calculateMatchScore(userBio1, userBio2 models.UserBioResponse) float64 {
 	}
 
 	return score
-}
-
-func OrderPair(a, b int) (int, int) {
-	if a < b {
-		return a, b
-	} else {
-		return b, a
-	}
-}
-
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }

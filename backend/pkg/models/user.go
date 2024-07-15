@@ -27,10 +27,6 @@ type UserBioResponse struct {
 	LocationOption    string  `json:"location_option"`
 }
 
-type RecommendationResponse struct {
-	Ids []int `json:"ids"`
-}
-
-type ConnectionResponse struct {
+type IdList struct {
 	Ids []int `json:"ids"`
 }

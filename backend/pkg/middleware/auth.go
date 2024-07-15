@@ -87,7 +87,7 @@ func getSecretKey() string {
 	return secretKey
 }
 
-func validateJWT(db *sql.DB, token string) (string, int64, error) {
+func ValidateJWT(db *sql.DB, token string) (string, int64, error) {
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM jwt_blacklist WHERE token = $1)", token).Scan(&exists)
 	if err != nil {
@@ -152,12 +152,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 
 		token := cookie.Value
 
-		if checkTokenFromBlacklist(db, token) {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		userId, _, err := validateJWT(db, token)
+		userId, _, err := ValidateJWT(db, token)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
@@ -168,18 +163,8 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 	})
 }
 
-func checkTokenFromBlacklist(db *sql.DB, token string) bool {
-	var exists bool
-	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM jwt_blacklist WHERE token = $1)", token).Scan(&exists)
-	if err != nil {
-		log.Printf("Error checking token from blacklist: %v", err)
-		return true
-	}
-	return exists
-}
-
 func AddTokenToBlacklist(db *sql.DB, token string) error {
-	_, expirationTime, err := validateJWT(db, token)
+	_, expirationTime, err := ValidateJWT(db, token)
 	if err != nil {
 		return err
 	}

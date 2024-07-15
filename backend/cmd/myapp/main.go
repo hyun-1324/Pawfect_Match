@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"log"
 	"matchMe/pkg/db"
+	"matchMe/pkg/handlers"
 	"matchMe/pkg/middleware"
 	"net/http"
 	"path/filepath"
 
-	"matchMe/pkg/handlers"
+	socketio "github.com/googollee/go-socket.io"
 )
 
 func main() {
@@ -31,9 +32,17 @@ func main() {
 		DB: database,
 	}
 
+	server := socketio.NewServer(nil)
+	handlers.RegisterSocketHandlers(server, database)
+
+	go server.Serve()
+	defer server.Close()
+
 	buildPath := filepath.Join("..", "..", "..", "frontend", "build")
 	fs := http.FileServer(http.Dir(buildPath))
 	http.Handle("/", fs)
+
+	http.Handle("/socket.io/", server)
 
 	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
 	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
@@ -41,14 +50,14 @@ func main() {
 	http.Handle("GET /me", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMe)))
 	http.Handle("GET /me/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeProfile)))
 	http.Handle("GET /me/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeBio)))
-	http.Handle("GET /recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.Recommendations)))
-	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.Connections)))
+	http.Handle("GET /recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetRecommendations)))
+	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetConnections)))
 	http.Handle("GET /images/{fileName}", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetProfilePicture)))
-	http.Handle("/live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
-	http.Handle("/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
-	http.Handle("/logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
-	http.Handle("/login", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Login)))
-	http.Handle("/register", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Register)))
+	http.Handle("POST /live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
+	http.Handle("POST /profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
+	http.Handle("POST /logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
+	http.Handle("POST /login", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Login)))
+	http.Handle("POST /register", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Register)))
 
 	log.Println("Staring server on port 8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
