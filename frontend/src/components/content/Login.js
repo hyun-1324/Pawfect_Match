@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const Login = () => {
@@ -48,8 +47,8 @@ const Login = () => {
     };
 
     return (
-        <div className="loginCard card">
-            <div className="gridCard">
+        <div className="twoColumnCard card centered">
+            <div className="oneColumnCardCentered">
                 <h2>Login</h2>
                 {error && <div className="errorBox">Error:<br/>{error}</div>}
                 <form onSubmit={handleSubmit}>
@@ -76,7 +75,7 @@ const Login = () => {
                     {!isPending && <button className="button" type="submit"><img src={`${process.env.PUBLIC_URL}/images/forward.png`} alt="Log in"></img></button>}
                 </form>
             </div>
-            <div className="gridCard">
+            <div className="oneColumnCardCentered">
                 <h3>Not a member yet?</h3>
                 <Link to="/register" className="textButton button">Register here!</Link>
             </div>
