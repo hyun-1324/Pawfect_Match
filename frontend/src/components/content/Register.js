@@ -29,13 +29,6 @@ const Register = () => {
     const [isPending, setIsPending] = useState(false);
     const [controller, setController] = useState(null); 
 
-    useEffect(() => {
-        
-        // Show image in a new window
-
-    }, []);
-
-
     const handleChange = (name, value) => {
         setForm({
             ...form,
@@ -68,7 +61,6 @@ const Register = () => {
    const handleCropComplete = (_, croppedAreaPixels) => {
         setCroppedAreaPixels(croppedAreaPixels);
     };
-
 
     useEffect(() => {
         // Cleanup function to abort the fetch if necessary
@@ -332,8 +324,6 @@ const Register = () => {
                 
             </form>
         </div>
-        
-
     );
     }
 
