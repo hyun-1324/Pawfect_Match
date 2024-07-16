@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"matchMe/pkg/util"
 	"net/http"
 	"os"
 	"strings"
@@ -91,7 +92,7 @@ func ValidateJWT(db *sql.DB, token string) (string, int64, error) {
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM jwt_blacklist WHERE token = $1)", token).Scan(&exists)
 	if err != nil {
-		return "", 0, fmt.Errorf("database error: %v", err)
+		return "", 0, fmt.Errorf("failed to read data: %v", err)
 	}
 	if exists {
 		return "", 0, fmt.Errorf("token is blacklisted")
@@ -144,17 +145,17 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 		cookie, err := r.Cookie("jwt_token")
 		if err != nil {
 			if err != http.ErrNoCookie {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				util.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
 				return
 			}
-			http.Error(w, "internal server error", http.StatusInternalServerError)
+			util.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
 		}
 
 		token := cookie.Value
 
 		userId, _, err := ValidateJWT(db, token)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			util.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
 			return
 		}
 

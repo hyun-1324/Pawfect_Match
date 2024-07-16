@@ -26,14 +26,14 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		cookieHeader := headers.Get("Cookie")
 
 		if cookieHeader == "" {
-			return fmt.Errorf("unauthorized: no token found in cookie")
+			return fmt.Errorf("unauthorized access")
 		}
 
 		token := extractJWTFromCookieHeader(cookieHeader)
 
 		userId, _, err := middleware.ValidateJWT(db, token)
 		if err != nil {
-			return fmt.Errorf("unauthorized: invalid token")
+			return fmt.Errorf("unauthorized access")
 		}
 
 		s.SetContext(userId)
@@ -44,24 +44,27 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 
 		friendRequests, err := getRequests(db, userId)
 		if err != nil {
-			s.Emit("error", "failed to fetch friend requests")
-			return fmt.Errorf("failed to fetch friend requests: %v", err)
+			s.Emit("error", "unable to fetch friend requests")
+			fmt.Printf("error fetching friend requests for user %s: %v\n", userId, err)
+			return err
 		}
 
 		s.Emit("friendRequests", friendRequests)
 
 		hasUnreadMessages, err := checkUnreadMessages(db, userId)
 		if err != nil {
-			s.Emit("error", "Failed to fetch unread messages")
-			return fmt.Errorf("failed to fetch unread messages: %v", err)
+			s.Emit("error", "unable to fetch unread messages")
+			fmt.Printf("error fetching unread messages for user %s: %v\n", userId, err)
+			return err
 		}
 
 		s.Emit("check_unread_messages", hasUnreadMessages)
 
 		rooms, err := getUserRooms(db, userId)
 		if err != nil {
-			s.Emit("error", "failed to fetch user rooms")
-			return fmt.Errorf("failed to fetch user rooms: %v", err)
+			s.Emit("error", "unable to fetch user rooms")
+			fmt.Printf("error fetching rooms for user %s: %v\n", userId, err)
+			return err
 		}
 
 		for _, roomId := range rooms {
@@ -89,19 +92,20 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		fromId := s.Context().(string)
 		toId, ok := msg["to_id"].(string)
 		if !ok {
-			s.Emit("error", "to_id is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 
 		err := saveRequest(db, fromId, toId)
 		if err != nil {
-			s.Emit("error", "failed to save friend request")
+			s.Emit("error", "unable to process friend request")
+			fmt.Printf("error saving friend request from %s to %s: %v\n", fromId, toId, err)
 			return
 		}
 
 		friendRequests, err := getRequests(db, toId)
 		if err != nil {
-			s.Emit("error", "failed to fetch friend requests")
+			fmt.Printf("error fetching friend requests for user %s: %v\n", toId, err)
 			return
 		}
 
@@ -119,13 +123,14 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		toId := s.Context().(string)
 		fromId, ok := msg["from_id"].(string)
 		if !ok {
-			s.Emit("error", "from_id is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 
 		err := saveAcceptance(db, fromId, toId)
 		if err != nil {
-			s.Emit("error", "failed to save acceptance")
+			s.Emit("error", "unable to process acceptance")
+			fmt.Printf("error saving acceptance from %s to %s: %v\n", fromId, toId, err)
 			return
 		}
 
@@ -145,13 +150,14 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		toId := s.Context().(string)
 		fromId, ok := msg["from_id"].(string)
 		if !ok {
-			s.Emit("error", "from_id is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 
 		err := saveDecline(db, fromId, toId)
 		if err != nil {
-			s.Emit("error", "failed to decline request")
+			s.Emit("error", "unable to process decline")
+			fmt.Printf("error declining request from %s to %s: %v\n", fromId, toId, err)
 			return
 		}
 	})
@@ -160,13 +166,14 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		toId := s.Context().(string)
 		fromId, ok := msg["from_id"].(string)
 		if !ok {
-			s.Emit("error", "from_id is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 
 		err := rejectRecommendation(db, fromId, toId)
 		if err != nil {
-			s.Emit("error", "failed to reject recommendation")
+			s.Emit("error", "unable to process recommendation rejection")
+			fmt.Printf("error rejecting recommendation from %s to %s: %v\n", fromId, toId, err)
 			return
 		}
 
@@ -178,13 +185,14 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		fromId := s.Context().(string)
 		toId, ok := msg["to_id"].(string)
 		if !ok {
-			s.Emit("error", "to_id is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 
 		roomId, err := createRoom(db, fromId, toId)
 		if err != nil {
-			s.Emit("error", "failed to create room")
+			s.Emit("error", "unable to create room")
+			fmt.Printf("error creating room for users %s and %s: %v\n", fromId, toId, err)
 			return
 		}
 
@@ -204,28 +212,28 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		fromId := s.Context().(string)
 		roomId, ok := msg["room_id"].(string)
 		if !ok {
-			s.Emit("error", "room_id is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 		message, ok := msg["message"].(string)
 		if !ok {
-			s.Emit("error", "message is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 		if len([]byte(message)) > 255 {
-			s.Emit("error", "message is too long")
+			s.Emit("error", "Message is too long")
 			return
 		}
 
 		toId, ok := msg["to_id"].(string)
 		if !ok {
-			s.Emit("error", "to_id is missing")
+			s.Emit("error", "invalid request parameters")
 			return
 		}
 
 		messageId, err := saveMessage(db, roomId, fromId, toId, message)
 		if err != nil {
-			s.Emit("error", "failed to save message")
+			s.Emit("error", "unable to send message")
 			return
 		}
 
@@ -236,7 +244,8 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		if exists {
 			chatList, err := getChatList(db, toId)
 			if err != nil {
-				s.Emit("error", "failed to fetch chat list")
+				receiverConn.Emit("error", "unable to fetch chat list")
+				fmt.Printf("error fetching chat list for user %s: %v\n", toId, err)
 				return
 			}
 			receiverConn.Emit("get_chat_list", chatList)
@@ -256,30 +265,33 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		userId := s.Context().(string)
 		roomId, ok := msg["room_id"].(string)
 		if !ok {
-			s.Emit("error", "room_id is missing")
+			s.Emit("error", "Invalid request parameters")
 			return
 		}
 		lastMessageId, ok := msg["last_message_id"].(int)
 		if !ok {
-			s.Emit("error", "last_message_id is missing")
+			s.Emit("error", "Invalid request parameters")
 			return
 		}
 
 		messages, err := getMessagesForRoom(db, roomId, userId, lastMessageId)
 		if err != nil {
-			s.Emit("error", "Failed to fetch messages")
+			s.Emit("error", "unable to fetch messages")
+			fmt.Printf("error fetching messages for room %s and user %s: %v\n", roomId, userId, err)
 			return
 		}
 
 		err = markMessagesAsRead(db, userId, roomId)
 		if err != nil {
-			s.Emit("error", "Failed to mark messages as read")
+			s.Emit("error", "unable to mark messages as read")
+			fmt.Printf("error marking messages as read for room %s and user %s: %v\n", roomId, userId, err)
 			return
 		}
 
 		chatList, err := getChatList(db, userId)
 		if err != nil {
-			s.Emit("error", "failed to fetch chat list")
+			s.Emit("error", "unable to fetch chat list")
+			fmt.Printf("error fetching chat list for user %s: %v\n", userId, err)
 			return
 		}
 		s.Emit("get_chat_list", chatList)
@@ -291,7 +303,8 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		userId := s.Context().(string)
 		hasUnreadMessages, err := checkUnreadMessages(db, userId)
 		if err != nil {
-			s.Emit("error", "failed to check unread messages")
+			s.Emit("error", "unable to check unread messages")
+			fmt.Printf("error checking unread messages for user %s: %v\n", userId, err)
 			return
 		}
 		s.Emit("check_unread_message", hasUnreadMessages)
@@ -301,7 +314,8 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 		userId := s.Context().(string)
 		chatList, err := getChatList(db, userId)
 		if err != nil {
-			s.Emit("error", "Failed to fetch unread messages")
+			s.Emit("error", "unable to fetch chat list")
+			fmt.Printf("error fetching chat list for user %s: %v\n", userId, err)
 			return
 		}
 		s.Emit("get_unread_messages", chatList)
@@ -377,24 +391,24 @@ func saveAcceptance(db *sql.DB, fromId, toId string) error {
 
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
 	numFromId, err := strconv.Atoi(fromId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
 	smallId, largeId := util.OrderPair(numToId, numFromId)
 
 	_, err = db.Exec("INSERT INTO connections (user_id1, user_id2) VALUES ($1, $2) ON CONFLICT (user_id1, user_id2) DO NOTHING", smallId, largeId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to insert data: %v", err)
 	}
 
 	_, err = db.Exec("UPDATE requests SET processed = TRUE, accepted = TRUE WHERE from_id = $1 AND to_id = $2", fromId, toId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update data: %v", err)
 	}
 
 	return nil
@@ -404,12 +418,12 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
 	numFromId, err := strconv.Atoi(fromId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
 	smallId, largeId := util.OrderPair(numToId, numFromId)
@@ -417,13 +431,13 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 	query := "UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2"
 	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update data: %v", err)
 	}
 
 	query = "UPDATE matches SET rejected = TRUE WHERE from_id = $1 AND to_id = $2"
 	_, err = db.Exec(query, smallId, largeId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update data: %v", err)
 	}
 
 	return nil
@@ -433,12 +447,12 @@ func rejectRecommendation(db *sql.DB, fromId, toId string) error {
 
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
 	numFromId, err := strconv.Atoi(fromId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
 	smallId, largeId := util.OrderPair(numToId, numFromId)
@@ -446,7 +460,7 @@ func rejectRecommendation(db *sql.DB, fromId, toId string) error {
 	query := "UPDATE matches SET rejected = TRUE WHERE from_id = $1 AND to_id = $2"
 	_, err = db.Exec(query, smallId, largeId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update data: %v", err)
 	}
 
 	query = `
@@ -459,7 +473,7 @@ func rejectRecommendation(db *sql.DB, fromId, toId string) error {
 	`
 	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update data: %v", err)
 	}
 
 	return nil
@@ -468,11 +482,11 @@ func rejectRecommendation(db *sql.DB, fromId, toId string) error {
 func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 	numFromId, err := strconv.Atoi(fromId)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to change string to int: %v", err)
 	}
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to change string to int: %v", err)
 	}
 
 	smallId, largeId := util.OrderPair(numFromId, numToId)
@@ -485,7 +499,7 @@ func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 		RETURNING id`, smallId, largeId).Scan(&roomId)
 
 	if err != nil {
-		return "", fmt.Errorf("failed to create or get room: %v", err)
+		return "", fmt.Errorf("failed to insert data: %v", err)
 	}
 
 	return roomId, nil
@@ -622,7 +636,7 @@ func markMessagesAsRead(db *sql.DB, userId, roomId string) error {
 	`
 	_, err := db.Exec(query, userId, roomId)
 	if err != nil {
-		return fmt.Errorf("failed to mark messages as read: %v", err)
+		return fmt.Errorf("failed to update data: %v", err)
 	}
 
 	return nil

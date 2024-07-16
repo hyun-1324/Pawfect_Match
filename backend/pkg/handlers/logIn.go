@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
+	"matchMe/pkg/util"
 	"net/http"
 	"time"
 
@@ -14,18 +15,18 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	var loginInfo models.Login
 
 	if err := json.NewDecoder(r.Body).Decode(&loginInfo); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		util.HandleError(w, "invalid request", http.StatusBadRequest, err)
 		return
 	}
 
 	err := validateEmailData(loginInfo.Email)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return
 	}
 
 	if loginInfo.Password == "" || len([]byte(loginInfo.Password)) > 60 {
-		http.Error(w, "e-mail or password is not correct", http.StatusBadRequest)
+		util.HandleError(w, "invalid password", http.StatusBadRequest, err)
 		return
 	}
 
@@ -35,20 +36,20 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	query := "SELECT id, password FROM users WHERE email = ?"
 	err = app.DB.QueryRow(query, loginInfo.Email).Scan(&userId, &hashedPassword)
 	if err != nil {
-		http.Error(w, "e-mail or password is not correct", http.StatusNotFound)
+		util.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
 		return
 	}
 
 	// Check if the password is correct
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginInfo.Password)); err != nil {
-		http.Error(w, "e-mail or password is not correct", http.StatusUnauthorized)
+		util.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
 		return
 	}
 
 	// Generate a JWT token
 	token, err := middleware.GenerateJWT(userId)
 	if err != nil {
-		http.Error(w, "failed to generate JWT token", http.StatusInternalServerError)
+		util.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
 		return
 	}
 
