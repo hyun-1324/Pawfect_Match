@@ -12,10 +12,10 @@ const Register = () => {
         dog_name: '',
         gender: 'male',
         neutered: false,
-        size: '',
+        size: 0,
         energy_level: 'low',
         favorite_play_style: 'wrestling',
-        age: '',
+        age: 0,
         preferred_distance: 0,
         preferred_gender: 'any',
         preferred_neutered: false,
@@ -80,8 +80,21 @@ const Register = () => {
         setController(controller);
         
         try {
-            if (form.password !== form.confirm_password) {
-                throw new Error('Passwords do not match!');
+            // Check that age and size are valid numbers
+            try {
+                if (form.age < 0 || form.age > 30) {
+                    throw new Error('Age must be between 0 and 30 years!');
+                }
+                if (form.size < 0 || form.size > 100) {
+                    throw new Error('Size must be between 0 and 100 kg!');
+                }
+                if (form.password !== form.confirm_password) {
+                    throw new Error('Passwords do not match!');
+                }
+            } catch (err) {
+                setIsPending(false);
+                setError(err.message);
+                return;
             }
             const formData = new FormData();
             if (imageSrc) {
@@ -183,12 +196,12 @@ const Register = () => {
                     onChange={(e) => handleChange(e.target.name, e.target.value)} /><br />
                 <label htmlFor="age">Age: *</label><br />
                 <input
-                    type="text"
+                    type="number"
                     id="age"
                     name="age"
                     placeholder="age in years"
                     required
-                    value={form.age}
+                    value={form.age === 0 ? '' : form.age}
                     onChange={(e) => handleChange(e.target.name, e.target.value)}
                 /><br />
                 <label htmlFor="gender">Gender: *</label>
@@ -203,12 +216,12 @@ const Register = () => {
                 </select><br />
                 <label htmlFor="size">Size: *</label><br />
                 <input
-                    type="text"
+                    type="number"
                     placeholder="size in kilograms"
                     id="size"
                     name="size"
                     required
-                    value={form.size}
+                    value={form.size === 0 ? '' : form.size}
                     onChange={(e) => handleChange(e.target.name, e.target.value)}
                 /><br />
                 <label htmlFor="neutered">My dog is neutered/spayed: *</label>
