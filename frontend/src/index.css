@@ -107,30 +107,63 @@ h2, h3 {
         padding: 0.5rem;
         box-sizing: border-box;
     }
-    .loginCard {
+    .centered {
         text-align: center;
+    }
+    .twoColumnCard {
         display: grid;
         padding: 0;
         grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
         min-height: 100%;
+        input, label, select, textarea {
+            margin: 0.5rem;
+        }
+    }
+    .oneColumnCardCentered {
+        display:flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .oneColumnCardLeft {
+        display:flex;
+        flex-direction: column;
+        padding: 0.5rem;
+        min-height: 100%;
         input, label {
             margin: 0.5rem;
         }
-        .gridCard {
-            display:flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .errorBox {
-            width: 50%;
-            border: red solid 1px;
-            background-color: #F9DBD2;
-            padding: 0.5rem;
-            margin: 0 auto;
-            margin-bottom: 1rem;
-        }
     }
+    .oneColumnCardRight {
+        display:flex;
+        flex-direction: column;
+        padding: 0.5rem;
+        min-height: 100%;
+        align-items: flex-end;
+        justify-content: flex-end;
+    }
+    .errorBox {
+        width: 50%;
+        border: red solid 1px;
+        background-color: #F9DBD2;
+        padding: 0.5rem;
+        margin: 0 auto;
+        margin-bottom: 1rem;
+    }
+    .checkbox {
+        align-self: flex-start;
+    }
+    .aboutMeBox {
+        height: 100px;
+        background-color: var(--yellow);
+        border: #6D594D solid 1px;
+        border-radius: 3px;
+    }
+    .formOutput {
+        align-self: flex-end;
+    }
+    
+    
 }
 
 /* Media queries to adjust grid in different sized screens*/
@@ -257,6 +290,12 @@ button {
     border: none;
     background-color: transparent;
     margin: 0.5rem;
+    max-width: 95px;
+    max-height: 95px;
+    img {
+        max-width: 100%;
+        max-height: 100%;
+    }
 }
 
 .textButton {
@@ -273,10 +312,13 @@ button {
 
 }
 
+
 .button:hover {
     transform: scale(1.05); 
     cursor: pointer; 
 }
+
+
 
 
 
