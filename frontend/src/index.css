@@ -134,6 +134,14 @@ h2, h3 {
             margin: 0.5rem;
         }
     }
+    .oneColumnCardRight {
+        display:flex;
+        flex-direction: column;
+        padding: 0.5rem;
+        min-height: 100%;
+        align-items: flex-end;
+        justify-content: flex-end;
+    }
     .errorBox {
         width: 50%;
         border: red solid 1px;
@@ -304,10 +312,6 @@ button {
 
 }
 
-.leftButton {
-    margin-top: auto;
-    align-self: flex-end;
-}
 
 .button:hover {
     transform: scale(1.05); 

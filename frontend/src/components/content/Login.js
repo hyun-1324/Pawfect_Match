@@ -17,33 +17,42 @@ const Login = () => {
         };
     }, [controller]);
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault(); 
         setIsPending(true);
         setError(null);
-
+    
         const controller = new AbortController();
         setController(controller);
-
-        fetch('http://localhost:3000/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json',},
-            body: JSON.stringify({ email, password }),
-            signal: controller.signal,
-        })
-        .then(response => {
+    
+        try {
+            const response = await fetch('http://localhost:3000/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password }),
+                signal: controller.signal,
+            });
+    
             if (!response.ok) {
-                const errorText = response.text();
-                throw new Error(errorText);
+                const errorResponse = await response.json();
+                const errorMessage = errorResponse.Message;
+                throw new Error(errorMessage);
             }
+    
             setIsPending(false);
             return response.json();
-        }).catch(err => {
-            if (err.name !== 'AbortError') {
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                // The request was aborted
+                console.log('Fetch aborted');
+            } else if (!err.response) {
+                // This is likely a network error
+                setError('Network error, please try again.');
+            } else {
+                // This is an HTTP error that was thrown manually in the try block
                 setError(err.message);
-                setIsPending(false);
             }
-        });
+        }
     };
 
     return (

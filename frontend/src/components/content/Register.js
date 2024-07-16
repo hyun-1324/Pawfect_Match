@@ -22,16 +22,18 @@ const Register = () => {
         about_me: '',
     });
     const [imageSrc, setImageSrc] = useState(null);
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [crop, setCrop] = useState({ x: 0, y: 0});
     const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null); // [x, y, width, height]
     const [error, setError] = useState(null);
     const [isPending, setIsPending] = useState(false);
     const [controller, setController] = useState(null); 
 
-    // For debugging
     useEffect(() => {
-        console.log(imageSrc, crop, zoom, form.add_picture);
-    }, [imageSrc, crop, zoom, form.add_picture]);
+        
+        // Show image in a new window
+
+    }, []);
 
 
     const handleChange = (name, value) => {
@@ -51,15 +53,22 @@ const Register = () => {
 
     const handleRemove = () => {
         setImageSrc(null);
-        setCrop({ x: 0, y: 0 });
+        setCrop({ x: 0, y: 0});
         setZoom(1);
+        setCroppedAreaPixels(null);
         handleChange('add_picture', false);
         document.getElementById('file-input').value = '';
+        URL.revokeObjectURL(imageSrc);
     };
 
     const handleClick = () => {
         document.getElementById('file-input').click();
     };
+
+   const handleCropComplete = (_, croppedAreaPixels) => {
+        setCroppedAreaPixels(croppedAreaPixels);
+    };
+
 
     useEffect(() => {
         // Cleanup function to abort the fetch if necessary
@@ -71,47 +80,50 @@ const Register = () => {
     }, [controller]);
 
     const handleSubmit = async (event) => {
-        console.log(form);
         event.preventDefault(); 
         setIsPending(true);
         setError(null);
-    
+        
         const controller = new AbortController();
         setController(controller);
-    
+        
         try {
-            const croppedImage = await getCroppedImg(imageSrc, crop, zoom);
-            // First, send the form data
-            console.log(form);
+            if (form.password !== form.confirm_password) {
+                throw new Error('Passwords do not match!');
+            }
+            const formData = new FormData();
+            if (imageSrc) {
+                const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
+                formData.append('profilePicture', croppedImageBlob, 'profilePicture.png');
+            }
+            formData.append('json', JSON.stringify(form));
+            console.log("form data: ", formData);
+
             let response = await fetch('http://localhost:3000/register', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(form),
+                body: formData,
                 signal: controller.signal,
             });
     
             if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text);
+                // Handle HTTP errors
+                const errorResponse = await response.json();
+                const errorMessage = errorResponse.Message;
+                throw new Error(errorMessage);
             }
-    
-            // After the first request completes, send the cropped image
-            response = await fetch('http://localhost:3000/register', {
-                method: 'POST',
-                body: croppedImage, 
-                signal: controller.signal,
-            });
-    
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text);
-            }
-    
             setIsPending(false);
+            return response.json();
         } catch (err) {
-            if (err.name !== 'AbortError') {
+            setIsPending(false);
+            if (err.name === 'AbortError') {
+                // The request was aborted
+                console.log('Fetch aborted');
+            } else if (!err.response) {
+                // This is likely a network error
+                setError('Network error, please try again.');
+            } else {
+                // This is an HTTP error that was thrown manually in the try block
                 setError(err.message);
-                setIsPending(false);
             }
         }
     };
@@ -258,8 +270,8 @@ const Register = () => {
                 
                 <input type="file" id="file-input" style={{ display: "none" }} accept="image/*" onChange={handleFileChange} />
                 <div>
-                    <button className="button"><img src={`${process.env.PUBLIC_URL}/images/upload.png`} alt="upload" onClick={handleClick} /></button>
-                    {imageSrc && <button className="button" onClick={handleRemove}><img src={`${process.env.PUBLIC_URL}/images/remove.png`}></img></button>}
+                    <button type="button" className="button"><img src={`${process.env.PUBLIC_URL}/images/upload.png`} alt="upload" onClick={handleClick} /></button>
+                    {imageSrc && <button type="button" className="button" onClick={handleRemove}><img src={`${process.env.PUBLIC_URL}/images/remove.png`} alt="remove"></img></button>}
                 </div>
                 {!imageSrc && <p>No file uploaded!</p>}
                 {imageSrc && <p>File uploaded! <br />Crop and zoom the picture here if needed:</p>}
@@ -272,6 +284,7 @@ const Register = () => {
                         aspect={1}
                         onCropChange={setCrop}
                         onZoomChange={setZoom}
+                        onCropComplete={handleCropComplete}
                         />
                     </div>
                 </div>}
@@ -311,11 +324,11 @@ const Register = () => {
                 />
                 <output className="formOutput" htmlFor="prefDistance">{form.preferred_distance} km</output><br />
                 </div>
-                <div className="oneColumnCardLeft">
-                    <button className="leftButton button" type="submit"><img src={`${process.env.PUBLIC_URL}/images/forward.png`}></img></button>
+                <div className="oneColumnCardRight">
+                    {error && <div className="errorBox flexEnd">{error}</div>}
+                    {!isPending && <button className="button" type="submit"><img src={`${process.env.PUBLIC_URL}/images/forward.png`} alt="Register"></img></button>}
+                    {isPending && <button className="button" disabled><img src={`${process.env.PUBLIC_URL}/images/loading.png`} alt="Loading..."></img></button>}
                 </div>
-                
-                
                 
             </form>
         </div>
