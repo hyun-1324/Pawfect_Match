@@ -89,7 +89,6 @@ const Register = () => {
                 formData.append('profilePicture', croppedImageBlob, 'profilePicture.png');
             }
             formData.append('json', JSON.stringify(form));
-            console.log("form data: ", formData);
 
             let response = await fetch('http://localhost:3000/register', {
                 method: 'POST',
