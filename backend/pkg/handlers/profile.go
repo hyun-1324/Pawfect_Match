@@ -64,4 +64,6 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	calculateRecommendationScore(app, numId)
 
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+
 }

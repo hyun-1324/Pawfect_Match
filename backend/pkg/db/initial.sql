@@ -74,9 +74,9 @@ CREATE TABLE connections (
   UNIQUE (user_id1, user_id2)
 );
 
-CREATE UNIQUE INDEX unique_request ON connections (
-  LEAST(from_id, to_id),
-  GREATEST(from_id, to_id)
+CREATE UNIQUE INDEX unique_id_connection ON connections (
+  LEAST(user_id1, user_id2),
+  GREATEST(user_id1, user_id2)
 );
 
 CREATE TABLE requests (
@@ -90,7 +90,7 @@ CREATE TABLE requests (
   FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX unique_request ON requests (
+CREATE UNIQUE INDEX unique_id_request ON requests (
   LEAST(from_id, to_id),
   GREATEST(from_id, to_id)
 );
@@ -113,9 +113,9 @@ CREATE TABLE matches (
   CONSTRAINT unique_user_ids_pair UNIQUE (user_id1, user_id2)
 );
 
-CREATE UNIQUE INDEX unique_request ON matches (
-  LEAST(from_id, to_id),
-  GREATEST(from_id, to_id)
+CREATE UNIQUE INDEX unique_id_matches ON matches (
+  LEAST(user_id1, user_id2),
+  GREATEST(user_id1, user_id2)
 );
 
 CREATE OR REPLACE FUNCTION update_matches() 
@@ -186,9 +186,9 @@ CREATE TABLE rooms (
   UNIQUE (user_id1, user_id2)
 );
 
-CREATE UNIQUE INDEX unique_request ON rooms (
-  LEAST(from_id, to_id),
-  GREATEST(from_id, to_id)
+CREATE UNIQUE INDEX unique_id_rooms ON rooms (
+  LEAST(user_id1, user_id2),
+  GREATEST(user_id1, user_id2)
 );
 
 CREATE TABLE messages (

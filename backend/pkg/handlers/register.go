@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"matchMe/pkg/models"
 	"matchMe/pkg/util"
 	"net/http"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -17,29 +19,29 @@ import (
 
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
-	jsonFile, _, err := r.FormFile("json")
-	if err != nil {
-		util.HandleError(w, "invalid request", http.StatusBadRequest, err)
+
+	jsonData := r.FormValue("json")
+	if jsonData == "" {
+		util.HandleError(w, "invalid request", http.StatusBadRequest, fmt.Errorf("missing json data"))
 		return
 	}
-	defer jsonFile.Close()
 
-	if err := json.NewDecoder(jsonFile).Decode(&req); err != nil {
+	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
 		util.HandleError(w, "failed to decode JSON", http.StatusInternalServerError, err)
 		return
 	}
 
 	if req.Password == "" || len([]byte(req.Password)) > 60 {
-		util.HandleError(w, "invalid password", http.StatusBadRequest, err)
+		util.HandleError(w, "invalid password", http.StatusBadRequest, errors.New("invalid password"))
 		return
 	}
 
 	if req.ConfirmPassword != req.Password {
-		util.HandleError(w, "passwords do not match", http.StatusBadRequest, err)
+		util.HandleError(w, "passwords do not match", http.StatusBadRequest, errors.New("invalid JSON data"))
 		return
 	}
 
-	err = validateEmailData(req.Email)
+	err := validateEmailData(req.Email)
 	if err != nil {
 		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return
@@ -143,7 +145,12 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("invalid dog gender")
 	}
 
-	if !(req.Size >= 0 && req.Size <= 100) {
+	floatSize, err := strconv.ParseFloat(req.Size, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse dog size")
+	}
+
+	if !(floatSize > 0 && floatSize <= 30) {
 		return fmt.Errorf("invalid dog size")
 	}
 
@@ -155,11 +162,21 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("invalid dog favorite play style")
 	}
 
-	if req.Age < 0 || req.Age > 30 {
+	intAge, err := strconv.Atoi(req.Age)
+	if err != nil {
+		return fmt.Errorf("failed to parse dog age")
+	}
+
+	if intAge < 0 || intAge > 30 {
 		return fmt.Errorf("invalid dog age")
 	}
 
-	if req.PreferredDistance < 0 || req.PreferredDistance > 30 {
+	intPreferredDistance, err := strconv.Atoi(req.PreferredDistance)
+	if err != nil {
+		return fmt.Errorf("failed to parse preferred distance")
+	}
+
+	if intPreferredDistance < 0 || intPreferredDistance > 30 {
 		return fmt.Errorf("invalid preferred distance")
 	}
 
@@ -239,7 +256,7 @@ func processProfilePictureData(r *http.Request, app *App, userId int, addFile bo
 		return err
 	}
 
-	fileURL := "localhost:3000/images/" + newFileName
+	fileURL := "localhost:3000/profile_pictures/" + newFileName
 
 	query := `INSERT INTO profile_pictures (user_id, file_name, file_data, file_type, file_url)
 VALUES ($1, $2, $3, $4, $5)

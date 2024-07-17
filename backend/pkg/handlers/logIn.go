@@ -14,12 +14,13 @@ import (
 func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	var loginInfo models.Login
 
-	if err := json.NewDecoder(r.Body).Decode(&loginInfo); err != nil {
+	err := json.NewDecoder(r.Body).Decode(&loginInfo)
+	if err != nil {
 		util.HandleError(w, "invalid request", http.StatusBadRequest, err)
 		return
 	}
 
-	err := validateEmailData(loginInfo.Email)
+	err = validateEmailData(loginInfo.Email)
 	if err != nil {
 		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return
@@ -33,7 +34,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	// Check if the user exists in the database
 	var userId string
 	var hashedPassword string
-	query := "SELECT id, password FROM users WHERE email = ?"
+	query := "SELECT id, password FROM users WHERE email = $1"
 	err = app.DB.QueryRow(query, loginInfo.Email).Scan(&userId, &hashedPassword)
 	if err != nil {
 		util.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
