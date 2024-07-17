@@ -56,7 +56,7 @@ func main() {
 	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetConnections)))
 	http.Handle("POST /handle_live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
 	http.Handle("POST /handle_profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
-	http.Handle("POST /handle_logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
+	http.Handle("GET /handle_logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
 	http.Handle("POST /handle_login", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Login)))
 	http.Handle("POST /handle_register", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Register)))
 
