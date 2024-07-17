@@ -18,7 +18,7 @@ import (
 
 type contextKey string
 
-const UserIDKey contextKey = "userID"
+const UserIdKey contextKey = "userId"
 const secretKeyEnv = "JWT_SECRET_KEY"
 
 type JWTHeader struct {
@@ -160,7 +160,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserIDKey, userId)
+		ctx := context.WithValue(r.Context(), UserIdKey, userId)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -183,7 +183,7 @@ func AddTokenToBlacklist(db *sql.DB, token string) error {
 }
 
 func GetUserId(r *http.Request) string {
-	if userId, ok := r.Context().Value(UserIDKey).(string); ok {
+	if userId, ok := r.Context().Value(UserIdKey).(string); ok {
 		return userId
 	}
 	return ""

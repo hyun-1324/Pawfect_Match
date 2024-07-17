@@ -15,10 +15,6 @@ type App struct {
 	DB *sql.DB
 }
 
-type contextKey string
-
-const UserIDKey contextKey = "userId"
-
 func (app *App) User(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
 	userId := middleware.GetUserId(r)
