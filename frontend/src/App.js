@@ -25,12 +25,12 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/profile/:id" element={<Profile />} />
-            <Route path="/me" element={<Me />} />
+            <Route path="/profile/own" element={<Me />} />
             <Route path="/edit/profile" element={<EditProfile />} />
             <Route path="/edit/preferences" element={<EditPreferences />} />
             <Route exact path="/chat" element={<ChatList />} />
             <Route path="/chat/:id" element={<Chat />} />
-            <Route path="/connections" element={<Connections />} />
+            <Route path="/myconnections" element={<Connections />} />
             <Route path="*" element={<NotFound/>}/>
           </Routes>
         </div>

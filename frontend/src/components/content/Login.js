@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -7,6 +8,8 @@ const Login = () => {
     const [error, setError] = useState(null);
     const [isPending, setIsPending] = useState(false);
     const [controller, setController] = useState(null); 
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         // Cleanup function to abort the fetch if necessary
@@ -26,7 +29,7 @@ const Login = () => {
         setController(controller);
     
         try {
-            const response = await fetch('http://localhost:3000/login', {
+            const response = await fetch('http://localhost:3000/handle_login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ email, password }),
@@ -34,23 +37,26 @@ const Login = () => {
             });
     
             if (!response.ok) {
+                // Handle HTTP errors
                 const errorResponse = await response.json();
                 const errorMessage = errorResponse.Message;
-                throw new Error(errorMessage);
+                const error = new Error(errorMessage);
+                error.response = errorResponse; 
+                throw error;
             }
-    
             setIsPending(false);
-            return response.json();
+            navigate('/');
         } catch (err) {
+            setIsPending(false);
             if (err.name === 'AbortError') {
                 // The request was aborted
                 console.log('Fetch aborted');
-            } else if (!err.response) {
+            } else if (err.response && err.response.Message) {
+                // This is an HTTP error that was thrown manually in the try block
+                setError(err.response.Message);
+            } else {
                 // This is likely a network error
                 setError('Network error, please try again.');
-            } else {
-                // This is an HTTP error that was thrown manually in the try block
-                setError(err.message);
             }
         }
     };
