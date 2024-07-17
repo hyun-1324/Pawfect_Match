@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
 	"matchMe/pkg/util"
@@ -14,11 +15,16 @@ import (
 func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	var loginInfo models.Login
 
-	if err := json.NewDecoder(r.Body).Decode(&loginInfo); err != nil {
-		util.HandleError(w, "invalid request", http.StatusBadRequest, err)
+	jsonData := r.FormValue("json")
+	if jsonData == "" {
+		util.HandleError(w, "invalid request", http.StatusBadRequest, errors.New("invalid JSON data"))
 		return
 	}
 
+	if err := json.Unmarshal([]byte(jsonData), &loginInfo); err != nil {
+		util.HandleError(w, "failed to process data", http.StatusInternalServerError, err)
+		return
+	}
 	err := validateEmailData(loginInfo.Email)
 	if err != nil {
 		util.HandleError(w, "invalid email", http.StatusBadRequest, err)

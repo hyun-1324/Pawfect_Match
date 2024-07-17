@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"matchMe/pkg/models"
 	"matchMe/pkg/util"
@@ -17,29 +18,31 @@ import (
 
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
-	jsonFile, _, err := r.FormFile("json")
-	if err != nil {
-		util.HandleError(w, "invalid request", http.StatusBadRequest, err)
+
+	jsonData := r.FormValue("json")
+	if jsonData == "" {
+		util.HandleError(w, "invalid request", http.StatusBadRequest, errors.New("invalid JSON data"))
 		return
 	}
-	defer jsonFile.Close()
 
-	if err := json.NewDecoder(jsonFile).Decode(&req); err != nil {
-		util.HandleError(w, "failed to decode JSON", http.StatusInternalServerError, err)
+	fmt.Println(jsonData)
+
+	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
+		util.HandleError(w, "failed to process data", http.StatusInternalServerError, err)
 		return
 	}
 
 	if req.Password == "" || len([]byte(req.Password)) > 60 {
-		util.HandleError(w, "invalid password", http.StatusBadRequest, err)
+		util.HandleError(w, "invalid password", http.StatusBadRequest, errors.New("invalid password"))
 		return
 	}
 
 	if req.ConfirmPassword != req.Password {
-		util.HandleError(w, "passwords do not match", http.StatusBadRequest, err)
+		util.HandleError(w, "passwords do not match", http.StatusBadRequest, errors.New("invalid JSON data"))
 		return
 	}
 
-	err = validateEmailData(req.Email)
+	err := validateEmailData(req.Email)
 	if err != nil {
 		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return
@@ -143,7 +146,7 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("invalid dog gender")
 	}
 
-	if !(req.Size >= 0 && req.Size <= 100) {
+	if !(req.Size > 0 && req.Size <= 30) {
 		return fmt.Errorf("invalid dog size")
 	}
 
@@ -239,7 +242,7 @@ func processProfilePictureData(r *http.Request, app *App, userId int, addFile bo
 		return err
 	}
 
-	fileURL := "localhost:3000/images/" + newFileName
+	fileURL := "localhost:3000/profile_pictures/" + newFileName
 
 	query := `INSERT INTO profile_pictures (user_id, file_name, file_data, file_type, file_url)
 VALUES ($1, $2, $3, $4, $5)

@@ -10,11 +10,11 @@ type Register struct {
 	DogName           string  `json:"dog_name"`
 	Gender            string  `json:"gender"` // male, female
 	Neutered          bool    `json:"neutered"`
-	Size              float32 `json:"size"`                // 0-100
+	Size              float64 `json:"size"`                // 0-100
 	EnergyLevel       string  `json:"energy_level"`        // low, medium, high
 	FavoritePlayStyle string  `json:"favorite_play_style"` //wrestling, lonely wolf, cheerleading, chasing, tugging, ripping, soft touch, body slamming
 	Age               int     `json:"age"`                 // 0-30
-	PreferredDistance int     `json:"preferred_distance"`  // 0-100
+	PreferredDistance int     `json:"preferred_distance"`  // 0-30
 	PreferredGender   string  `json:"preferred_gender"`    // male, female, any
 	PreferredNeutered bool    `json:"preferred_neutered"`
 	AboutMe           string  `json:"about_me"`
