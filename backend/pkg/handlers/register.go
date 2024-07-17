@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -19,9 +20,14 @@ import (
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
 
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	jsonData := r.FormValue("json")
+	if jsonData == "" {
+		util.HandleError(w, "invalid request", http.StatusBadRequest, fmt.Errorf("missing json data"))
+		return
+	}
+
+	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
+		util.HandleError(w, "failed to decode JSON", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -35,7 +41,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = validateEmailData(req.Email)
+	err := validateEmailData(req.Email)
 	if err != nil {
 		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return
@@ -139,7 +145,12 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("invalid dog gender")
 	}
 
-	if !(req.Size > 0 && req.Size <= 30) {
+	floatSize, err := strconv.ParseFloat(req.Size, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse dog size")
+	}
+
+	if !(floatSize > 0 && floatSize <= 30) {
 		return fmt.Errorf("invalid dog size")
 	}
 
@@ -151,11 +162,21 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("invalid dog favorite play style")
 	}
 
-	if req.Age < 0 || req.Age > 30 {
+	intAge, err := strconv.Atoi(req.Age)
+	if err != nil {
+		return fmt.Errorf("failed to parse dog age")
+	}
+
+	if intAge < 0 || intAge > 30 {
 		return fmt.Errorf("invalid dog age")
 	}
 
-	if req.PreferredDistance < 0 || req.PreferredDistance > 30 {
+	intPreferredDistance, err := strconv.Atoi(req.PreferredDistance)
+	if err != nil {
+		return fmt.Errorf("failed to parse preferred distance")
+	}
+
+	if intPreferredDistance < 0 || intPreferredDistance > 30 {
 		return fmt.Errorf("invalid preferred distance")
 	}
 
