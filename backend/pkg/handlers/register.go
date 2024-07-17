@@ -111,7 +111,15 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 
 	calculateRecommendationScore(app, req.Id)
 
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	response := map[string]string{"Message": "Register successful"}
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		util.HandleError(w, "failed to create response", http.StatusInternalServerError, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
 }
 
 func validateEmailData(email string) error {

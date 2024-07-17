@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
 	"matchMe/pkg/util"
@@ -62,7 +63,16 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		Path:     "/",
+		SameSite: http.SameSiteNoneMode,
 	})
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	response := map[string]string{"Message": "Login successful"}
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		util.HandleError(w, "failed to create response", http.StatusInternalServerError, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
 }
