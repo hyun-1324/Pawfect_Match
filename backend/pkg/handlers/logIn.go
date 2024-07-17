@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
 	"matchMe/pkg/util"
