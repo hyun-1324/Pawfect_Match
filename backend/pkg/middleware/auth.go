@@ -19,7 +19,7 @@ import (
 type contextKey string
 
 const UserIDKey contextKey = "userID"
-const secretKeyEnv = "JWT_SECRET"
+const secretKeyEnv = "JWT_SECRET_KEY"
 
 type JWTHeader struct {
 	Alg string `json:"alg"`

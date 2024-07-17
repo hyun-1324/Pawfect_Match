@@ -19,16 +19,9 @@ import (
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
 
-	jsonData := r.FormValue("json")
-	if jsonData == "" {
-		util.HandleError(w, "invalid request", http.StatusBadRequest, errors.New("invalid JSON data"))
-		return
-	}
-
-	fmt.Println(jsonData)
-
-	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
-		util.HandleError(w, "failed to process data", http.StatusInternalServerError, err)
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -42,7 +35,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := validateEmailData(req.Email)
+	err = validateEmailData(req.Email)
 	if err != nil {
 		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return

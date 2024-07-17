@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
 	"matchMe/pkg/util"
@@ -15,17 +14,13 @@ import (
 func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	var loginInfo models.Login
 
-	jsonData := r.FormValue("json")
-	if jsonData == "" {
-		util.HandleError(w, "invalid request", http.StatusBadRequest, errors.New("invalid JSON data"))
+	err := json.NewDecoder(r.Body).Decode(&loginInfo)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := json.Unmarshal([]byte(jsonData), &loginInfo); err != nil {
-		util.HandleError(w, "failed to process data", http.StatusInternalServerError, err)
-		return
-	}
-	err := validateEmailData(loginInfo.Email)
+	err = validateEmailData(loginInfo.Email)
 	if err != nil {
 		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return
@@ -39,7 +34,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	// Check if the user exists in the database
 	var userId string
 	var hashedPassword string
-	query := "SELECT id, password FROM users WHERE email = ?"
+	query := "SELECT id, password FROM users WHERE email = $1"
 	err = app.DB.QueryRow(query, loginInfo.Email).Scan(&userId, &hashedPassword)
 	if err != nil {
 		util.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
