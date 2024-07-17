@@ -55,10 +55,10 @@ func main() {
 	http.Handle("GET /recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetRecommendations)))
 	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetConnections)))
 	http.Handle("POST /live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
-	http.Handle("POST /profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
-	http.Handle("POST /logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
-	http.Handle("POST /login", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Login)))
-	http.Handle("POST /register", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Register)))
+	http.Handle("POST /handle_profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
+	http.Handle("POST /handle_logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
+	http.Handle("POST /handle_login", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Login)))
+	http.Handle("POST /handle_register", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Register)))
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},
