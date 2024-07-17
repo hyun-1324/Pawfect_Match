@@ -12,7 +12,10 @@ func calculateRecommendationScore(app *App, userId int) error {
 		return err
 	}
 
-	executeRecommendationAlgorithm(app, userId, userBioData)
+	err = executeRecommendationAlgorithm(app, userId, userBioData)
+	if err != nil {
+		return err
+	}
 
 	return nil
 

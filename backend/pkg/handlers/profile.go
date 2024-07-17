@@ -64,6 +64,14 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	calculateRecommendationScore(app, numId)
 
-	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+	response := map[string]string{"Message": "Profile updated successfully"}
 
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		util.HandleError(w, "failed to create response", http.StatusInternalServerError, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
 }

@@ -33,4 +33,14 @@ func (app *App) UpdateLivelocation(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	response := map[string]string{"Message": "Location updated sucessfully"}
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		util.HandleError(w, "failed to create response", http.StatusInternalServerError, err)
+		return
+	}
+
+	w.Header().Set("Content-type", "application/json")
+	w.Write(responseJSON)
 }
