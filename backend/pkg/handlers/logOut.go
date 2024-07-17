@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/util"
 	"net/http"
@@ -29,5 +30,13 @@ func (app *App) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:   "/",
 	})
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	response := map[string]string{"Message": "Logout successful"}
+	responseJSON, err := json.Marshal(response)
+	if err != nil {
+		util.HandleError(w, "failed to create response", http.StatusInternalServerError, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(responseJSON)
 }
