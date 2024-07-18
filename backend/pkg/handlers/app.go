@@ -22,6 +22,10 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 
 	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.HandleError(w, "status not found", http.StatusNotFound, err)
+			return
+		}
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
@@ -74,6 +78,10 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	profile.Id = r.PathValue("id")
 	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.HandleError(w, "status not found", http.StatusNotFound, err)
+			return
+		}
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
@@ -101,6 +109,10 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.LocationOption)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			utils.HandleError(w, "status not found", http.StatusNotFound, err)
+			return
+		}
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
