@@ -57,8 +57,9 @@ func main() {
 	http.Handle("POST /handle_live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
 	http.Handle("POST /handle_profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
 	http.Handle("GET /handle_logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
-	http.Handle("POST /handle_login", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Login)))
-	http.Handle("POST /handle_register", middleware.RedirectIfAuthenticated(database, http.HandlerFunc(app.Register)))
+	http.Handle("GET /login_status", http.HandlerFunc(app.CheckLoginStatus))
+	http.Handle("POST /handle_login", http.HandlerFunc(app.Login))
+	http.Handle("POST /handle_register", http.HandlerFunc(app.Register))
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000"},

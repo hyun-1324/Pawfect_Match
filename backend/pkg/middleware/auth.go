@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"matchMe/pkg/util"
+	"matchMe/pkg/utils"
 	"net/http"
 	"os"
 	"strings"
@@ -148,10 +148,10 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 		cookie, err := r.Cookie("jwt_token")
 		if err != nil {
 			if err == http.ErrNoCookie {
-				util.HandleError(w, "unauthorized access", http.StatusUnauthorized, err)
+				utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, err)
 				return
 			}
-			util.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
+			utils.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
 			return
 		}
 
@@ -159,7 +159,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 
 		userId, _, err := ValidateJWT(db, token)
 		if err != nil {
-			util.HandleError(w, "unauthorized access", http.StatusUnauthorized, err)
+			utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, err)
 			return
 		}
 
@@ -190,15 +190,4 @@ func GetUserId(r *http.Request) string {
 		return userId
 	}
 	return ""
-}
-
-func RedirectIfAuthenticated(db *sql.DB, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID := GetUserId(r)
-		if userID != "" {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }

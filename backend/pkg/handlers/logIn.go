@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
-	"matchMe/pkg/util"
+	"matchMe/pkg/utils"
 	"net/http"
 	"time"
 
@@ -16,18 +16,18 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&loginInfo)
 	if err != nil {
-		util.HandleError(w, "invalid request", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid request", http.StatusBadRequest, err)
 		return
 	}
 
 	err = validateEmailData(loginInfo.Email)
 	if err != nil {
-		util.HandleError(w, "invalid email", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid email", http.StatusBadRequest, err)
 		return
 	}
 
 	if loginInfo.Password == "" || len([]byte(loginInfo.Password)) > 60 {
-		util.HandleError(w, "invalid password", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid password", http.StatusBadRequest, err)
 		return
 	}
 
@@ -37,20 +37,20 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	query := "SELECT id, password FROM users WHERE email = $1"
 	err = app.DB.QueryRow(query, loginInfo.Email).Scan(&userId, &hashedPassword)
 	if err != nil {
-		util.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
+		utils.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
 		return
 	}
 
 	// Check if the password is correct
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginInfo.Password)); err != nil {
-		util.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
+		utils.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
 		return
 	}
 
 	// Generate a JWT token
 	token, err := middleware.GenerateJWT(userId)
 	if err != nil {
-		util.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -65,13 +65,9 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteNoneMode,
 	})
 
-	response := map[string]string{"Message": "Login successful"}
-	responseJSON, err := json.Marshal(response)
+	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	if err != nil {
-		util.HandleError(w, "failed to create response", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to login", http.StatusInternalServerError, err)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(responseJSON)
 }
