@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../../tools/getCroppedImg';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
     const [form, setForm] = useState({
@@ -28,6 +29,8 @@ const Register = () => {
     const [error, setError] = useState(null);
     const [isPending, setIsPending] = useState(false);
     const [controller, setController] = useState(null); 
+
+    const navigate = useNavigate();
 
     const handleChange = (name, value) => {
         setForm({
@@ -103,7 +106,7 @@ const Register = () => {
             }
             formData.append('json', JSON.stringify(form));
 
-            let response = await fetch('http://localhost:3000/register', {
+            let response = await fetch('http://localhost:3000/handle_register', {
                 method: 'POST',
                 body: formData,
                 signal: controller.signal,
@@ -113,21 +116,23 @@ const Register = () => {
                 // Handle HTTP errors
                 const errorResponse = await response.json();
                 const errorMessage = errorResponse.Message;
-                throw new Error(errorMessage);
+                const error = new Error(errorMessage);
+                error.response = errorResponse; 
+                throw error;
             }
             setIsPending(false);
-            return response.json();
+            navigate('/');
         } catch (err) {
             setIsPending(false);
             if (err.name === 'AbortError') {
                 // The request was aborted
                 console.log('Fetch aborted');
-            } else if (!err.response) {
+            } else if (err.response && err.response.Message) {
+                // This is an HTTP error that was thrown manually in the try block
+                setError(err.response.Message);
+            } else {
                 // This is likely a network error
                 setError('Network error, please try again.');
-            } else {
-                // This is an HTTP error that was thrown manually in the try block
-                setError(err.message);
             }
         }
     };
@@ -323,13 +328,13 @@ const Register = () => {
                     name="preferred_distance"
                     value={form.preferred_distance}
                     onChange={(e) => handleChange(e.target.name, e.target.value)}
-                    min={0}
+                    min={1}
                     max={30}
                 />
                 <output className="formOutput" htmlFor="prefDistance">{form.preferred_distance} km</output><br />
                 </div>
                 <div className="oneColumnCardRight">
-                    {error && <div className="errorBox flexEnd">{error}</div>}
+                    {error && <div className="errorBox flexEnd">Error:<br/>{error}</div>}
                     {!isPending && <button className="button" type="submit"><img src={`${process.env.PUBLIC_URL}/images/forward.png`} alt="Register"></img></button>}
                     {isPending && <button className="button" disabled><img src={`${process.env.PUBLIC_URL}/images/loading.png`} alt="Loading..."></img></button>}
                 </div>

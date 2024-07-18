@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import handleLogout from "../../tools/handleLogout";
 
 const Navbar = () => {
+    const navigate = useNavigate();
     if (window.location.pathname === "/login" || window.location.pathname === "/register") {
         return (
             <nav className="navbar" style={{backgroundColor:"#C4DDF2", display:"flex"}}>
@@ -33,7 +35,7 @@ const Navbar = () => {
                 <Link to="/me"><img className="button navButton" src={`${process.env.PUBLIC_URL}/images/profile.png`} alt="Profile"></img><span className="navText">Profile</span></Link>
             </div>
             <div className="navLinkLogout">
-                <img onClick={handleLogout} className="button navButton logoutNav" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
+                <img onClick={() => handleLogout(navigate)} className="button navButton logoutNav" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
                 <span className= "navText">Logout</span>
             </div>
         
