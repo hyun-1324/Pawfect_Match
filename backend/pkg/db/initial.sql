@@ -138,35 +138,22 @@ EXECUTE FUNCTION update_matches();
 CREATE OR REPLACE FUNCTION update_compatible_distance()
 RETURNS TRIGGER AS $$
 BEGIN
-  WITH user_distance AS (
+  UPDATE matches m
+  SET compatible_distance = (
     SELECT
-      m.id AS match_id,
-      m.user_id1,
-      m.user_id2,
-      ST_Distance(
-        l1.geom::GEOGRAPHY,
-        l2.geom::GEOGRAPHY
-      ) / 1000 AS distance,
-      bd1.preferred_distance AS preferred_distance1_km,
-      bd2.preferred_distance AS preferred_distance2_km
-    FROM matches m
-      JOIN locations l1 ON m.user_id1 = l1.user_id
-      JOIN locations l2 ON m.user_id2 = l2.user_id
-      JOIN biographical_data bd1 ON m.user_id1 = bd1.user_id
-      JOIN biographical_data bd2 ON m.user_id2 = bd2.user_id
-    WHERE m.user_id1 = NEW.user_id OR m.user_id2 = NEW.user_id
+      CASE
+        WHEN ST_Distance(l1.geom::GEOGRAPHY, l2.geom::GEOGRAPHY) / 1000 <= 
+        LEAST(bd1.preferred_distance, bd2.preferred_distance)
+        THEN TRUE
+        ELSE FALSE
+      END
+    FROM locations l1
+    JOIN locations l2 ON m.user_id2 = l2.user_id
+    JOIN biographical_data bd1 ON m.user_id1 = bd1.user_id
+    JOIN biographical_data bd2 ON m.user_id2 = bd2.user_id
+    WHERE m.user_id1 = l1.user_id
   )
-  UPDATE matches
-  SET compatible_distance = TRUE
-  FROM user_distance ud
-  WHERE matches.id = ud.match_id
-  AND ud.distance <= LEAST(ud.preferred_distance1_km, ud.preferred_distance2_km);
-
-  UPDATE matches
-  SET compatible_distance = FALSE
-  FROM user_distance ud
-  WHERE matches.id = ud.match_id
-  AND ud.distance > LEAST(ud.preferred_distance1_km, ud.preferred_distance2_km);
+  WHERE m.user_id1 = NEW.user_id OR m.user_id2 = NEW.user_id;
 
   RETURN NEW;
 END;
