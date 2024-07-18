@@ -11,29 +11,33 @@ import EditProfile from "./components/content/EditProfile";
 import ChatList from "./components/content/ChatList";
 import Chat from "./components/content/Chat";
 import Connections from "./components/content/Connections";
+import { socket } from './socket';
+import { SocketContext } from './socketContext';
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Logobar />
-        <Navbar />
-        <div className="content">
-          <Routes>
-            <Route exact path="/" element={<Recommendations />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/profile/:id" element={<Profile />} />
-            <Route path="/myprofile" element={<MyProfile />} />
-            <Route path="/edit/profile" element={<EditProfile />} />
-            <Route exact path="/chat" element={<ChatList />} />
-            <Route path="/chat/:id" element={<Chat />} />
-            <Route path="/myconnections" element={<Connections />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+    <SocketContext.Provider value={socket}>
+      <Router>
+        <div className="App">
+          <Logobar />
+          <Navbar />
+          <div className="content">
+            <Routes>
+              <Route exact path="/" element={<Recommendations />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/profile/:id" element={<Profile />} />
+              <Route path="/myprofile" element={<MyProfile />} />
+              <Route path="/edit/profile" element={<EditProfile />} />
+              <Route exact path="/chat" element={<ChatList />} />
+              <Route path="/chat/:id" element={<Chat />} />
+              <Route path="/myconnections" element={<Connections />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
         </div>
-      </div>
-    </Router>
+      </Router>
+    </SocketContext.Provider>
   );
 }
 
