@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
-	"matchMe/pkg/util"
+	"matchMe/pkg/utils"
 	"net/http"
 	"strconv"
 	"sync"
@@ -399,7 +399,7 @@ func saveAcceptance(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := util.OrderPair(numToId, numFromId)
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
 
 	_, err = db.Exec("INSERT INTO connections (user_id1, user_id2) VALUES ($1, $2) ON CONFLICT (user_id1, user_id2) DO NOTHING", smallId, largeId)
 	if err != nil {
@@ -426,7 +426,7 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := util.OrderPair(numToId, numFromId)
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
 
 	query := "UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2"
 	_, err = db.Exec(query, fromId, toId)
@@ -455,7 +455,7 @@ func rejectRecommendation(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := util.OrderPair(numToId, numFromId)
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
 
 	query := "UPDATE matches SET rejected = TRUE WHERE from_id = $1 AND to_id = $2"
 	_, err = db.Exec(query, smallId, largeId)
@@ -489,7 +489,7 @@ func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 		return "", fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := util.OrderPair(numFromId, numToId)
+	smallId, largeId := utils.OrderPair(numFromId, numToId)
 
 	var roomId string
 	err = db.QueryRow(`

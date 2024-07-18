@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
-	"matchMe/pkg/util"
+	"matchMe/pkg/utils"
 	"net/http"
 	"strconv"
 )
@@ -12,66 +12,61 @@ import (
 func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		util.HandleError(w, "invalid request", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid request", http.StatusBadRequest, err)
 		return
 	}
 
 	userId := middleware.GetUserId(r)
 	numId, err := strconv.Atoi(userId)
 	if err != nil {
-		util.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
 		return
 	}
 
 	err = checkUserDataValidation(req)
 	if err != nil {
-		util.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
 		return
 	}
 
 	latitude, longitude, err := checkLocationData(req.LocationOptions)
 	if err != nil {
-		util.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
 		return
 	}
 
 	if latitude != 0 && longitude != 0 {
 		_, err = app.DB.Exec(`UPDATE locations set option=$1 latitude=$2 longitude=$3 WHERE user_id = $4`, req.LocationOptions, latitude, longitude, req.Id)
 		if err != nil {
-			util.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
+			utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
 			return
 		}
 	}
 
 	_, err = app.DB.Exec(`UPDATE users SET about_me = $1, dog_name = $2 WHERE users.id = $3`, req.AboutMe, req.DogName, numId)
 	if err != nil {
-		util.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
 		return
 	}
 
 	query := `UPDATE biographical_data SET dog_gender = $1, dog_neutered = $2, dog_size = $3, dog_energy_level = $4, dog_favorite_play_style = $5, dog_age = $6, preferred_distance = $7, preferred_gender = $8, preferred_neutered = $9 WHERE biographical_data.user_id = $10`
 	_, err = app.DB.Exec(query, req.Gender, req.Neutered, req.Size, req.EnergyLevel, req.FavoritePlayStyle, req.Age, req.PreferredDistance, req.PreferredGender, req.PreferredNeutered, numId)
 	if err != nil {
-		util.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
 		return
 	}
 
 	err = processProfilePictureData(r, app, req.Id, req.AddPicture)
 	if err != nil {
-		util.HandleError(w, "failed to update profile picture", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to update profile picture", http.StatusInternalServerError, err)
 		return
 	}
 
 	calculateRecommendationScore(app, numId)
 
-	response := map[string]string{"Message": "Profile updated successfully"}
-
-	responseJSON, err := json.Marshal(response)
+	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	if err != nil {
-		util.HandleError(w, "failed to create response", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, err)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(responseJSON)
 }

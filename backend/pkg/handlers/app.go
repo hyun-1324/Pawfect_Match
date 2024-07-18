@@ -8,7 +8,7 @@ import (
 
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
-	"matchMe/pkg/util"
+	"matchMe/pkg/utils"
 )
 
 type App struct {
@@ -22,20 +22,19 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 
 	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, user.Id)
 	if err != nil {
-		util.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
+		utils.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(user)
 	if err != nil {
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -46,7 +45,7 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	fileName := r.PathValue("fileName")
 
 	if fileName == "" {
-		util.HandleError(w, "invalid file name", http.StatusInternalServerError, nil)
+		utils.HandleError(w, "invalid file name", http.StatusInternalServerError, nil)
 		return
 	}
 
@@ -55,13 +54,13 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	var mimeType string
 	err := app.DB.QueryRow("SELECT user_id, file_data, mime_type FROM profile_pictures WHERE file_name = $1", fileName).Scan(&pictureOwner, &data, &mimeType)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, pictureOwner)
 	if err != nil {
-		util.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
+		utils.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -75,20 +74,19 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	profile.Id = r.PathValue("id")
 	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, profile.Id)
 	if err != nil {
-		util.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
+		utils.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(profile)
 	if err != nil {
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -103,20 +101,19 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.LocationOption)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, bio.Id)
 	if err != nil {
-		util.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
+		utils.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(bio)
 	if err != nil {
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -175,14 +172,13 @@ func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(user)
 	if err != nil {
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -193,15 +189,14 @@ func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
 	profile.Id = userId
 	err := app.DB.QueryRow("SELECT about_me FROM users WHERE id = $1", profile.Id).Scan(&profile.AboutMe)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(profile)
 	if err != nil {
 
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -216,14 +211,13 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(bio)
 	if err != nil {
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -244,7 +238,7 @@ func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 		`
 	rows, err := app.DB.Query(query, userId)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 	defer rows.Close()
@@ -254,16 +248,15 @@ func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 		var id int
 		err := rows.Scan(&id)
 		if err != nil {
-			util.HandleError(w, "failed to scan recommendations", http.StatusInternalServerError, err)
+			utils.HandleError(w, "failed to scan recommendations", http.StatusInternalServerError, err)
 			return
 		}
 		ids = append(ids, id)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(models.IdList{Ids: ids})
 	if err != nil {
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
@@ -279,7 +272,7 @@ func (app *App) GetConnections(w http.ResponseWriter, r *http.Request) {
 	WHERE user_id1 = $1 OR user_id2 = $1`
 	rows, err := app.DB.Query(query, userId)
 	if err != nil {
-		util.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 	defer rows.Close()
@@ -289,16 +282,15 @@ func (app *App) GetConnections(w http.ResponseWriter, r *http.Request) {
 		var id int
 		err := rows.Scan(&id)
 		if err != nil {
-			util.HandleError(w, "failed to scan connections", http.StatusInternalServerError, err)
+			utils.HandleError(w, "failed to scan connections", http.StatusInternalServerError, err)
 			return
 		}
 		ids = append(ids, id)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(models.IdList{Ids: ids})
 	if err != nil {
-		util.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to encode JSON", http.StatusInternalServerError, err)
 		return
 	}
 }
