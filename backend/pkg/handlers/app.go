@@ -49,26 +49,29 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	fileName := r.PathValue("fileName")
 
 	if fileName == "" {
-		utils.HandleError(w, "invalid file name", http.StatusInternalServerError, nil)
+		utils.HandleError(w, "invalid file name", http.StatusBadRequest, nil)
 		return
 	}
 
 	var pictureOwner string
 	var data []byte
 	var mimeType string
-	err := app.DB.QueryRow("SELECT user_id, file_data, mime_type FROM profile_pictures WHERE file_name = $1", fileName).Scan(&pictureOwner, &data, &mimeType)
+	err := app.DB.QueryRow("SELECT user_id, file_data, file_type FROM profile_pictures WHERE file_name = $1", fileName).Scan(&pictureOwner, &data, &mimeType)
 	if err != nil {
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, err)
 		return
 	}
 
-	err = checkRecommendationAndConnectionStatus(app.DB, userId, pictureOwner)
-	if err != nil {
-		utils.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
-		return
+	if pictureOwner != userId {
+		err = checkRecommendationAndConnectionStatus(app.DB, userId, pictureOwner)
+		if err != nil {
+			utils.HandleError(w, "unauthorized access", http.StatusInternalServerError, err)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Cache-Control", "public, max-age=600")
 	w.Write(data)
 }
 
@@ -165,7 +168,7 @@ func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId string)
 	`
 
 	var recommendationExists, connectionExists, requestExists bool
-	err := db.QueryRow(query, userId, targetId).Scan(&recommendationExists, connectionExists)
+	err := db.QueryRow(query, userId, targetId).Scan(&recommendationExists, &connectionExists, &requestExists)
 	if err != nil {
 		return err
 	}

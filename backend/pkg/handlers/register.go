@@ -83,7 +83,6 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, err)
 		return
 	}
-
 	_, err = app.DB.Exec(`INSERT INTO biographical_data (user_id, dog_gender,
 	 dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age,
 	 preferred_distance, preferred_gender, preferred_neutered) VALUES ($1, $2, $3,
@@ -260,7 +259,7 @@ func processProfilePictureData(r *http.Request, app *App, userId int, addFile bo
 		return err
 	}
 
-	fileURL := "localhost:3000/profile_pictures/" + newFileName
+	fileURL := "/profile_pictures/" + newFileName
 
 	query := `INSERT INTO profile_pictures (user_id, file_name, file_data, file_type, file_url)
 VALUES ($1, $2, $3, $4, $5)
