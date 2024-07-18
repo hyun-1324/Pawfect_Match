@@ -36,7 +36,10 @@ func base64Encode(data []byte) string {
 }
 
 func base64Decode(s string) ([]byte, error) {
-	return base64.URLEncoding.DecodeString(strings.TrimRight(s, "="))
+	if l := len(s) % 4; l > 0 {
+		s += strings.Repeat("=", 4-l)
+	}
+	return base64.URLEncoding.DecodeString(s)
 }
 
 func GenerateJWT(userID string) (string, error) {
