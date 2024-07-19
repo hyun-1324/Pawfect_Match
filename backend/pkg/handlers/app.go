@@ -110,7 +110,7 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
 	preferred_gender, preferred_neutered, option FROM biographical_data JOIN locations ON locations.user_id = biographical_data.user_id WHERE biographical_data.user_id = $1`,
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
-		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.LocationOption)
+		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.PreferredLocation)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			utils.HandleError(w, "status not found", http.StatusNotFound, fmt.Errorf("user bio with id %s not found", bio.Id))
@@ -222,9 +222,9 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 	bio.Id = userId
 	err := app.DB.QueryRow(`SELECT dog_gender, dog_neutered, dog_size, 
 	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
-	preferred_gender, preferred_neutered FROM biographical_data WHERE user_id = $1`,
+	preferred_gender, preferred_neutered, preferred_location FROM biographical_data WHERE user_id = $1`,
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
-		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered)
+		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.PreferredLocation)
 	if err != nil {
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, fmt.Errorf("failed to fetch data for my bio: %v", err))
 		return

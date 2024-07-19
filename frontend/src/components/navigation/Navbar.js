@@ -3,44 +3,89 @@ import { useNavigate } from "react-router-dom";
 import handleLogout from "../../tools/handleLogout";
 
 const Navbar = () => {
-    const navigate = useNavigate();
-    if (window.location.pathname === "/login" || window.location.pathname === "/register") {
-        return (
-            <nav className="navbar" style={{backgroundColor:"#C4DDF2", display:"flex"}}>
-                <div className="welcomeText">
-                    <p>
-                        Welome to Pawfect Match!<br/><br/>
-                        With this app you can find the most suitable play mates for your dog.<br/><br/>
-                        Log in or register to get started!
-                    </p>
-                    <img className="loginImage" src={`${process.env.PUBLIC_URL}/images/loginDog.png`} alt="dog" />
-                </div>
-            </nav>
-
-        );
-    }
+  const navigate = useNavigate();
+  if (
+    window.location.pathname === "/login" ||
+    window.location.pathname === "/register"
+  ) {
     return (
-        <nav className="navbar"> 
-        
-            <div className="navLink">
-                <Link to="/"><img className="button navButton" src={`${process.env.PUBLIC_URL}/images/recommendations.png`} alt="Recommendations"></img><span className="navText">Recommendations</span></Link>
-            </div>
-            <div className="navLink">
-                <Link to="/connections"><img className="button navButton" src={`${process.env.PUBLIC_URL}/images/connections.png`} alt="Connections"></img><span className="navText">Connections</span></Link>
-            </div>
-            <div className="navLink">
-                <Link to="/chat"><img className="button navButton" src={`${process.env.PUBLIC_URL}/images/chat.png`} alt="Messages"></img><span className="navText">Messages</span></Link>
-            </div>
-            <div className="navLink">
-                <Link to="/me"><img className="button navButton" src={`${process.env.PUBLIC_URL}/images/profile.png`} alt="Profile"></img><span className="navText">Profile</span></Link>
-            </div>
-            <div className="navLinkLogout">
-                <img onClick={() => handleLogout(navigate)} className="button navButton logoutNav" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
-                <span className= "navText">Logout</span>
-            </div>
-        
-        </nav>
+      <nav
+        className="navbar"
+        style={{ backgroundColor: "#C4DDF2", display: "flex" }}
+      >
+        <div className="welcomeText">
+          <p>
+            Welome to Pawfect Match!
+            <br />
+            <br />
+            With this app you can find the most suitable play mates for your
+            dog.
+            <br />
+            <br />
+            Log in or register to get started!
+          </p>
+          <img
+            className="loginImage"
+            src={`${process.env.PUBLIC_URL}/images/loginDog.png`}
+            alt="dog"
+          />
+        </div>
+      </nav>
     );
-}
+  }
+  return (
+    <nav className="navbar">
+      <div className="navLink">
+        <Link to="/">
+          <img
+            className="button navButton"
+            src={`${process.env.PUBLIC_URL}/images/recommendations.png`}
+            alt="Recommendations"
+          ></img>
+          <span className="navText">Recommendations</span>
+        </Link>
+      </div>
+      <div className="navLink">
+        <Link to="/connections">
+          <img
+            className="button navButton"
+            src={`${process.env.PUBLIC_URL}/images/connections.png`}
+            alt="Connections"
+          ></img>
+          <span className="navText">Connections</span>
+        </Link>
+      </div>
+      <div className="navLink">
+        <Link to="/chat">
+          <img
+            className="button navButton"
+            src={`${process.env.PUBLIC_URL}/images/chat.png`}
+            alt="Messages"
+          ></img>
+          <span className="navText">Messages</span>
+        </Link>
+      </div>
+      <div className="navLink">
+        <Link to="/myprofile">
+          <img
+            className="button navButton"
+            src={`${process.env.PUBLIC_URL}/images/profile.png`}
+            alt="Profile"
+          ></img>
+          <span className="navText">Profile</span>
+        </Link>
+      </div>
+      <div className="navLinkLogout">
+        <img
+          onClick={() => handleLogout(navigate)}
+          className="button navButton logoutNav"
+          src={`${process.env.PUBLIC_URL}/images/logout.png`}
+          alt="logout"
+        />
+        <span className="navText">Logout</span>
+      </div>
+    </nav>
+  );
+};
 
 export default Navbar;
