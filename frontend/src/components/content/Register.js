@@ -29,6 +29,7 @@ const Register = () => {
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
 
@@ -74,6 +75,41 @@ const Register = () => {
     };
   }, [controller]);
 
+  useEffect(() => {
+    setIsLoading(true);
+    const checkLoginStatus = async () => {
+        const controller = new AbortController();
+        setController(controller);
+        try {
+            const response = await fetch('/login_status');
+            if (response.ok) {
+                navigate('/'); // Adjust the path as needed
+            } else {
+                const errorResponse = await response.json();
+                const error = new Error();
+                error.status = response.status; // Include the status code
+                error.message = errorResponse.Message || "Unknown error"; // Include the error message; 
+                throw error;
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                // The request was aborted
+                console.log('Fetch aborted');
+            } else if (error.status === 401) {
+                // User is not logged in, continue
+                return;
+            } else if (error.status !== 401 && error.message) {
+                // Handle internal server errors
+                setError(error.message);
+            } else {
+                // This is likely a network error
+                setError('Network error, please try again.');
+            }
+        }
+    };
+    checkLoginStatus().then(() => setIsLoading(false));
+}, []); 
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsPending(true);
@@ -83,6 +119,7 @@ const Register = () => {
     setController(controller);
 
     try {
+      const formData = new FormData();
       // Check that age and size are valid numbers
       try {
         if (form.age < 0 || form.age > 30) {
@@ -94,23 +131,25 @@ const Register = () => {
         if (form.password !== form.confirm_password) {
           throw new Error("Passwords do not match!");
         }
+        if (imageSrc) {
+          const croppedImageBlob = await getCroppedImg(
+            imageSrc,
+            croppedAreaPixels
+          );
+          // Check image size
+          if (croppedImageBlob.size > 2000000) {
+              throw new Error("Image size must be less than 2 MB!");
+          }
+          formData.append(
+            "profilePicture", croppedImageBlob, "profilePicture.png"
+          );
+        };
       } catch (err) {
         setIsPending(false);
         setError(err.message);
         return;
       }
-      const formData = new FormData();
-      if (imageSrc) {
-        const croppedImageBlob = await getCroppedImg(
-          imageSrc,
-          croppedAreaPixels
-        );
-        formData.append(
-          "profilePicture",
-          croppedImageBlob,
-          "profilePicture.png"
-        );
-      }
+      
       formData.append("json", JSON.stringify(form));
 
       let response = await fetch("http://localhost:3000/handle_register", {
@@ -128,7 +167,7 @@ const Register = () => {
         throw error;
       }
       setIsPending(false);
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       setIsPending(false);
       if (err.name === "AbortError") {
