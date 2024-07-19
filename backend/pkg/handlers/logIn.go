@@ -68,7 +68,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,
 		Path:     "/",
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})

@@ -60,33 +60,33 @@ func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]mo
 		smallId, largeId := utils.OrderPair(userId, dataId)
 
 		if (userBio.PreferredNeutered && !data.Neutered) || (!userBio.Neutered && data.PreferredNeutered) {
-			_, err := app.DB.Exec("INSERT INTO matches (compatible_neutered, user_id1, user_id2) VALUES ($1, $2, $3)", false, smallId, largeId)
+			_, err := app.DB.Exec("UPDATE matches SET compatible_neutered = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
 			if err != nil {
 				return err
 			}
 			continue
 		} else {
-			_, err := app.DB.Exec("INSERT INTO matches (compatible_neutered, user_id1, user_id2) VALUES ($1, $2, $3)", true, smallId, largeId)
+			_, err := app.DB.Exec("UPDATE matches SET compatible_neutered = $1 WHERE user_id1 = $2 AND user_id2 = $3", true, smallId, largeId)
 			if err != nil {
 				return err
 			}
 		}
 
 		if ((userBio.PreferredGender != "any" && data.PreferredGender != "any") && (userBio.Gender != data.PreferredGender) || (userBio.PreferredGender != data.Gender)) || ((userBio.PreferredGender != "any" && data.PreferredGender == "any") && (userBio.PreferredGender != data.Gender)) || ((userBio.PreferredGender == "any" && data.PreferredGender != "any") && (userBio.Gender != data.PreferredGender)) {
-			_, err := app.DB.Exec("INSERT INTO matches (compatible_gender, user_id1, user_id2) VALUES ($1, $2, $3)", false, smallId, largeId)
+			_, err := app.DB.Exec("UPDATE matches SET compatible_gender = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
 			if err != nil {
 				return err
 			}
 			continue
 		} else {
-			_, err := app.DB.Exec("INSERT INTO matches (compatible_gender, user_id1, user_id2) VALUES ($1, $2, $3)", true, smallId, largeId)
+			_, err := app.DB.Exec("UPDATE matches SET compatible_gender = $1 WHERE user_id1 = $2 AND user_id2 = $3", true, smallId, largeId)
 			if err != nil {
 				return err
 			}
 		}
 
 		compatiblePlayStyle := checkPlayStyleCompatibility(userBio.FavoritePlayStyle, data.FavoritePlayStyle)
-		_, err := app.DB.Exec("INSERT INTO matches (compatible_play_style, user_id1, user_id2) VALUES ($1, $2, $3)", compatiblePlayStyle, smallId, largeId)
+		_, err := app.DB.Exec("UPDATE matches SET compatible_play_style = $1 WHERE user_id1 = $2 AND user_id2 = $3", compatiblePlayStyle, smallId, largeId)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]mo
 		}
 
 		compatibleSize := checkSizeCompatibility(userBio.Size, data.Size)
-		_, err = app.DB.Exec("INSERT INTO matches (compatible_size, user_id1, user_id2) VALUES ($1, $2, $3)", compatibleSize, smallId, largeId)
+		_, err = app.DB.Exec("UPDATE matches SET compatible_size = $1 WHERE user_id1 = $2 AND user_id2 = $3", compatibleSize, smallId, largeId)
 		if err != nil {
 			return err
 		}
