@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"matchMe/pkg/models"
 	"matchMe/pkg/utils"
@@ -27,52 +26,52 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
-		utils.HandleError(w, "failed to decode JSON", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to decode JSON", http.StatusInternalServerError, fmt.Errorf("failed to decode JSON data for registration: %v", err))
 		return
 	}
 
 	if req.Password == "" || len([]byte(req.Password)) > 60 {
-		utils.HandleError(w, "invalid password", http.StatusBadRequest, errors.New("invalid password"))
+		utils.HandleError(w, "invalid password", http.StatusBadRequest, nil)
 		return
 	}
 
 	if req.ConfirmPassword != req.Password {
-		utils.HandleError(w, "passwords do not match", http.StatusBadRequest, errors.New("invalid JSON data"))
+		utils.HandleError(w, "passwords do not match", http.StatusBadRequest, nil)
 		return
 	}
 
 	err := validateEmailData(req.Email)
 	if err != nil {
-		utils.HandleError(w, "invalid email", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid email", http.StatusBadRequest, fmt.Errorf("failed to validate email for registration: %v", err))
 		return
 	}
 
 	err = checkUserDataValidation(req)
 	if err != nil {
-		utils.HandleError(w, err.Error(), http.StatusBadRequest, err)
+		utils.HandleError(w, err.Error(), http.StatusBadRequest, fmt.Errorf("failed to validate user data for registration: %v", err))
 		return
 	}
 
 	latitude, longitude, err := checkLocationData(req.LocationOptions)
 	if err != nil {
-		utils.HandleError(w, "invalid location", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid location", http.StatusBadRequest, fmt.Errorf("failed to validate location data for registration: %v", err))
 		return
 	}
 
 	var exists bool
 	err = app.DB.QueryRow(`SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)`, req.Email).Scan(&exists)
 	if err != nil {
-		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to check if user exists for registration: %v", err))
 		return
 	}
 	if exists {
-		utils.HandleError(w, "email already taken", http.StatusInternalServerError, err)
+		utils.HandleError(w, "email already taken", http.StatusInternalServerError, nil)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to hash password: %v", err))
 		return
 	}
 
@@ -80,7 +79,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	VALUES ($1, $2, $3, $4) RETURNING id`,
 		req.Email, hashedPassword, req.AboutMe, req.DogName).Scan(&req.Id)
 	if err != nil {
-		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to insert user data: %v", err))
 		return
 	}
 	_, err = app.DB.Exec(`INSERT INTO biographical_data (user_id, dog_gender,
@@ -90,29 +89,33 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		req.EnergyLevel, req.FavoritePlayStyle, req.Age, req.PreferredDistance,
 		req.PreferredGender, req.PreferredNeutered)
 	if err != nil {
-		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to insert bio data: %v", err))
 		return
 	}
 
 	if latitude != 0 && longitude != 0 {
 		_, err = app.DB.Exec(`INSERT INTO locations (user_id, option, latitude, longitude) VALUES ($1, $2, $3, $4)`, req.Id, req.LocationOptions, latitude, longitude)
 		if err != nil {
-			utils.HandleError(w, "failed to register user", http.StatusInternalServerError, err)
+			utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to insert location data: %v", err))
 			return
 		}
 	}
 
 	err = processProfilePictureData(r, app, req.Id, true)
 	if err != nil {
-		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to process profile picture data: %v", err))
 		return
 	}
 
-	calculateRecommendationScore(app, req.Id)
+	err = calculateRecommendationScore(app, req.Id)
+	if err != nil {
+		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to calculate recommendation score: %v", err))
+		return
+	}
 
 	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	if err != nil {
-		utils.HandleError(w, "failed to register", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to register", http.StatusInternalServerError, fmt.Errorf("failed to encode response for registration: %v", err))
 		return
 	}
 }
