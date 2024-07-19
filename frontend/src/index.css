@@ -1,324 +1,332 @@
 :root {
-    --primary-bg-color: #C4DDF2;
-    --logo-font-color: #6D594D;
-    --content-font-color: #332d2a;
-    --yellow: #FCEECE;
+  --primary-bg-color: #c4ddf2;
+  --logo-font-color: #6d594d;
+  --content-font-color: #332d2a;
+  --yellow: #fceece;
 }
 
 @font-face {
-    font-family: 'logoFont';
-    src: url('../public/fonts/pacifico/Pacifico-Regular.ttf') format('truetype');
+  font-family: "logoFont";
+  src: url("../public/fonts/pacifico/Pacifico-Regular.ttf") format("truetype");
 }
 
 @font-face {
-    font-family: 'contentFont';
-    src: url('../public/fonts/arimo/Arimo-VariableFont_wght.ttf') format('truetype');
+  font-family: "contentFont";
+  src: url("../public/fonts/arimo/Arimo-VariableFont_wght.ttf")
+    format("truetype");
 }
 
 /* General styling */
 
 body {
-    margin: 0;
+  margin: 0;
 }
 
 #root {
-    height: 100vh;
-    width: 100vw;
-    background-color: var(--yellow);
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--yellow);
 }
 
-h2, h3 {
-    margin: 1rem 0;
+h2,
+h3 {
+  margin: 1rem 0;
 }
 
 .App {
-    padding: 1vh;
-    display: grid;
-    grid-template-areas: 
-        "logobar content"
-        "navbar content";
-    gap: 1vh;
-    justify-content: center;
-    height: 100%;
-    max-width: 1100px;
-    box-sizing: border-box;
-    margin: auto;
-    background-color: white;
+  padding: 1vh;
+  display: grid;
+  grid-template-areas:
+    "logobar content"
+    "navbar content";
+  gap: 1vh;
+  justify-content: center;
+  height: 100%;
+  max-width: 1100px;
+  box-sizing: border-box;
+  margin: auto;
+  background-color: white;
 }
 
 /* Main component styling */
 
 .logobar {
-    grid-area: logobar;
-    display: flex;
-    background-color: var(--primary-bg-color);
-    align-items: center;
+  grid-area: logobar;
+  display: flex;
+  background-color: var(--primary-bg-color);
+  align-items: center;
+  border-radius: 3px;
+  .logo {
+    max-height: 100%;
     border-radius: 3px;
-    .logo {
-        max-height: 100%;
-        border-radius: 3px;
-    }
-    .logoutLogo {
-        max-height: 100%;
-        max-width: 20vw;
-        margin-left: auto;
-        margin-right: 1rem;
-    }
+  }
+  .logoutLogo {
+    max-height: 100%;
+    max-width: 20vw;
+    margin-left: auto;
+    margin-right: 1rem;
+  }
 }
 
 .navbar {
-    grid-area: navbar;
-    display: grid;
-    grid-template-columns: 1fr;
-    border-radius: 3px;
-    .navButton {
-        max-height: 20vh;
-        }
-    .navLinkLogout {
-        align-content: end;
+  grid-area: navbar;
+  display: grid;
+  grid-template-columns: 1fr;
+  border-radius: 3px;
+  .navButton {
+    max-height: 20vh;
+  }
+  .navLinkLogout {
+    align-content: end;
+  }
+  .welcomeText {
+    font-family: "contentFont", "sans-serif";
+    color: var(--logo-font-color);
+    font-size: 1rem;
+    text-align: center;
+    padding: 0.5rem;
+    align-self: center;
+    p {
+      margin-bottom: 4vh;
     }
-    .welcomeText {
-        font-family: "contentFont", "sans-serif";
-        color: var(--logo-font-color);
-        font-size: 1rem;
-        text-align: center;
-        padding: 0.5rem;
-        align-self: center;
-        p {
-            margin-bottom: 4vh;
-        }
-        .loginImage {
-            max-width: 100%;
-        }
+    .loginImage {
+      max-width: 100%;
     }
+  }
 }
 
 .content {
-    grid-area: content;
-    background-color: var(--primary-bg-color);
-    padding: 0.5rem;
-    font-family: "contentFont", "sans-serif";
-    color: var(--content-font-color);
+  grid-area: content;
+  background-color: var(--primary-bg-color);
+  padding: 0.5rem;
+  font-family: "contentFont", "sans-serif";
+  color: var(--content-font-color);
+  border-radius: 3px;
+  overflow-y: scroll;
+  .card {
     border-radius: 3px;
-    overflow-y: scroll;
-    .card {
-        border-radius: 3px;
-        background-color: white;
-        padding: 0.5rem;
-        box-sizing: border-box;
+    background-color: white;
+    padding: 0.5rem;
+    box-sizing: border-box;
+  }
+  .centered {
+    text-align: center;
+  }
+  .twoColumnCard {
+    display: grid;
+    padding: 0;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    min-height: 100%;
+    input,
+    label,
+    select,
+    textarea {
+      margin: 0.5rem;
     }
-    .centered {
-        text-align: center;
+  }
+  .oneColumnCardCentered {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .oneColumnCardLeft {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    min-height: 100%;
+    input,
+    label {
+      margin: 0.5rem;
     }
-    .twoColumnCard {
-        display: grid;
-        padding: 0;
-        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-        min-height: 100%;
-        input, label, select, textarea {
-            margin: 0.5rem;
-        }
-    }
-    .oneColumnCardCentered {
-        display:flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-    }
-    .oneColumnCardLeft {
-        display:flex;
-        flex-direction: column;
-        padding: 0.5rem;
-        min-height: 100%;
-        input, label {
-            margin: 0.5rem;
-        }
-    }
-    .oneColumnCardRight {
-        display:flex;
-        flex-direction: column;
-        padding: 0.5rem;
-        min-height: 100%;
-        align-items: flex-end;
-        justify-content: flex-end;
-    }
-    .errorBox {
-        width: 50%;
-        border: red solid 1px;
-        background-color: #F9DBD2;
-        padding: 0.5rem;
-        margin: 0 auto;
-        margin-bottom: 1rem;
-    }
-    .checkbox {
-        align-self: flex-start;
-    }
-    .aboutMeBox {
-        height: 100px;
-        background-color: var(--yellow);
-        border: #6D594D solid 1px;
-        border-radius: 3px;
-    }
-    .formOutput {
-        align-self: flex-end;
-    }
-    
-    
+  }
+  .oneColumnCardRight {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    min-height: 100%;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+  .errorBox {
+    width: 50%;
+    border: red solid 1px;
+    background-color: #f9dbd2;
+    padding: 0.5rem;
+    margin: 0 auto;
+    margin-bottom: 1rem;
+  }
+  .checkbox {
+    align-self: flex-start;
+  }
+  .aboutMeBox {
+    height: 100px;
+    background-color: var(--yellow);
+    border: #6d594d solid 1px;
+    border-radius: 3px;
+  }
+  .formOutput {
+    align-self: flex-end;
+  }
+}
+
+.profile-container {
+  position: relative;
+}
+
+.edit-button {
+  position: absolute;
+  top: -20px;
+  right: 3px;
 }
 
 /* Media queries to adjust grid in different sized screens*/
 
 @media screen and (min-width: 1000px) and (min-height: 600px) {
-    .App {
-        grid-template-columns: 1fr 4fr;
-        grid-template-rows: 10vh 87vh; 
+  .App {
+    grid-template-columns: 1fr 4fr;
+    grid-template-rows: 10vh 87vh;
+  }
+  .logo {
+    max-height: 100%;
+    max-width: 100%;
+  }
+  .logoutLogo {
+    display: none;
+  }
+  .navbar {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto 1fr;
+    a,
+    .navLinkLogout {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      font-family: "logoFont", "cursive";
+      color: var(--logo-font-color);
     }
-    .logo {
-        max-height: 100%;
-        max-width: 100%;
+    .navLinkLogout {
+      align-self: end;
     }
-    .logoutLogo {
-        display: none;
+    .navButton {
+      max-height: 20vh;
     }
-    .navbar {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto 1fr;
-        a, .navLinkLogout {
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            font-family: "logoFont", "cursive";
-            color: var(--logo-font-color)
-        }
-        .navLinkLogout {
-            align-self: end;
-        }
-        .navButton {
-            max-height: 20vh;
-        }
-    }
+  }
 }
 
-@media  screen and (min-width: 550px) and (max-width: 999px),
-        screen and (min-width: 1000px) and (max-height: 599px){
-    .App {
-        grid-template-columns: 1fr 4fr;
-        grid-template-rows: 10vh 87vh;
+@media screen and (min-width: 550px) and (max-width: 999px),
+  screen and (min-width: 1000px) and (max-height: 599px) {
+  .App {
+    grid-template-columns: 1fr 4fr;
+    grid-template-rows: 10vh 87vh;
+  }
+  .logo {
+    max-width: 100%;
+  }
+  .logoutLogo {
+    display: none;
+  }
+  .navbar {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto 1fr;
+    .navButton {
+      max-height: 20vh;
     }
-    .logo {
-        max-width: 100%;
+    .navText {
+      display: none;
     }
-    .logoutLogo {
-        display: none;
+    .loginImage {
+      display: none;
     }
-    .navbar {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto 1fr;
-        .navButton {
-            max-height: 20vh;
-            }
-        .navText {
-            display: none;
-        }
-        .loginImage {
-            display: none;
-        }
-    }
+  }
 }
 
-@media screen and (min-width: 550px) and (max-width: 999px) and (min-height: 600px){
-    .App {
-        grid-template-columns: 1fr 4fr;
-        grid-template-rows: 10vh 87vh;
+@media screen and (min-width: 550px) and (max-width: 999px) and (min-height: 600px) {
+  .App {
+    grid-template-columns: 1fr 4fr;
+    grid-template-rows: 10vh 87vh;
+  }
+  .navbar {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto 1fr;
+    .navButton {
+      max-height: 20vh;
     }
-    .navbar {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto 1fr;
-        .navButton {
-            max-height: 20vh;
-            }
-        .navText {
-            display: none;
-        }
-        .loginImage {
-            display: block;
-        }
+    .navText {
+      display: none;
     }
+    .loginImage {
+      display: block;
+    }
+  }
 }
 
 @media screen and (max-width: 549px) {
-    .App {
-        grid-template-columns: 1fr;
-        grid-template-rows: 60px 1fr max-content;
-        grid-template-areas:
-        "logobar"
-        "content"
-        "navbar";
+  .App {
+    grid-template-columns: 1fr;
+    grid-template-rows: 60px 1fr max-content;
+    grid-template-areas:
+      "logobar"
+      "content"
+      "navbar";
+  }
+  .logo {
+    max-width: 70vw;
+  }
+  .logoutLogo {
+    display: block;
+  }
+  .navbar {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: auto;
+    .navLink {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      .navButton {
+        max-width: 24vw;
+      }
+      .navText {
+        display: none;
+      }
     }
-    .logo {
-        max-width: 70vw;
+    .navLinkLogout {
+      display: none;
     }
-    .logoutLogo {
-        display: block;
+    .welcomeText {
+      display: none;
     }
-    .navbar {
-        grid-template-columns: repeat(4, 1fr);
-        grid-template-rows: auto;
-        .navLink {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            .navButton {
-                max-width: 24vw;
-            }
-            .navText {
-                display: none;
-            }
-        }
-        .navLinkLogout {
-            display: none;
-        }
-        .welcomeText {
-            display: none;
-        }
-    }
+  }
 }
 
 /* Button styling */
 
 button {
-    border: none;
-    background-color: transparent;
-    margin: 0.5rem;
-    max-width: 95px;
-    max-height: 95px;
-    img {
-        max-width: 100%;
-        max-height: 100%;
-    }
+  border: none;
+  background-color: transparent;
+  margin: 0.5rem;
+  max-width: 95px;
+  max-height: 95px;
+  img {
+    max-width: 100%;
+    max-height: 100%;
+  }
 }
 
 .textButton {
-    font-family: "contentFont", "sans-serif";
-    color: var(--content-font-color);
-    font-size: 1rem;
-    text-decoration: none;
-    border: solid 1px var(--content-font-color);
-    background-color: var(--yellow);
-    padding: 0.5rem;
-    border-radius: 3px;
-    width: fit-content;
-    margin-bottom: 1rem;
-
+  font-family: "contentFont", "sans-serif";
+  color: var(--content-font-color);
+  font-size: 1rem;
+  text-decoration: none;
+  border: solid 1px var(--content-font-color);
+  background-color: var(--yellow);
+  padding: 0.5rem;
+  border-radius: 3px;
+  width: fit-content;
+  margin-bottom: 1rem;
 }
-
 
 .button:hover {
-    transform: scale(1.05); 
-    cursor: pointer; 
+  transform: scale(1.05);
+  cursor: pointer;
 }
-
-
-
-
-

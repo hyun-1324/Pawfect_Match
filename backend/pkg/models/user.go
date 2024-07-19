@@ -24,7 +24,7 @@ type UserBioResponse struct {
 	FavoritePlayStyle string  `json:"play_style"`
 	Age               int     `json:"age"`
 	PreferredDistance int     `json:"preferred_distance"`
-	LocationOption    string  `json:"location_option"`
+	PreferredLocation string  `json:"preferred_location"`
 }
 
 type IdList struct {

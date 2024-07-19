@@ -52,7 +52,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	latitude, longitude, err := checkLocationData(req.LocationOptions)
+	latitude, longitude, err := checkLocationData(req.PreferredLocation)
 	if err != nil {
 		utils.HandleError(w, "invalid location", http.StatusBadRequest, fmt.Errorf("failed to validate location data for registration: %v", err))
 		return
@@ -84,17 +84,17 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = app.DB.Exec(`INSERT INTO biographical_data (user_id, dog_gender,
 	 dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age,
-	 preferred_distance, preferred_gender, preferred_neutered) VALUES ($1, $2, $3,
-	  $4, $5, $6, $7, $8, $9, $10)`, req.Id, req.Gender, req.Neutered, req.Size,
+	 preferred_distance, preferred_gender, preferred_neutered, preferred_location) VALUES ($1, $2, $3,
+	  $4, $5, $6, $7, $8, $9, $10, $11)`, req.Id, req.Gender, req.Neutered, req.Size,
 		req.EnergyLevel, req.FavoritePlayStyle, req.Age, req.PreferredDistance,
-		req.PreferredGender, req.PreferredNeutered)
+		req.PreferredGender, req.PreferredNeutered, req.PreferredLocation)
 	if err != nil {
 		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to insert bio data: %v", err))
 		return
 	}
 
 	if latitude != 0 && longitude != 0 {
-		_, err = app.DB.Exec(`INSERT INTO locations (user_id, option, latitude, longitude) VALUES ($1, $2, $3, $4)`, req.Id, req.LocationOptions, latitude, longitude)
+		_, err = app.DB.Exec(`INSERT INTO locations (user_id, option, latitude, longitude) VALUES ($1, $2, $3, $4)`, req.Id, req.PreferredLocation, latitude, longitude)
 		if err != nil {
 			utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to insert location data: %v", err))
 			return

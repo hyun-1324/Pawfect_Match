@@ -30,14 +30,14 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	latitude, longitude, err := checkLocationData(req.LocationOptions)
+	latitude, longitude, err := checkLocationData(req.PreferredLocation)
 	if err != nil {
 		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to validate location data for updating profile: %v", err))
 		return
 	}
 
 	if latitude != 0 && longitude != 0 {
-		_, err = app.DB.Exec(`UPDATE locations set option=$1 latitude=$2 longitude=$3 WHERE user_id = $4`, req.LocationOptions, latitude, longitude, req.Id)
+		_, err = app.DB.Exec(`UPDATE locations set option=$1 latitude=$2 longitude=$3 WHERE user_id = $4`, req.PreferredLocation, latitude, longitude, req.Id)
 		if err != nil {
 			utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to update location data for updating profile: %v", err))
 			return

@@ -20,6 +20,7 @@ CREATE TABLE biographical_data (
   preferred_distance INTEGER NOT NULL,
   preferred_gender VARCHAR(10) NOT NULL CHECK (preferred_gender IN ('male', 'female', 'any')),
   preferred_neutered BOOLEAN NOT NULL,
+  preferred_location VARCHAR(15) NOT NULL CHECK (preferred_location IN ('Live', 'Helsinki', 'Tampere', 'Turku', 'Jyväskylä', 'Kuopio')),
   FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 
