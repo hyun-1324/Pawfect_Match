@@ -72,7 +72,7 @@ func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]mo
 			}
 		}
 
-		if ((userBio.PreferredGender != "any" && data.PreferredGender != "any") && (userBio.Gender != data.PreferredGender) || (userBio.PreferredGender != data.Gender)) || ((userBio.PreferredGender != "any" && data.PreferredGender == "any") && (userBio.PreferredGender != data.Gender)) || ((userBio.PreferredGender == "any" && data.PreferredGender != "any") && (userBio.Gender != data.PreferredGender)) {
+		if ((userBio.PreferredGender != "any" && data.PreferredGender != "any") && ((userBio.Gender != data.PreferredGender) || (userBio.PreferredGender != data.Gender))) || ((userBio.PreferredGender != "any" && data.PreferredGender == "any") && (userBio.PreferredGender != data.Gender)) || ((userBio.PreferredGender == "any" && data.PreferredGender != "any") && (userBio.Gender != data.PreferredGender)) {
 			_, err := app.DB.Exec("UPDATE matches SET compatible_gender = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
 			if err != nil {
 				return err
