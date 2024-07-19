@@ -17,7 +17,7 @@ const Register = () => {
     energy_level: "low",
     favorite_play_style: "wrestling",
     age: 0,
-    preferred_distance: 0,
+    preferred_distance: 1,
     preferred_gender: "any",
     preferred_neutered: false,
     about_me: "",
@@ -199,7 +199,7 @@ const Register = () => {
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           >
             <option value="Live">Use my live location</option>
-            <option value="Helsinki">Helisnki</option>
+            <option value="Helsinki">Helsinki</option>
             <option value="Tampere">Tampere</option>
             <option value="Turku">Turku</option>
             <option value="Jyväskylä">Jyväskylä</option>
