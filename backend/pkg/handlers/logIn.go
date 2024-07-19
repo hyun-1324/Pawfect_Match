@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
 	"matchMe/pkg/utils"
@@ -16,18 +18,18 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&loginInfo)
 	if err != nil {
-		utils.HandleError(w, "invalid request", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid request", http.StatusBadRequest, fmt.Errorf("failed to decode JSON for login: %v", err))
 		return
 	}
 
 	err = validateEmailData(loginInfo.Email)
 	if err != nil {
-		utils.HandleError(w, "invalid email", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid email", http.StatusBadRequest, fmt.Errorf("failed to validate email: %v", err))
 		return
 	}
 
 	if loginInfo.Password == "" || len([]byte(loginInfo.Password)) > 60 {
-		utils.HandleError(w, "invalid password", http.StatusBadRequest, err)
+		utils.HandleError(w, "invalid password", http.StatusBadRequest, nil)
 		return
 	}
 
@@ -37,20 +39,24 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	query := "SELECT id, password FROM users WHERE email = $1"
 	err = app.DB.QueryRow(query, loginInfo.Email).Scan(&userId, &hashedPassword)
 	if err != nil {
-		utils.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
+		if err == sql.ErrNoRows {
+			utils.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, nil)
+			return
+		}
+		utils.HandleError(w, "", http.StatusInternalServerError, fmt.Errorf("failed to check if user exists during login process: %v", err))
 		return
 	}
 
 	// Check if the password is correct
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginInfo.Password)); err != nil {
-		utils.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, err)
+		utils.HandleError(w, "e-mail or password is not correct", http.StatusBadRequest, nil)
 		return
 	}
 
 	// Generate a JWT token
 	token, err := middleware.GenerateJWT(userId)
 	if err != nil {
-		utils.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, fmt.Errorf("failed to generate JWT token: %v", err))
 		return
 	}
 
@@ -67,7 +73,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	if err != nil {
-		utils.HandleError(w, "failed to login", http.StatusInternalServerError, err)
+		utils.HandleError(w, "failed to login", http.StatusInternalServerError, fmt.Errorf("failed to encode response for login: %v", err))
 		return
 	}
 }
