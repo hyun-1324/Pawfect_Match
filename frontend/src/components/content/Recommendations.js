@@ -109,7 +109,7 @@ const Recommendations = () => {
         return null;
     };
     
-    const makeRecommendationCards = (recommendations) => {
+    /*const makeRecommendationCards = (recommendations) => {
         if (!recommendations.ids || recommendations.ids.length === 0) {
             return;
         }
@@ -118,7 +118,7 @@ const Recommendations = () => {
                 <img src={`${process.env.PUBLIC_URL}`} alt="dog" />
             </div>
         ));
-    };
+    };*/
             
         
 
@@ -132,10 +132,8 @@ return (
     <div className="recommendations">
         <h2>Recommendations</h2>
         {errorMessage && <div className="errorBox">Error:<br />{errorMessage}</div>}
-        {!recommendations.ids && !errorMessage && <div className="card">
-            You don't have any recommendations at the moment. 
-            Come back later or modify your preference settings in profile.</div>}
-        {makeRecommendationCards(recommendations)}
+
+        
     </div>
 
 
