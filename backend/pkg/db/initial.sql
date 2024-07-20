@@ -32,6 +32,7 @@ CREATE TABLE locations (
   longitude DOUBLE PRECISION NOT NULL DEFAULT 0.0,
   geom GEOMETRY(POINT, 4326),
   FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
+  CONSTRAINT unique_user_id UNIQUE (user_id);
 );
 
 CREATE INDEX idx_locations_geom ON locations USING GIST(geom);
