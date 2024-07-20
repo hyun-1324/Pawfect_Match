@@ -148,13 +148,46 @@ h3 {
     align-items: flex-end;
     justify-content: flex-end;
   }
+  .userCard {
+    display: flex;
+    box-sizing: border-box;
+    .cardPicture {
+      max-height: 120px;
+      border-radius: 3px;
+    }
+    p {
+      margin: 0.5rem;
+      font-weight: bold;
+      word-wrap: break-word; 
+      overflow-wrap: break-word;
+    }
+    .nameAndButtons {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      justify-content: space-between ;
+    }
+    .userCardButton {
+      align-self: flex-end;
+      height: 60px;
+    }
+    .buttonContainer {
+      display: flex;
+      align-self: flex-end;
+      justify-self: flex-end;
+      
+    }
+  }
   .errorBox {
     width: 50%;
     border: red solid 1px;
-    background-color: #f9dbd2;
+    background-color: #110805;
     padding: 0.5rem;
     margin: 0 auto;
     margin-bottom: 1rem;
+  }
+  .loadingScreenPicture {
+    max-width: 80%;
   }
   .checkbox {
     align-self: flex-start;

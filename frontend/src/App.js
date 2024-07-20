@@ -12,38 +12,32 @@ import EditProfile from "./components/content/EditProfile";
 import ChatList from "./components/content/ChatList";
 import Chat from "./components/content/Chat";
 import Connections from "./components/content/Connections";
-import { socket } from './socket';
-import { SocketContext } from './socketContext';
+
 
 function App() {
   const [showConnectionNotification, setShowConnectionNotification] = useState(false);
   const [showChatNotification, setShowChatNotification] = useState(false);
   
-  /*useEffect(() => {
-      // Define event handlers
-      const handleFriendRequests = (ids) => {
-          setShowConnectionNotification(ids.length > 0);
-      };
-  
-      const handleUnreadMessages = (isTrue) => {
-          setShowChatNotification(isTrue);
-      };
-  
-      // Subscribe to socket events
-      socket.on("friendRequests", handleFriendRequests);
-      socket.on("check_unread_messages", handleUnreadMessages);
-  
-      // Cleanup function to unsubscribe from events
-      return () => {
-          socket.off("friendRequests", handleFriendRequests);
-          socket.off("check_unread_messages", handleUnreadMessages);
-      };
-  }, [socket]); // Dependencies array ensures effect runs only when `socket` changes*/
+  /*function connect() {
+    const ws = new WebSocket('ws://localhost:8080/ws);
 
+    ws.onclose = function(e) {
+        console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+        setTimeout(function() {
+            connect();
+        }, 1000);
+    };
 
+    ws.onerror = function(err) {
+        console.error('Socket encountered error: ', err.message, 'Closing socket');
+        ws.close();
+    };
+  }
+
+  connect(); */
 
   return (
-    <SocketContext.Provider value={socket}>
+
       <Router>
         <div className="App">
           <Logobar />
@@ -64,7 +58,7 @@ function App() {
           </div>
         </div>
       </Router>
-    </SocketContext.Provider>
+
   );
 }
 
