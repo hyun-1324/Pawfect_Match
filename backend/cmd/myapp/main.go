@@ -7,9 +7,11 @@ import (
 	"matchMe/pkg/handlers"
 	"matchMe/pkg/middleware"
 	"net/http"
-	"path/filepath"
 
 	socketio "github.com/googollee/go-socket.io"
+	"github.com/googollee/go-socket.io/engineio"
+	"github.com/googollee/go-socket.io/engineio/transport"
+	"github.com/googollee/go-socket.io/engineio/transport/websocket"
 	"github.com/rs/cors"
 )
 
@@ -33,15 +35,25 @@ func main() {
 		DB: database,
 	}
 
-	server := socketio.NewServer(nil)
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	server := socketio.NewServer(&engineio.Options{
+		Transports: []transport.Transport{&websocket.Transport{
+			CheckOrigin: func(r *http.Request) bool {
+				return corsMiddleware.OriginAllowed(r)
+			},
+		}},
+	})
+
 	handlers.RegisterSocketHandlers(server, database)
 
 	go server.Serve()
 	defer server.Close()
-
-	buildPath := filepath.Join("..", "..", "..", "frontend", "build")
-	fs := http.FileServer(http.Dir(buildPath))
-	http.Handle("/", fs)
 
 	http.Handle("/socket.io/", server)
 
@@ -61,14 +73,7 @@ func main() {
 	http.Handle("POST /handle_login", http.HandlerFunc(app.Login))
 	http.Handle("POST /handle_register", http.HandlerFunc(app.Register))
 
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
-	}).Handler
-
-	handler := corsHandler(http.DefaultServeMux)
+	handler := corsMiddleware.Handler(http.DefaultServeMux)
 
 	log.Println("Staring server on port 8080...")
 	if err := http.ListenAndServe(":8080", handler); err != nil {
