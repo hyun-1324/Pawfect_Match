@@ -30,7 +30,7 @@ CREATE TABLE locations (
   option VARCHAR(15) NOT NULL CHECK (option IN ('Live', 'Helsinki', 'Tampere', 'Turku', 'Jyväskylä', 'Kuopio')),
   latitude DOUBLE PRECISION NOT NULL DEFAULT 0.0,
   longitude DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-  geom GEOGRAPHY(POINT, 4326),
+  geom GEOGRAPHY(POINT, 4326), //GEOMETRY
   FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
 

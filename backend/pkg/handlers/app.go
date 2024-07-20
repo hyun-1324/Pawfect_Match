@@ -11,10 +11,6 @@ import (
 	"matchMe/pkg/utils"
 )
 
-type App struct {
-	DB *sql.DB
-}
-
 func (app *App) User(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
 	userId := middleware.GetUserId(r)
