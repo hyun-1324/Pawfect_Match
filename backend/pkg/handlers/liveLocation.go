@@ -20,7 +20,7 @@ func (app *App) UpdateLivelocation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var exists bool
-	err = app.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM locations WHERE option = "Live" AND user_id = $1`, userId).Scan(&exists)
+	err = app.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM locations WHERE option = 'Live' AND user_id = $1)`, userId).Scan(&exists)
 	if err != nil {
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, fmt.Errorf("failed to check if live location data is available: %v", err))
 		return

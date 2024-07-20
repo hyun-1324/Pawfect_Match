@@ -182,7 +182,7 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("failed to parse preferred distance")
 	}
 
-	if intPreferredDistance < 0 || intPreferredDistance > 30 {
+	if intPreferredDistance <= 0 || intPreferredDistance > 30 {
 		return fmt.Errorf("invalid preferred distance")
 	}
 
