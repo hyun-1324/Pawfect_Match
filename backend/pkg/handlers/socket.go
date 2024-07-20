@@ -29,7 +29,10 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 			return fmt.Errorf("unauthorized access")
 		}
 
-		token := extractJWTFromCookieHeader(cookieHeader)
+		token, err := extractJWTFromCookieHeader(cookieHeader)
+		if err != nil {
+			return fmt.Errorf("unauthorized access")
+		}
 
 		userId, _, err := middleware.ValidateJWT(db, token)
 		if err != nil {
@@ -373,7 +376,7 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 }
 
-func extractJWTFromCookieHeader(cookieHeader string) string {
+func extractJWTFromCookieHeader(cookieHeader string) (string, error) {
 	header := http.Header{}
 	header.Add("Cookie", cookieHeader)
 	request := http.Request{Header: header}
