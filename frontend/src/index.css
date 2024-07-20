@@ -303,7 +303,7 @@ h3 {
 
 button {
   border: none;
-  background-color: transparent;
+  background: transparent;
   margin: 0.5rem;
   max-width: 95px;
   max-height: 95px;
@@ -330,3 +330,24 @@ button {
   transform: scale(1.05);
   cursor: pointer;
 }
+
+/* Notification styling */
+
+.notificationImageContainer {
+    position: relative;
+    display: inline-block; 
+}
+
+.notificationMark {
+    position: absolute;
+    top: 10px; 
+    right: 10px; 
+    width: 15px; 
+    height: 15px; 
+    background-color: red;
+    border-radius: 50%; 
+    border: var(--content-font-color) solid 1px;
+}
+
+
+

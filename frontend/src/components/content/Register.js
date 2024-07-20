@@ -13,11 +13,11 @@ const Register = () => {
     dog_name: "",
     gender: "male",
     neutered: false,
-    size: 0,
+    size: "",
     energy_level: "low",
     favorite_play_style: "wrestling",
-    age: 0,
-    preferred_distance: 0,
+    age: "",
+    preferred_distance: "1",
     preferred_gender: "any",
     preferred_neutered: false,
     about_me: "",
@@ -29,6 +29,7 @@ const Register = () => {
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
 
@@ -74,6 +75,41 @@ const Register = () => {
     };
   }, [controller]);
 
+  useEffect(() => {
+    setIsLoading(true);
+    const checkLoginStatus = async () => {
+        const controller = new AbortController();
+        setController(controller);
+        try {
+            const response = await fetch('/login_status');
+            if (response.ok) {
+                navigate('/'); // Adjust the path as needed
+            } else {
+                const errorResponse = await response.json();
+                const error = new Error();
+                error.status = response.status; // Include the status code
+                error.message = errorResponse.Message || "Unknown error"; // Include the error message; 
+                throw error;
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                // The request was aborted
+                console.log('Fetch aborted');
+            } else if (error.status === 401) {
+                // User is not logged in, continue
+                return;
+            } else if (error.status !== 401 && error.message) {
+                // Handle internal server errors
+                setError(error.message);
+            } else {
+                // This is likely a network error
+                setError('Network error, please try again.');
+            }
+        }
+    };
+    checkLoginStatus().then(() => setIsLoading(false));
+}, []); 
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsPending(true);
@@ -83,6 +119,7 @@ const Register = () => {
     setController(controller);
 
     try {
+      const formData = new FormData();
       // Check that age and size are valid numbers
       try {
         if (form.age < 0 || form.age > 30) {
@@ -94,23 +131,25 @@ const Register = () => {
         if (form.password !== form.confirm_password) {
           throw new Error("Passwords do not match!");
         }
+        if (imageSrc) {
+          const croppedImageBlob = await getCroppedImg(
+            imageSrc,
+            croppedAreaPixels
+          );
+          // Check image size
+          if (croppedImageBlob.size > 2000000) {
+              throw new Error("Image size must be less than 2 MB!");
+          }
+          formData.append(
+            "profilePicture", croppedImageBlob, "profilePicture.png"
+          );
+        };
       } catch (err) {
         setIsPending(false);
         setError(err.message);
         return;
       }
-      const formData = new FormData();
-      if (imageSrc) {
-        const croppedImageBlob = await getCroppedImg(
-          imageSrc,
-          croppedAreaPixels
-        );
-        formData.append(
-          "profilePicture",
-          croppedImageBlob,
-          "profilePicture.png"
-        );
-      }
+      
       formData.append("json", JSON.stringify(form));
 
       let response = await fetch("http://localhost:3000/handle_register", {
@@ -128,7 +167,7 @@ const Register = () => {
         throw error;
       }
       setIsPending(false);
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       setIsPending(false);
       if (err.name === "AbortError") {
@@ -199,7 +238,7 @@ const Register = () => {
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           >
             <option value="Live">Use my live location</option>
-            <option value="Helsinki">Helisnki</option>
+            <option value="Helsinki">Helsinki</option>
             <option value="Tampere">Tampere</option>
             <option value="Turku">Turku</option>
             <option value="Jyväskylä">Jyväskylä</option>
@@ -226,7 +265,7 @@ const Register = () => {
             name="age"
             placeholder="age in years"
             required
-            value={form.age === 0 ? "" : form.age}
+            value={form.age}
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
@@ -249,7 +288,7 @@ const Register = () => {
             id="size"
             name="size"
             required
-            value={form.size === 0 ? "" : form.size}
+            value={form.size}
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
