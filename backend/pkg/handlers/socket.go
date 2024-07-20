@@ -79,7 +79,12 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnDisconnect("/", func(s socketio.Conn, reason string) {
-		userId := s.Context().(string)
+		userId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in disconnect")
+			return
+		}
 
 		userConnections.Lock()
 		delete(userConnections.connections, userId)
@@ -89,7 +94,12 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "send_request", func(s socketio.Conn, msg map[string]interface{}) {
-		fromId := s.Context().(string)
+		fromId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in send_request")
+			return
+		}
 		toId, ok := msg["to_id"].(string)
 		if !ok {
 			s.Emit("error", "invalid request parameters")
@@ -120,7 +130,12 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "accept_request", func(s socketio.Conn, msg map[string]interface{}) {
-		toId := s.Context().(string)
+		toId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in accept_request")
+			return
+		}
 		fromId, ok := msg["from_id"].(string)
 		if !ok {
 			s.Emit("error", "invalid request parameters")
@@ -163,7 +178,13 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "reject_recommendation", func(s socketio.Conn, msg map[string]interface{}) {
-		toId := s.Context().(string)
+		toId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in reject_recommendation")
+			return
+		}
+
 		fromId, ok := msg["from_id"].(string)
 		if !ok {
 			s.Emit("error", "invalid request parameters")
@@ -182,7 +203,13 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "create_room", func(s socketio.Conn, msg map[string]interface{}) {
-		fromId := s.Context().(string)
+		fromId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in create_room")
+			return
+		}
+
 		toId, ok := msg["to_id"].(string)
 		if !ok {
 			s.Emit("error", "invalid request parameters")
@@ -209,7 +236,13 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "send_message", func(s socketio.Conn, msg map[string]interface{}) {
-		fromId := s.Context().(string)
+		fromId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in send_message")
+			return
+		}
+
 		roomId, ok := msg["room_id"].(string)
 		if !ok {
 			s.Emit("error", "invalid request parameters")
@@ -262,7 +295,13 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "get_messages", func(s socketio.Conn, msg map[string]interface{}) {
-		userId := s.Context().(string)
+		userId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in get_messages")
+			return
+		}
+
 		roomId, ok := msg["room_id"].(string)
 		if !ok {
 			s.Emit("error", "Invalid request parameters")
@@ -300,7 +339,13 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "check_unread_message", func(s socketio.Conn) {
-		userId := s.Context().(string)
+		userId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in check_unread_message")
+			return
+		}
+
 		hasUnreadMessages, err := checkUnreadMessages(db, userId)
 		if err != nil {
 			s.Emit("error", "unable to check unread messages")
@@ -311,7 +356,13 @@ func RegisterSocketHandlers(server *socketio.Server, db *sql.DB) {
 	})
 
 	server.OnEvent("/", "get_chat_list", func(s socketio.Conn) {
-		userId := s.Context().(string)
+		userId, ok := s.Context().(string)
+		if !ok {
+			s.Emit("error", "Invalid user context")
+			fmt.Println("Error: Invalid user context in get_chat_list")
+			return
+		}
+
 		chatList, err := getChatList(db, userId)
 		if err != nil {
 			s.Emit("error", "unable to fetch chat list")
