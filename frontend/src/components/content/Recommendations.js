@@ -14,7 +14,7 @@ const Recommendations = () => {
     
 
 
-    
+    //socket.connect();
     // Use custom hook to fetch data
     const { data: bioData, isPending, error } = useFetch("/me/bio");
   
@@ -58,29 +58,22 @@ const Recommendations = () => {
 
     useEffect(() => {
         // fetch recommendations
-        if (locationUpdated && bioData && !recommendations, !isRecommendationsLoaded) {
-            const FetchRecommendations = async () => {
-                const response = await fetch("/recommendations");
-                if (!response.ok) {
-                    const errorResponse = await response.json();
-                    const error = new Error();
-                    error.status = response.status;
-                    error.message = errorResponse.Message || "Unknown error";
+        if (locationUpdated && bioData && !recommendations && !isRecommendationsLoaded) {
+           fetchRecommendations().then(({ recommendationsData, error }) => {
+                if (error) {
                     setErrorMessage(error.message);
-                    return;
+                } else {
+                    setIsRecommendationsLoaded(true);
+                    setRecommendations(recommendationsData);
                 }
-                const data = await response.json();
-                setRecommendations(data);
-                setIsRecommendationsLoaded(true);
-            };
-            FetchRecommendations();
+              });
         }
         
     }, [locationUpdated, bioData, isRecommendationsLoaded, recommendations]); 
 
     useEffect(() => {
         // fetch all other data needed for the recommendations
-        if (recommendations && recommendations.ids && recommendations.ids.length > 0) {
+        if (recommendations && recommendations.length > 0) {
             
         }
     }, [recommendations]);
@@ -91,7 +84,19 @@ const Recommendations = () => {
     
     
 
-    
+    const fetchRecommendations = async () => {
+        const response = await fetch("/recommendations");
+        if (!response.ok) {
+            const errorResponse = await response.json();
+            const error = new Error();
+            error.status = response.status;
+            error.message = errorResponse.Message || "Unknown error";
+            return { recommendationsData: null, error };
+        }
+        const data = await response.json();
+        return { recommendationsData: data.ids, error: null };
+
+    };
 
     const sendLocation = async ({ latitude, longitude }) => {
         const locationResponse = await fetch("/handle_live", {
