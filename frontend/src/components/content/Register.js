@@ -13,11 +13,11 @@ const Register = () => {
     dog_name: "",
     gender: "male",
     neutered: false,
-    size: 0,
+    size: "",
     energy_level: "low",
     favorite_play_style: "wrestling",
-    age: 0,
-    preferred_distance: 1,
+    age: "",
+    preferred_distance: "1",
     preferred_gender: "any",
     preferred_neutered: false,
     about_me: "",
@@ -265,7 +265,7 @@ const Register = () => {
             name="age"
             placeholder="age in years"
             required
-            value={form.age === 0 ? "" : form.age}
+            value={form.age}
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
@@ -288,7 +288,7 @@ const Register = () => {
             id="size"
             name="size"
             required
-            value={form.size === 0 ? "" : form.size}
+            value={form.size}
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />

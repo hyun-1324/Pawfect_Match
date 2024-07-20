@@ -2,36 +2,9 @@ import React, {useContext, useEffect, useState} from "react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import handleLogout from "../../tools/handleLogout";
-import { SocketContext } from "../../socketContext";
 
-const Navbar = () => {
+const Navbar = ({showChatNotification, showConnectionNotification}) => {
     
-    const socket = useContext(SocketContext);
-
-    const [showConnectionNotification, setShowConnectionNotification] = useState(false);
-    const [showChatNotification, setShowChatNotification] = useState(false);
-
-    useEffect(() => {
-        // Define event handlers
-        const handleFriendRequests = (ids) => {
-            setShowConnectionNotification(ids.length > 0);
-        };
-
-        const handleUnreadMessages = (isTrue) => {
-            setShowChatNotification(isTrue);
-        };
-
-        // Subscribe to socket events
-        socket.on("friendRequests", handleFriendRequests);
-        socket.on("check_unread_messages", handleUnreadMessages);
-
-        // Cleanup function to unsubscribe from events
-        return () => {
-            socket.off("friendRequests", handleFriendRequests);
-            socket.off("check_unread_messages", handleUnreadMessages);
-        };
-    }, [socket]); // Dependencies array ensures effect runs only when `socket` changes
-
     const navigate = useNavigate();
     if (window.location.pathname === "/login" || window.location.pathname === "/register") {
         return (

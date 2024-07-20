@@ -8,6 +8,7 @@ const useFetch = (url) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    
     const abortCont = new AbortController();
     const fetchData = async () => {
       try {
@@ -18,6 +19,7 @@ const useFetch = (url) => {
           const error = new Error();
           error.status = response.status; // Include the status code
           error.message = errorResponse.Message || "Unknown error"; // Include the error message; 
+          setError(error);
           throw error;
           }
         const data = await response.json();
@@ -45,9 +47,9 @@ const useFetch = (url) => {
 
   // Redirect to login page if unauthorized error
   useEffect(() => {
-    if (error?.status === '401') {
+    if (error?.status === 401) {
       navigate('/login'); 
-    } else if (error?.status === '404') {
+    } else if (error?.status === 404) {
       navigate('/notFound');
     }
 

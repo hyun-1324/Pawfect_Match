@@ -303,7 +303,7 @@ h3 {
 
 button {
   border: none;
-  background-color: transparent;
+  background: transparent;
   margin: 0.5rem;
   max-width: 95px;
   max-height: 95px;
