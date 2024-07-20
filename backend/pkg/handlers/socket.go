@@ -383,9 +383,9 @@ func extractJWTFromCookieHeader(cookieHeader string) (string, error) {
 
 	cookie, err := request.Cookie("jwt_token")
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return cookie.Value
+	return cookie.Value, nil
 }
 
 func getRequests(db *sql.DB, userId string) (models.IdList, error) {
