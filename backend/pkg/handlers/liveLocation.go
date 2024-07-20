@@ -26,9 +26,8 @@ func (app *App) UpdateLivelocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-		// Insert the location of the user
-		query := `INSERT INTO locations (user_id, latitude, longitude) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET latitude = $2, longitude = $3;`
-		_, err = app.DB.Exec(query, userId, liveLoc.Latitude, liveLoc.Longitude)
+		query := `UPDATE locations SET latitude = $1, longitude = $2 WHERE user_id = $3;`
+		_, err = app.DB.Exec(query, liveLoc.Latitude, liveLoc.Longitude, userId)
 		if err != nil {
 			utils.HandleError(w, "failed to insert data", http.StatusInternalServerError, fmt.Errorf("failed to insert live location data: %v", err))
 			return

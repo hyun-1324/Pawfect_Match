@@ -93,12 +93,10 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if latitude != 0 && longitude != 0 {
-		_, err = app.DB.Exec(`INSERT INTO locations (user_id, option, latitude, longitude) VALUES ($1, $2, $3, $4)`, req.Id, req.PreferredLocation, latitude, longitude)
-		if err != nil {
-			utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to insert location data: %v", err))
-			return
-		}
+	_, err = app.DB.Exec(`INSERT INTO locations (user_id, option, latitude, longitude) VALUES ($1, $2, $3, $4)`, req.Id, req.PreferredLocation, latitude, longitude)
+	if err != nil {
+		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to insert location data: %v", err))
+		return
 	}
 
 	err = processProfilePictureData(r, app, req.Id, true)
