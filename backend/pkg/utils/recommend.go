@@ -1,12 +1,12 @@
-package handlers
+package utils
 
 import (
+	"database/sql"
 	"matchMe/pkg/models"
-	"matchMe/pkg/utils"
 	"strconv"
 )
 
-func calculateRecommendationScore(app *App, userId int) error {
+func CalculateRecommendationScore(app *sql.DB, userId int) error {
 	userBioData, err := getUserBioData(app)
 	if err != nil {
 		return err
@@ -21,8 +21,8 @@ func calculateRecommendationScore(app *App, userId int) error {
 
 }
 
-func getUserBioData(app *App) (map[int]models.UserBioResponse, error) {
-	rows, err := app.DB.Query("SELECT user_id, dog_gender, dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, preferred_gender, preferred_neutered FROM biographical_data")
+func getUserBioData(db *sql.DB) (map[int]models.UserBioResponse, error) {
+	rows, err := db.Query("SELECT user_id, dog_gender, dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, preferred_gender, preferred_neutered FROM biographical_data")
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func getUserBioData(app *App) (map[int]models.UserBioResponse, error) {
 
 }
 
-func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]models.UserBioResponse) error {
+func executeRecommendationAlgorithm(db *sql.DB, userId int, userBioData map[int]models.UserBioResponse) error {
 
 	userBio := userBioData[userId]
 
@@ -57,36 +57,36 @@ func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]mo
 		if dataId == userId {
 			continue
 		}
-		smallId, largeId := utils.OrderPair(userId, dataId)
+		smallId, largeId := OrderPair(userId, dataId)
 
 		if (userBio.PreferredNeutered && !data.Neutered) || (!userBio.Neutered && data.PreferredNeutered) {
-			_, err := app.DB.Exec("UPDATE matches SET compatible_neutered = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
+			_, err := db.Exec("UPDATE matches SET compatible_neutered = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
 			if err != nil {
 				return err
 			}
 			continue
 		} else {
-			_, err := app.DB.Exec("UPDATE matches SET compatible_neutered = $1 WHERE user_id1 = $2 AND user_id2 = $3", true, smallId, largeId)
+			_, err := db.Exec("UPDATE matches SET compatible_neutered = $1 WHERE user_id1 = $2 AND user_id2 = $3", true, smallId, largeId)
 			if err != nil {
 				return err
 			}
 		}
 
 		if ((userBio.PreferredGender != "any" && data.PreferredGender != "any") && ((userBio.Gender != data.PreferredGender) || (userBio.PreferredGender != data.Gender))) || ((userBio.PreferredGender != "any" && data.PreferredGender == "any") && (userBio.PreferredGender != data.Gender)) || ((userBio.PreferredGender == "any" && data.PreferredGender != "any") && (userBio.Gender != data.PreferredGender)) {
-			_, err := app.DB.Exec("UPDATE matches SET compatible_gender = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
+			_, err := db.Exec("UPDATE matches SET compatible_gender = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
 			if err != nil {
 				return err
 			}
 			continue
 		} else {
-			_, err := app.DB.Exec("UPDATE matches SET compatible_gender = $1 WHERE user_id1 = $2 AND user_id2 = $3", true, smallId, largeId)
+			_, err := db.Exec("UPDATE matches SET compatible_gender = $1 WHERE user_id1 = $2 AND user_id2 = $3", true, smallId, largeId)
 			if err != nil {
 				return err
 			}
 		}
 
 		compatiblePlayStyle := checkPlayStyleCompatibility(userBio.FavoritePlayStyle, data.FavoritePlayStyle)
-		_, err := app.DB.Exec("UPDATE matches SET compatible_play_style = $1 WHERE user_id1 = $2 AND user_id2 = $3", compatiblePlayStyle, smallId, largeId)
+		_, err := db.Exec("UPDATE matches SET compatible_play_style = $1 WHERE user_id1 = $2 AND user_id2 = $3", compatiblePlayStyle, smallId, largeId)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]mo
 		}
 
 		compatibleSize := checkSizeCompatibility(userBio.Size, data.Size)
-		_, err = app.DB.Exec("UPDATE matches SET compatible_size = $1 WHERE user_id1 = $2 AND user_id2 = $3", compatibleSize, smallId, largeId)
+		_, err = db.Exec("UPDATE matches SET compatible_size = $1 WHERE user_id1 = $2 AND user_id2 = $3", compatibleSize, smallId, largeId)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func executeRecommendationAlgorithm(app *App, userId int, userBioData map[int]mo
 		}
 
 		matchScore := calculateMatchScore(userBio, data)
-		_, err = app.DB.Exec("UPDATE matches SET match_score = $1 WHERE user_id1 = $2 AND user_id2 = $3", matchScore, smallId, largeId)
+		_, err = db.Exec("UPDATE matches SET match_score = $1 WHERE user_id1 = $2 AND user_id2 = $3", matchScore, smallId, largeId)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func checkSizeCompatibility(size1, size2 float32) bool {
 	category2 := determineSizeCategory(size2, sizeThresholds)
 
 	// Check if the size difference is within one category
-	return utils.Abs(category1-category2) <= 1
+	return Abs(category1-category2) <= 1
 }
 
 func determineSizeCategory(size float32, thresholds []float32) int {
@@ -183,7 +183,7 @@ func calculateMatchScore(userBio1, userBio2 models.UserBioResponse) float64 {
 		score += 1
 	}
 
-	ageDiff := utils.Abs(userBio1.Age - userBio2.Age)
+	ageDiff := Abs(userBio1.Age - userBio2.Age)
 	switch {
 	case ageDiff <= 3:
 		score += 1

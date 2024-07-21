@@ -107,7 +107,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = calculateRecommendationScore(app, req.Id)
+	err = utils.CalculateRecommendationScore(app.DB, req.Id)
 	if err != nil {
 		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to calculate recommendation score: %v", err))
 		return

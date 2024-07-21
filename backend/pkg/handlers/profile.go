@@ -63,7 +63,11 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calculateRecommendationScore(app, numId)
+	err = utils.CalculateRecommendationScore(app.DB, numId)
+	if err != nil {
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to calculate recommendation score for updating profile: %v", err))
+		return
+	}
 
 	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	if err != nil {
