@@ -110,14 +110,34 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 				continue
 			}
 			app.handleAcceptRequest(client, requestData.Id)
+		case "decline_request":
+			var requestData models.RequestData
+			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				log.Printf("error unmarshaling request data: %v", err)
+				continue
+			}
+			app.handleDeclineRequest(client, requestData.Id)
+		case "reject_recommendation":
+			var requestData models.RequestData
+			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				log.Printf("error unmarshaling request data: %v", err)
+				continue
+			}
+			app.handleRejectRecommendation(client, requestData.Id)
 		case "create_room":
-			app.handleCreateRoom(client, event.Data)
+			var requestData models.RequestData
+			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				log.Printf("error unmarshaling create room request: %v", err)
+				continue
+			}
+			app.handleCreateRoom(client, requestData.Id)
 		case "join_room":
 			app.handleJoinRoom(client, event.Data)
 		case "leave_room":
 			app.handleLeaveRoom(client, event.Data)
 		case "send_message":
 			app.handleSendMessage(client, event.Data)
+		case "get_messages":
 		}
 	}
 }
@@ -181,10 +201,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch friend requests"}`)
 		log.Printf("error fetching friend requests for user %s: %v\n", client.userId, err)
 	} else {
-		response, _ := json.Marshal(map[string]interface{}{
-			"event": "friendRequests",
-			"data":  friendRequests,
-		})
+		response, _ := changeToEvent("friendRequests", friendRequests)
 		client.send <- response
 	}
 
@@ -193,10 +210,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch unread messages"}`)
 		log.Printf("error fetching unread messages for user %s: %v\n", client.userId, err)
 	} else {
-		response, _ := json.Marshal(map[string]interface{}{
-			"event": "check_unread_messages",
-			"data":  hasUnreadMessages,
-		})
+		response, _ := changeToEvent("unreadMessages", hasUnreadMessages)
 		client.send <- response
 	}
 
@@ -226,7 +240,7 @@ func (app *App) joinRoom(client *Client, roomId string) {
 func (app *App) handleSendRequest(client *Client, toId string) {
 	err := saveRequest(app.DB, client.userId, toId)
 	if err != nil {
-
+		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 		fmt.Printf("error saving friend request from %s to %s: %v\n", client.userId, toId, err)
 		return
 	}
@@ -241,22 +255,10 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 	if toClient, ok := app.clients.Load(toId); ok {
 		client, ok := toClient.(*Client)
 		if ok {
-			eventData, err := json.Marshal(friendRequests)
+			response, err := changeToEvent("friendRequests", friendRequests)
 			if err != nil {
 				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 				fmt.Printf("error marshaling friend requests: %v\n", err)
-				return
-			}
-
-			event := models.Event{
-				Event: "friendRequests",
-				Data:  eventData,
-			}
-
-			response, err := json.Marshal(event)
-			if err != nil {
-				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
-				fmt.Printf("error marshaling event: %v\n", err)
 				return
 			}
 
@@ -279,22 +281,10 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 		return
 	}
 
-	eventData, err := json.Marshal(map[string]string{"connection_update": "true"})
+	response, err := changeToEvent("connection_update", `"connection_update": "true"`)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 		fmt.Printf("error marshaling connection update: %v\n", err)
-		return
-	}
-
-	event := models.Event{
-		Event: "connection_update",
-		Data:  eventData,
-	}
-
-	response, err := json.Marshal(event)
-	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
-		fmt.Printf("error marshaling event: %v\n", err)
 		return
 	}
 
@@ -307,38 +297,86 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 	}
 
 	if toClient, ok := app.clients.Load(fromId); ok {
-		toClient := toClient.(*Client)
-		select {
-		case toClient.send <- response:
-		default:
-			toClient.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
-			fmt.Printf("Falied to send connection update notification to user %s\n", fromId)
-			app.unregisterClient(toClient)
+		toClient, ok := toClient.(*Client)
+		if ok {
+			select {
+			case toClient.send <- response:
+			default:
+				toClient.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+				fmt.Printf("Falied to send connection update notification to user %s\n", fromId)
+				app.unregisterClient(toClient)
+			}
 		}
-
 	}
-
 }
 
-func (app *App) handleCreateRoom(client *Client, data json.RawMessage) {
-	var roomData struct {
-		RoomId string `json:"roomId"`
+func (app *App) handleDeclineRequest(client *Client, fromId string) {
+	err := saveDecline(app.DB, fromId, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the decline request"}`)
+		fmt.Printf("error saving decline from %s to %s: %v\n", fromId, client.userId, err)
+		return
 	}
-	if err := json.Unmarshal(data, &roomData); err != nil {
-		log.Printf("error unmarshaling room data: %v", err)
+}
+
+func (app *App) handleRejectRecommendation(client *Client, fromId string) {
+	err := saveRejection(app.DB, fromId, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the rejection request"}`)
+		fmt.Printf("error saving rejection from %s to %s: %v\n", fromId, client.userId, err)
+		return
+	}
+
+	response, err := changeToEvent("recommendation_update", `"recommendation_update": "true"`)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the rejection request"}`)
+		fmt.Printf("error marshaling recommendation update: %v\n", err)
+		return
+	}
+
+	select {
+	case client.send <- response:
+	default:
+		client.send <- []byte(`{"event":"error", "data":"unable to process the rejection request"}`)
+		fmt.Printf("Falied to send recommendation update notification to user %s\n", fromId)
+		app.unregisterClient(client)
+	}
+}
+
+func (app *App) handleCreateRoom(client *Client, toId string) {
+
+	roomId, err := createRoom(app.DB, client.userId, toId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to create room"}`)
+		fmt.Printf("error creating room between %s and %s: %v\n", client.userId, toId, err)
 		return
 	}
 
 	room := &Room{
-		id:      roomData.RoomId,
+		id:      roomId,
 		clients: make(map[string]*Client),
 	}
-	app.rooms.Store(roomData.RoomId, room)
-	app.joinRoom(client, roomData.RoomId)
 
-	response := map[string]string{"event": "room_created", "roomId": roomData.RoomId}
-	jsonResponse, _ := json.Marshal(response)
-	client.send <- jsonResponse
+	app.rooms.Store(roomId, room)
+	app.joinRoom(client, roomId)
+
+	if toClient, ok := app.clients.Load(toId); ok {
+		toClient, ok := toClient.(*Client)
+		if ok {
+			app.joinRoom(toClient, roomId)
+		}
+	}
+
+	data := map[string]string{"roomId": roomId}
+
+	response, err := changeToEvent("room_created", data)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to create room"}`)
+		fmt.Printf("error marshaling room created event: %v\n", err)
+		return
+	}
+
+	client.send <- response
 }
 
 func (app *App) handleJoinRoom(client *Client, data json.RawMessage) {
@@ -432,7 +470,6 @@ func (app *App) SendToUser(userId string, message []byte) {
 	}
 }
 
-// 새로운 메서드: 모든 연결된 클라이언트에게 브로드캐스트
 func (app *App) Broadcast(message []byte) {
 	app.clients.Range(func(key, value interface{}) bool {
 		client := value.(*Client)

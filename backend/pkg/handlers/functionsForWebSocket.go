@@ -2,11 +2,26 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"matchMe/pkg/models"
 	"matchMe/pkg/utils"
 	"strconv"
 )
+
+func changeToEvent(event string, data interface{}) ([]byte, error) {
+	eventData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Printf("failed to marshal data: %v\n", err)
+		return nil, fmt.Errorf("failed to marshal data: %v", err)
+	}
+	eventStruct := models.Event{
+		Event: event,
+		Data:  json.RawMessage(eventData),
+	}
+
+	return json.Marshal(eventStruct)
+}
 
 func getRequests(db *sql.DB, userId string) (models.IdList, error) {
 	query := `
@@ -127,4 +142,95 @@ func saveAcceptance(db *sql.DB, fromId, toId string) error {
 	}
 
 	return nil
+}
+
+func saveDecline(db *sql.DB, fromId, toId string) error {
+
+	numToId, err := strconv.Atoi(toId)
+	if err != nil {
+		return fmt.Errorf("failed to change string to int: %v", err)
+	}
+
+	numFromId, err := strconv.Atoi(fromId)
+	if err != nil {
+		return fmt.Errorf("failed to change string to int: %v", err)
+	}
+
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
+
+	query := "UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2"
+	_, err = db.Exec(query, fromId, toId)
+	if err != nil {
+		return fmt.Errorf("failed to update data: %v", err)
+	}
+
+	query = "UPDATE matches SET rejected = TRUE WHERE from_id = $1 AND to_id = $2"
+	_, err = db.Exec(query, smallId, largeId)
+	if err != nil {
+		return fmt.Errorf("failed to update data: %v", err)
+	}
+
+	return nil
+}
+
+func saveRejection(db *sql.DB, fromId, toId string) error {
+
+	numToId, err := strconv.Atoi(toId)
+	if err != nil {
+		return fmt.Errorf("failed to change string to int: %v", err)
+	}
+
+	numFromId, err := strconv.Atoi(fromId)
+	if err != nil {
+		return fmt.Errorf("failed to change string to int: %v", err)
+	}
+
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
+
+	query := "UPDATE matches SET rejected = TRUE WHERE from_id = $1 AND to_id = $2"
+	_, err = db.Exec(query, smallId, largeId)
+	if err != nil {
+		return fmt.Errorf("failed to update data: %v", err)
+	}
+
+	query = `
+	UPDATE requests 
+	SET processed = TRUE, accepted = FALSE
+	WHERE (
+	(from_id = $1 AND to_id = $2) 
+	OR 
+	(from_id = $2 AND to_id = $1))
+	`
+	_, err = db.Exec(query, fromId, toId)
+	if err != nil {
+		return fmt.Errorf("failed to update data: %v", err)
+	}
+
+	return nil
+}
+
+func createRoom(db *sql.DB, fromId, toId string) (string, error) {
+	numFromId, err := strconv.Atoi(fromId)
+	if err != nil {
+		return "", fmt.Errorf("failed to change string to int: %v", err)
+	}
+	numToId, err := strconv.Atoi(toId)
+	if err != nil {
+		return "", fmt.Errorf("failed to change string to int: %v", err)
+	}
+
+	smallId, largeId := utils.OrderPair(numFromId, numToId)
+
+	var roomId string
+	err = db.QueryRow(`
+		INSERT INTO rooms (user_id1, user_id2) 
+		VALUES ($1, $2) 
+		ON CONFLICT (user_id1, user_id2) DO NOTHING 
+		RETURNING id`, smallId, largeId).Scan(&roomId)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to insert data: %v", err)
+	}
+
+	return roomId, nil
 }
