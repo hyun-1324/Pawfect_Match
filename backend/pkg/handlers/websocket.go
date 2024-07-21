@@ -7,6 +7,7 @@ import (
 	"log"
 	"matchMe/pkg/middleware"
 	"matchMe/pkg/models"
+	"matchMe/pkg/utils"
 	"net/http"
 	"sync"
 	"time"
@@ -45,7 +46,8 @@ type App struct {
 func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatalf("Failed to upgrade connection: %v", err)
+		utils.HandleError(w, "failed to upgrade connection", http.StatusUnauthorized, fmt.Errorf("failed to upgrade connection: %v", err))
+		return
 	}
 
 	userId := middleware.GetUserId(r)
