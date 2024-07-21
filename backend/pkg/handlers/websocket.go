@@ -97,14 +97,19 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 
 		switch event.Event {
 		case "send_request":
-			var requestData models.SendRequestData
+			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
 				log.Printf("error unmarshaling request data: %v", err)
 				continue
 			}
-			app.handleSendRequest(client, requestData.ToId)
+			app.handleSendRequest(client, requestData.Id)
 		case "accept_request":
-			app.handleAcceptRequest(client, event.Data)
+			var requestData models.RequestData
+			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				log.Printf("error unmarshaling request data: %v", err)
+				continue
+			}
+			app.handleAcceptRequest(client, requestData.Id)
 		case "create_room":
 			app.handleCreateRoom(client, event.Data)
 		case "join_room":
@@ -221,13 +226,14 @@ func (app *App) joinRoom(client *Client, roomId string) {
 func (app *App) handleSendRequest(client *Client, toId string) {
 	err := saveRequest(app.DB, client.userId, toId)
 	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to process friend request"}`)
+
 		fmt.Printf("error saving friend request from %s to %s: %v\n", client.userId, toId, err)
 		return
 	}
 
 	friendRequests, err := getRequests(app.DB, toId)
 	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 		fmt.Printf("error fetching friend requests for user %s: %v\n", toId, err)
 		return
 	}
@@ -237,6 +243,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 		if ok {
 			eventData, err := json.Marshal(friendRequests)
 			if err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 				fmt.Printf("error marshaling friend requests: %v\n", err)
 				return
 			}
@@ -248,6 +255,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 
 			response, err := json.Marshal(event)
 			if err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 				fmt.Printf("error marshaling event: %v\n", err)
 				return
 			}
@@ -255,6 +263,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 			select {
 			case client.send <- response:
 			default:
+				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 				fmt.Printf("Falied to send friend request notification to user %s\n", toId)
 				app.unregisterClient(client)
 			}
@@ -262,9 +271,53 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 	}
 }
 
-func (app *App) handleAcceptRequest(client *Client, data json.RawMessage) {
-	// 수락 요청 처리 로직 구현
-	// app.DB를 사용하여 데이터베이스 작업 수행
+func (app *App) handleAcceptRequest(client *Client, fromId string) {
+	err := saveAcceptance(app.DB, fromId, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+		fmt.Printf("error saving acceptance from %s to %s: %v\n", fromId, client.userId, err)
+		return
+	}
+
+	eventData, err := json.Marshal(map[string]string{"connection_update": "true"})
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+		fmt.Printf("error marshaling connection update: %v\n", err)
+		return
+	}
+
+	event := models.Event{
+		Event: "connection_update",
+		Data:  eventData,
+	}
+
+	response, err := json.Marshal(event)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+		fmt.Printf("error marshaling event: %v\n", err)
+		return
+	}
+
+	select {
+	case client.send <- response:
+	default:
+		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+		fmt.Printf("Falied to send connection update notification to user %s\n", fromId)
+		app.unregisterClient(client)
+	}
+
+	if toClient, ok := app.clients.Load(fromId); ok {
+		toClient := toClient.(*Client)
+		select {
+		case toClient.send <- response:
+		default:
+			toClient.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+			fmt.Printf("Falied to send connection update notification to user %s\n", fromId)
+			app.unregisterClient(toClient)
+		}
+
+	}
+
 }
 
 func (app *App) handleCreateRoom(client *Client, data json.RawMessage) {

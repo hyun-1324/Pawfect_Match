@@ -10,8 +10,8 @@ type Event struct {
 	Data  json.RawMessage `json:"data"`
 }
 
-type SendRequestData struct {
-	ToId string `json:"to_id"`
+type RequestData struct {
+	Id string `json:"Id"`
 }
 
 type Message struct {
