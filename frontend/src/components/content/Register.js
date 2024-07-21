@@ -184,7 +184,7 @@ const Register = () => {
   };
 
   return (
-    <div className="oneColumnCard card">
+    <div className="card padded">
       <h2>Welcome to Pawfect Match!</h2>
       <p>
         We need some info about you and your dog to match you with the most
