@@ -131,10 +131,13 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 				continue
 			}
 			app.handleCreateRoom(client, requestData.Id)
-		case "join_room":
-			app.handleJoinRoom(client, event.Data)
 		case "leave_room":
-			app.handleLeaveRoom(client, event.Data)
+			var LeaveRoomData models.LeaveRoom
+			if err := json.Unmarshal(event.Data, &LeaveRoomData); err != nil {
+				log.Printf("error unmarshaling leave room data: %v", err)
+				continue
+			}
+			app.handleLeaveRoom(client, LeaveRoomData.RoomId)
 		case "send_message":
 			var messageData models.Message
 			if err := json.Unmarshal(event.Data, &messageData); err != nil {
@@ -153,6 +156,13 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 			app.handleCheckUnreadMessages(client)
 		case "get_chat_list":
 			app.handleGetChatList(client)
+		case "typing":
+			var typingData models.Typing
+			if err := json.Unmarshal(event.Data, &typingData); err != nil {
+				log.Printf("error unmarshaling typing data: %v", err)
+				continue
+			}
+			app.handleTyping(client, typingData)
 		}
 	}
 }
@@ -359,7 +369,6 @@ func (app *App) handleRejectRecommendation(client *Client, fromId string) {
 }
 
 func (app *App) handleCreateRoom(client *Client, toId string) {
-
 	roomId, err := createRoom(app.DB, client.userId, toId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to create room"}`)
@@ -394,48 +403,14 @@ func (app *App) handleCreateRoom(client *Client, toId string) {
 	client.send <- response
 }
 
-func (app *App) handleJoinRoom(client *Client, data json.RawMessage) {
-	var roomData struct {
-		RoomId string `json:"roomId"`
-	}
-	if err := json.Unmarshal(data, &roomData); err != nil {
-		log.Printf("error unmarshaling room data: %v", err)
-		return
-	}
-
-	app.joinRoom(client, roomData.RoomId)
-
-	response := map[string]string{"event": "room_joined", "roomId": roomData.RoomId}
-	jsonResponse, _ := json.Marshal(response)
-	client.send <- jsonResponse
-}
-
-func (app *App) handleLeaveRoom(client *Client, data json.RawMessage) {
-	var roomData struct {
-		RoomId string `json:"roomId"`
-	}
-	if err := json.Unmarshal(data, &roomData); err != nil {
-		log.Printf("error unmarshaling room data: %v", err)
-		return
-	}
-
-	app.leaveRoom(client, roomData.RoomId)
-
-	response := map[string]string{"event": "room_left", "roomId": roomData.RoomId}
-	jsonResponse, _ := json.Marshal(response)
-	client.send <- jsonResponse
-}
-
-func (app *App) leaveRoom(client *Client, roomId string) {
+func (app *App) handleLeaveRoom(client *Client, roomId string) {
 	room, ok := app.rooms.Load(roomId)
 	if !ok {
 		log.Printf("Room %s not found", roomId)
 		return
 	}
-
 	r := room.(*Room)
-	delete(r.clients, client)
-	client.roomId = ""
+	delete(r.clients, client.userId)
 
 	if len(r.clients) == 0 {
 		app.rooms.Delete(roomId)
@@ -557,6 +532,77 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
 		fmt.Printf("Falied to send messages to user %s\n", client.userId)
 		app.unregisterClient(client)
+	}
+
+}
+
+func (app *App) handleCheckUnreadMessages(client *Client) {
+	hasUnreadMessages, err := checkUnreadMessages(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)
+		fmt.Printf("error checking unread messages for user %s: %v\n", client.userId, err)
+		return
+	}
+
+	response, err := changeToEvent("check_unread_messages", hasUnreadMessages)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)
+		fmt.Printf("error marshaling check unread messages: %v\n", err)
+		return
+	}
+
+	select {
+	case client.send <- response:
+	default:
+		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)
+		fmt.Printf("Falied to send check unread messages to user %s\n", client.userId)
+		app.unregisterClient(client)
+	}
+}
+
+func (app *App) handleGetChatList(client *Client) {
+	chatList, err := getChatList(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
+		return
+	}
+
+	response, err := changeToEvent("get_chat_list", chatList)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+		fmt.Printf("error marshaling chat list: %v\n", err)
+		return
+	}
+
+	select {
+	case client.send <- response:
+	default:
+		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+		fmt.Printf("Falied to send chat list to user %s\n", client.userId)
+		app.unregisterClient(client)
+	}
+}
+
+func (app *App) handleTyping(client *Client, typingData models.Typing) {
+	if toClient, ok := app.clients.Load(typingData.ToId); ok {
+		toClient, ok := toClient.(*Client)
+		if ok {
+			response, err := changeToEvent("typing", typingData)
+			if err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to send typing notification"}`)
+				fmt.Printf("error marshaling typing notification: %v\n", err)
+				return
+			}
+
+			select {
+			case toClient.send <- response:
+			default:
+				toClient.send <- []byte(`{"event":"error", "data":"unable to send typing notification"}`)
+				fmt.Printf("Falied to send typing notification to user %s\n", typingData.ToId)
+				app.unregisterClient(toClient)
+			}
+		}
 	}
 
 }
