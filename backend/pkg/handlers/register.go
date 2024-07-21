@@ -121,7 +121,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateEmailData(email string) error {
-	emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
+	emailRegex := `^[^\s@]+@[^\s@]+\.[^\s@]{2,}$`
 	isValid := regexp.MustCompile(emailRegex).MatchString(email)
 	if !isValid || email == "" || len([]byte(email)) > 50 {
 		return fmt.Errorf("invalid email address")
