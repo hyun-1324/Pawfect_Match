@@ -3,8 +3,10 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"matchMe/pkg/middleware"
+	"matchMe/pkg/models"
 	"net/http"
 	"sync"
 	"time"
@@ -22,54 +24,16 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// type WebSocketManager struct {
-// 	clients    map[*Client]bool
-// 	broadcast  chan []byte
-// 	register   chan *Client
-// 	unregister chan *Client
-// }
-
-// func NewWebSocketManager() *WebSocketManager {
-// 	return &WebSocketManager{
-// 		clients:    make(map[*Client]bool),
-// 		broadcast:  make(chan []byte),
-// 		register:   make(chan *Client),
-// 		unregister: make(chan *Client),
-// 	}
-// }
-
-// func (manager *WebSocketManager) Run() {
-// 	for {
-// 		select {
-// 		case client := <-manager.register:
-// 			manager.clients[client] = true
-// 		case client := <-manager.unregister:
-// 			if _, ok := manager.clients[client]; ok {
-// 				delete(manager.clients, client)
-// 				close(client.send)
-// 			}
-// 		case message := <-manager.broadcast:
-// 			for client := range manager.clients {
-// 				select {
-// 				case client.send <- message:
-// 				default:
-// 					close(client.send)
-// 					delete(manager.clients, client)
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-
 type Client struct {
 	conn   *websocket.Conn
 	send   chan []byte
 	userId string
+	rooms  map[string]bool
 }
 
 type Room struct {
 	id      string
-	clients map[*Client]bool
+	clients map[string]*Client
 }
 
 type App struct {
@@ -89,13 +53,20 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	app.clients.Store(userId, client)
 
-	go app.readPump(client)
-	go app.writePump(client)
+	var wg sync.WaitGroup
+	wg.Add(2)
 
+	go app.writePump(client, &wg)
+	go app.readPump(client, &wg)
+
+	wg.Wait()
+
+	go app.sendInitialData(client)
 }
 
-func (app *App) readPump(client *Client) {
+func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 	defer func() {
+		app.removeClientFromAllRooms(client)
 		app.unregisterClient(client)
 		client.conn.Close()
 	}()
@@ -105,6 +76,8 @@ func (app *App) readPump(client *Client) {
 		client.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
+
+	wg.Done()
 
 	for {
 		_, message, err := client.conn.ReadMessage()
@@ -126,6 +99,14 @@ func (app *App) readPump(client *Client) {
 		}
 
 		switch event.Event {
+		case "create_room":
+			app.handleCreateRoom(client, event.Data)
+		case "join_room":
+			app.handleJoinRoom(client, event.Data)
+		case "leave_room":
+			app.handleLeaveRoom(client, event.Data)
+		case "send_message":
+			app.handleSendMessage(client, event.Data)
 		case "send_request":
 			app.handleSendRequest(client, event.Data)
 		case "accept_request":
@@ -135,12 +116,30 @@ func (app *App) readPump(client *Client) {
 	}
 }
 
-func (app *App) writePump(client *Client) {
+func (app *App) removeClientFromAllRooms(client *Client) {
+	app.rooms.Range(func(key, value interface{}) bool {
+		room := value.(*Room)
+		delete(room.clients, client.userId)
+		if len(room.clients) == 0 {
+			app.rooms.Delete(key)
+		}
+		return true
+	})
+}
+
+func (app *App) unregisterClient(client *Client) {
+	app.clients.Delete(client.userId)
+	close(client.send)
+}
+
+func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
 		ticker.Stop()
 		client.conn.Close()
 	}()
+
+	wg.Done()
 
 	for {
 		select {
@@ -170,9 +169,158 @@ func (app *App) writePump(client *Client) {
 	}
 }
 
-func (app *App) unregisterClient(client *Client) {
-	app.clients.Delete(client.userId)
-	close(client.send)
+func (app *App) sendInitialData(client *Client) {
+	friendRequests, err := getRequests(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to fetch friend requests"}`)
+		log.Printf("error fetching friend requests for user %s: %v\n", client.userId, err)
+	} else {
+		response, _ := json.Marshal(map[string]interface{}{
+			"event": "friendRequests",
+			"data":  friendRequests,
+		})
+		client.send <- response
+	}
+
+	hasUnreadMessages, err := checkUnreadMessages(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to fetch unread messages"}`)
+		log.Printf("error fetching unread messages for user %s: %v\n", client.userId, err)
+	} else {
+		response, _ := json.Marshal(map[string]interface{}{
+			"event": "check_unread_messages",
+			"data":  hasUnreadMessages,
+		})
+		client.send <- response
+	}
+
+	rooms, err := getUserRooms(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to fetch user rooms"}`)
+		log.Printf("error fetching user rooms for user %s: %v\n", client.userId, err)
+	}
+
+	for _, roomId := range rooms {
+		app.joinRoom(client, roomId)
+	}
+}
+
+func (app *App) joinRoom(client *Client, roomId string) {
+	room, ok := app.rooms.Load(roomId)
+	if !ok {
+		log.Printf("Room %s not found", roomId)
+		return
+	}
+
+	r := room.(*Room)
+	r.clients[roomId] = client
+	client.rooms[roomId] = true
+}
+
+func (app *App) handleCreateRoom(client *Client, data json.RawMessage) {
+	var roomData struct {
+		RoomId string `json:"roomId"`
+	}
+	if err := json.Unmarshal(data, &roomData); err != nil {
+		log.Printf("error unmarshaling room data: %v", err)
+		return
+	}
+
+	room := &Room{
+		id:      roomData.RoomId,
+		clients: make(map[string]*Client),
+	}
+	app.rooms.Store(roomData.RoomId, room)
+	app.joinRoom(client, roomData.RoomId)
+
+	response := map[string]string{"event": "room_created", "roomId": roomData.RoomId}
+	jsonResponse, _ := json.Marshal(response)
+	client.send <- jsonResponse
+}
+
+func (app *App) handleJoinRoom(client *Client, data json.RawMessage) {
+	var roomData struct {
+		RoomId string `json:"roomId"`
+	}
+	if err := json.Unmarshal(data, &roomData); err != nil {
+		log.Printf("error unmarshaling room data: %v", err)
+		return
+	}
+
+	app.joinRoom(client, roomData.RoomId)
+
+	response := map[string]string{"event": "room_joined", "roomId": roomData.RoomId}
+	jsonResponse, _ := json.Marshal(response)
+	client.send <- jsonResponse
+}
+
+func (app *App) handleLeaveRoom(client *Client, data json.RawMessage) {
+	var roomData struct {
+		RoomId string `json:"roomId"`
+	}
+	if err := json.Unmarshal(data, &roomData); err != nil {
+		log.Printf("error unmarshaling room data: %v", err)
+		return
+	}
+
+	app.leaveRoom(client, roomData.RoomId)
+
+	response := map[string]string{"event": "room_left", "roomId": roomData.RoomId}
+	jsonResponse, _ := json.Marshal(response)
+	client.send <- jsonResponse
+}
+
+func (app *App) handleSendMessage(client *Client, data json.RawMessage) {
+	var messageData struct {
+		RoomId  string `json:"roomId"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(data, &messageData); err != nil {
+		log.Printf("error unmarshaling message data: %v", err)
+		return
+	}
+
+	app.broadcastToRoom(messageData.RoomId, client.userId, messageData.Message)
+}
+
+func (app *App) leaveRoom(client *Client, roomId string) {
+	room, ok := app.rooms.Load(roomId)
+	if !ok {
+		log.Printf("Room %s not found", roomId)
+		return
+	}
+
+	r := room.(*Room)
+	delete(r.clients, client)
+	client.roomId = ""
+
+	if len(r.clients) == 0 {
+		app.rooms.Delete(roomId)
+	}
+}
+
+func (app *App) broadcastToRoom(roomId, senderId, message string) {
+	room, ok := app.rooms.Load(roomId)
+	if !ok {
+		log.Printf("Room %s not found", roomId)
+		return
+	}
+
+	r := room.(*Room)
+	messageData := map[string]string{
+		"event":    "new_message",
+		"senderId": senderId,
+		"message":  message,
+	}
+	jsonMessage, _ := json.Marshal(messageData)
+
+	for client := range r.clients {
+		select {
+		case client.send <- jsonMessage:
+		default:
+			app.unregisterClient(client)
+		}
+	}
 }
 
 func (app *App) handleSendRequest(client *Client, data json.RawMessage) {
@@ -202,4 +350,83 @@ func (app *App) Broadcast(message []byte) {
 		}
 		return true
 	})
+}
+
+func getRequests(db *sql.DB, userId string) (models.IdList, error) {
+	query := `
+	SELECT from_id 
+	FROM requests 
+	JOIN matches 
+		ON (
+		(matches.user_id1 = requests.from_id AND matches.user_id2 = requests.to_id)
+		OR 
+		(matches.user_id1 = requests.to_id AND matches.user_id2 = requests.from_id)
+		) 
+	WHERE requests.to_id = $1 
+	AND requests.processed = FALSE 
+	AND matches.requested = TRUE 
+	AND matches.rejected = FALSE
+	`
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return models.IdList{}, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			return models.IdList{}, fmt.Errorf("failed to scan row: %v", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err = rows.Err(); err != nil {
+		return models.IdList{}, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return models.IdList{Ids: ids}, nil
+}
+
+func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
+	query := `SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE)`
+
+	var exists bool
+	err := db.QueryRow(query, userId).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check unread messages: %v", err)
+	}
+
+	return exists, nil
+}
+
+func getUserRooms(db *sql.DB, userId string) ([]string, error) {
+	query := `
+		SELECT id 
+		FROM rooms 
+		WHERE user_id1 = $1 OR user_id2 = $1
+	`
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var rooms []string
+	for rows.Next() {
+		var roomId string
+		err := rows.Scan(&roomId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		rooms = append(rooms, roomId)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return rooms, nil
 }
