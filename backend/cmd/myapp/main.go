@@ -13,7 +13,7 @@ import (
 
 func main() {
 	const (
-		dbname   = "matchme"
+		dbname   = "matchMe"
 		user     = "donghyun"
 		password = ""
 		host     = "localhost"
