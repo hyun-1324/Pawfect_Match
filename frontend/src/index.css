@@ -181,7 +181,7 @@ h3 {
   .errorBox {
     width: 50%;
     border: red solid 1px;
-    background-color: #110805;
+    background-color: var(--yellow);
     padding: 0.5rem;
     margin: 0 auto;
     margin-bottom: 1rem;

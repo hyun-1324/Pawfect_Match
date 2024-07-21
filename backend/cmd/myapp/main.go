@@ -13,9 +13,9 @@ import (
 
 func main() {
 	const (
-		dbname   = "matchMe"
-		user     = "donghyun"
-		password = ""
+		dbname   = "matchme"
+		user     = "veera"
+		password = "a"
 		host     = "localhost"
 		port     = 5432
 	)

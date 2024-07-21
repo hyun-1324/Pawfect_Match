@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import handleLogout from "../../tools/handleLogout";
+import { useAuth } from '../../tools/AuthContext';
 
 const Navbar = ({showChatNotification, showConnectionNotification}) => {
     
     const navigate = useNavigate();
+    const { logout } = useAuth(); 
     if (window.location.pathname === "/login" || window.location.pathname === "/register") {
         return (
             <nav className="navbar" style={{backgroundColor:"#C4DDF2", display:"flex"}}>
@@ -49,7 +51,7 @@ const Navbar = ({showChatNotification, showConnectionNotification}) => {
                 <Link to="/myprofile"><img className="button navButton" src={`${process.env.PUBLIC_URL}/images/profile.png`} alt="Profile"></img><span className="navText">Profile</span></Link>
             </div>
             <div className="navLinkLogout">
-                <img onClick={() => handleLogout(navigate)} className="button navButton logoutNav" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
+                <img onClick={() => handleLogout(navigate, { logout })} className="button navButton logoutNav" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
                 <span className= "navText">Logout</span>
             </div>
         

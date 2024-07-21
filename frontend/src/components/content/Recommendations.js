@@ -15,6 +15,12 @@ const Recommendations = () => {
     // Use custom hook to fetch bio data
     const { data: bioData, isPending, error } = useFetch("/me/bio");
 
+    useEffect(() => {
+        if (error) {
+            setErrorMessage(error.message);
+        }
+    }, [error]);
+
     // Update location if needed
     useEffect(() => {
         const abortController = new AbortController(); // Create an instance of AbortController
@@ -171,7 +177,7 @@ return (
     <div className="recommendations">
         <h2>Recommendations</h2>
         {errorMessage && <div className="errorBox">Error:<br />{errorMessage}</div>}
-        {isLoading && 
+        {isLoading && !errorMessage &&
             <div className="card centered">
                 <h3>Updating your recommendations...</h3>
                 <img className="loadingScreenPicture" src={`${process.env.PUBLIC_URL}/images/loadingScreenDog.png`}></img>
