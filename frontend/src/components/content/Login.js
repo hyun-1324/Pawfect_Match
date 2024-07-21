@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { SocketContext } from '../../socketContext';
+import { useAuth } from '../../tools/AuthContext';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -10,8 +10,9 @@ const Login = () => {
     const [isPending, setIsPending] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [controller, setController] = useState(null); 
-    const socket = useContext(SocketContext);
-
+    
+    const { login } = useAuth(); 
+    
     const navigate = useNavigate();
     // Redirect to recommendations page if user is already logged in
 
@@ -59,6 +60,7 @@ const Login = () => {
     }, []); 
 
     const handleSubmit = async (event) => {
+        
         event.preventDefault(); 
         setIsPending(true);
         setError(null);
@@ -82,9 +84,9 @@ const Login = () => {
                 error.response = errorResponse; 
                 throw error;
             }
-            /*if (socket && typeof socket.connect === 'function') {
-                socket.connect();
-            }*/
+            // Set the WebSocket connection
+            login();
+
             setIsPending(false);
             navigate('/');
         } catch (err) {
@@ -98,6 +100,7 @@ const Login = () => {
             } else {
                 // This is likely a network error
                 setError('Network error, please try again.');
+                console.log(err);
             }
         }
     };

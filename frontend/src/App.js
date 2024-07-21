@@ -12,36 +12,17 @@ import EditProfile from "./components/content/EditProfile";
 import ChatList from "./components/content/ChatList";
 import Chat from "./components/content/Chat";
 import Connections from "./components/content/Connections";
+import useWebSocket from "react-use-websocket";
+import { AuthProvider } from './tools/AuthContext';
 
 
 function App() {
-  const [showConnectionNotification, setShowConnectionNotification] = useState(false);
-  const [showChatNotification, setShowChatNotification] = useState(false);
-  
-  /*function connect() {
-    const ws = new WebSocket('ws://localhost:8080/ws);
-
-    ws.onclose = function(e) {
-        console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
-        setTimeout(function() {
-            connect();
-        }, 1000);
-    };
-
-    ws.onerror = function(err) {
-        console.error('Socket encountered error: ', err.message, 'Closing socket');
-        ws.close();
-    };
-  }
-
-  connect(); */
-
   return (
-
+    <AuthProvider>
       <Router>
         <div className="App">
           <Logobar />
-          <Navbar showChatNotification={showChatNotification} showConnectionNotification={showConnectionNotification}/>
+          <Navbar />
           <div className="content">
             <Routes>
               <Route exact path="/" element={<Recommendations />} />
@@ -58,7 +39,7 @@ function App() {
           </div>
         </div>
       </Router>
-
+    </AuthProvider>
   );
 }
 
