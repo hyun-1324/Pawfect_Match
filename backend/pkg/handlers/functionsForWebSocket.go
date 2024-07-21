@@ -7,6 +7,7 @@ import (
 	"matchMe/pkg/models"
 	"matchMe/pkg/utils"
 	"strconv"
+	"time"
 )
 
 func changeToEvent(event string, data interface{}) ([]byte, error) {
@@ -233,4 +234,101 @@ func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 	}
 
 	return roomId, nil
+}
+
+func saveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.Time) (int, error) {
+
+	var messageId int
+	err := db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, sent_at) VALUES ($1, $2, $3, $4, $5) RETURNING id", roomId, fromId, toId, message, sentAt).Scan(&messageId)
+	if err != nil {
+		return 0, fmt.Errorf("failed to save message: %v", err)
+	}
+
+	return messageId, nil
+}
+
+func getChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
+	query := `
+SELECT 
+  room_id,
+  EXISTS (
+    SELECT 1
+    FROM messages m
+    WHERE m.room_id = messages.room_id AND m.read = FALSE
+  ) AS has_unread
+FROM messages 
+WHERE (to_id = $1 OR from_id = $1)
+GROUP BY room_id
+ORDER BY MAX(sent_at) DESC;
+	`
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var chatList []models.ChatList
+	for rows.Next() {
+		var msg models.ChatList
+		err := rows.Scan(&msg.RoomId, &msg.UnReadMessage)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		chatList = append(chatList, msg)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return chatList, nil
+}
+
+func getMessagesForRoom(db *sql.DB, roomId string, userId string, lastMessageId int) ([]models.Message, error) {
+	limit := 10
+
+	query := `
+	SELECT id, room_id, from_id, to_id, message, sent_at
+	FROM messages
+	WHERE room_id = $1 AND (from_id = $2 OR to_id = $2) AND id < $3
+	ORDER BY sent_at DESC
+	LIMIT $4
+	`
+
+	rows, err := db.Query(query, roomId, userId, lastMessageId, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var messages []models.Message
+	for rows.Next() {
+		var msg models.Message
+		err := rows.Scan(&msg.Id, &msg.RoomId, &msg.FromId, &msg.ToId, &msg.Message, &msg.SentAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		messages = append(messages, msg)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return messages, nil
+}
+
+func markMessagesAsRead(db *sql.DB, userId, roomId string) error {
+	query := `
+	UPDATE messages
+	SET read = TRUE
+	WHERE to_id = $1 AND room_id = $2
+	`
+	_, err := db.Exec(query, userId, roomId)
+	if err != nil {
+		return fmt.Errorf("failed to update data: %v", err)
+	}
+
+	return nil
+
 }
