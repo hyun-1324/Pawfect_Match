@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 
 const AuthContext = createContext();
@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ login, logout, sendJsonMessage, lastJsonMessage }}>
+    <AuthContext.Provider value={{ loggedIn, login, logout, sendJsonMessage, lastJsonMessage }}>
       {children}
     </AuthContext.Provider>
   );

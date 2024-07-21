@@ -17,17 +17,12 @@ import { AuthProvider } from './tools/AuthContext';
 
 
 function App() {
-  const [showConnectionNotification, setShowConnectionNotification] = useState(false);
-  const [showChatNotification, setShowChatNotification] = useState(false);
-
-
-
   return (
     <AuthProvider>
       <Router>
         <div className="App">
           <Logobar />
-          <Navbar showChatNotification={showChatNotification} showConnectionNotification={showConnectionNotification}/>
+          <Navbar />
           <div className="content">
             <Routes>
               <Route exact path="/" element={<Recommendations />} />

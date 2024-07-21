@@ -1,12 +1,36 @@
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import handleLogout from "../../tools/handleLogout";
 import { useAuth } from '../../tools/AuthContext';
 
-const Navbar = ({showChatNotification, showConnectionNotification}) => {
-    
+const Navbar = () => {
     const navigate = useNavigate();
     const { logout } = useAuth(); 
+    const { lastJsonMessage } = useAuth();
+
+    const [showConnectionNotification, setShowConnectionNotification] = useState(false);
+    const [showChatNotification, setShowChatNotification] = useState(false);
+
+    useEffect(() => {
+        if (lastJsonMessage) {
+            console.log(lastJsonMessage);
+            if (lastJsonMessage.event === "unreadMessages") {
+                if (lastJsonMessage.data === true) {
+                    setShowChatNotification(true);
+                } else if (lastJsonMessage.data === false) {
+                    setShowChatNotification(false);
+                }
+            }
+            if (lastJsonMessage.event === "friendRequests") {
+                if (lastJsonMessage.data.ids.length > 0) {
+                    setShowConnectionNotification(true);
+                } else {
+                    setShowConnectionNotification(false);
+                }
+            }
+        }
+    }, [lastJsonMessage]);
+
     if (window.location.pathname === "/login" || window.location.pathname === "/register") {
         return (
             <nav className="navbar" style={{backgroundColor:"#C4DDF2", display:"flex"}}>

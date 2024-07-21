@@ -1,7 +1,8 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import  useFetch  from "../../tools/useFetch";
+import { useAuth } from '../../tools/AuthContext';
 
 const Recommendations = () => {
     const navigate = useNavigate();
@@ -12,6 +13,9 @@ const Recommendations = () => {
     const [recommendations, setRecommendations] = useState(null);
     const [recommendationsList, setRecommendationsList] = useState([]);// []{id, dog_name, picture}
     
+    const { sendJsonMessage } = useAuth(); 
+    const { loggedIn } = useAuth();
+    const { login } = useAuth();
     // Use custom hook to fetch bio data
     const { data: bioData, isPending, error } = useFetch("/me/bio");
 
@@ -23,6 +27,10 @@ const Recommendations = () => {
 
     // Update location if needed
     useEffect(() => {
+        // Connect websocket if not already connected
+        if (!loggedIn && !isPending && !error) {
+            login();
+        }
         const abortController = new AbortController(); // Create an instance of AbortController
         const signal = abortController.signal; // Get the signal to pass to fetch
         // Check if the first fetch is completed and was successful
@@ -78,7 +86,7 @@ const Recommendations = () => {
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
-        if (recommendations && recommendations.length > 0 && isRecommendationsLoaded && isLoading) { 
+        if (recommendations && recommendations.length > 0 && isRecommendationsLoaded) { 
             // for each id in recommendations, fetch the data
             Promise.allSettled(recommendations.map((id) => 
                 fetchRecommendationData(id, {signal})
@@ -101,7 +109,7 @@ const Recommendations = () => {
             setIsLoading(false);
         }
         return () => abortController.abort(); 
-    }, [recommendations, isRecommendationsLoaded, isLoading]);
+    }, [recommendations, isRecommendationsLoaded]);
 
 
     const fetchRecommendationData = async (id, {signal}) => {
@@ -148,6 +156,21 @@ const Recommendations = () => {
         }
         return null;
     };
+
+    const handleSendRequest = useCallback((userId) => {
+        const dataObject = { id: userId };
+        sendJsonMessage({ event: "send_request", data: dataObject });
+        // remove the usercard with key userId from recommendations
+        setRecommendationsList((prevList) => prevList.filter((user) => user.id !== userId));
+        
+    }, [sendJsonMessage]);
+
+    const handleRejectRequest = useCallback((userId) => {
+        const dataObject = { id: userId };
+        sendJsonMessage({ event: "reject_request", data: dataObject });
+        // remove the usercard with key userId from recommendations
+        setRecommendationsList((prevList) => prevList.filter((user) => user.id !== userId));
+    }, []);
     
     const makeRecommendationCards = (recommendationsList) => {
         if (!recommendationsList || recommendationsList.length === 0) {
@@ -157,15 +180,15 @@ const Recommendations = () => {
                 </div>
             );
         }
-        // Socket action needed for the buttons
+
         return recommendationsList.map((dogData) => (
             <div key={dogData.id} className="card userCard">
                 <img className="cardPicture" src={dogData.picture} alt="dog" onClick={() => navigate(`/profile/${dogData.id}`)} />
                 <div className="nameAndButtons">
                     <p>{dogData.dog_name}</p>
                     <div className="buttonContainer">
-                        <img className="button userCardButton" src={`${process.env.PUBLIC_URL}/images/accept.png`} alt="Send connection request" />
-                        <img className="button userCardButton" src={`${process.env.PUBLIC_URL}/images/dismiss.png`} alt="Dismiss recommendation" />
+                        <button className="button userCardButton" onClick={() => handleSendRequest(dogData.id)}><img src={`${process.env.PUBLIC_URL}/images/accept.png`} alt="Send connection request" /></button>
+                        <button className="button userCardButton" onClick={() => handleRejectRequest(dogData.id)}><img src={`${process.env.PUBLIC_URL}/images/dismiss.png`} alt="Dismiss recommendation" /></button>
                     </div>
                 </div>
                 

@@ -106,14 +106,19 @@ h3 {
   .card {
     border-radius: 3px;
     background-color: white;
-    padding: 0.5rem;
+    
     box-sizing: border-box;
   }
   .centered {
     text-align: center;
+    padding: 0.5rem;
+  }
+  .padded {
+    padding: 0.5rem;
   }
   .twoColumnCard {
     display: grid;
+    gap: 0.5rem;
     padding: 0;
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     min-height: 100%;
@@ -157,6 +162,7 @@ h3 {
     }
     p {
       margin: 0.5rem;
+      font-size: large;
       font-weight: bold;
       word-wrap: break-word; 
       overflow-wrap: break-word;
@@ -177,6 +183,7 @@ h3 {
       justify-self: flex-end;
       
     }
+  
   }
   .errorBox {
     width: 50%;
