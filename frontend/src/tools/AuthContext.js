@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import useWebSocket, { ReadyState } from 'react-use-websocket';
+import useWebSocket from 'react-use-websocket';
 
 const AuthContext = createContext();
 
@@ -12,13 +12,12 @@ export const AuthProvider = ({ children }) => {
   const { 
     sendJsonMessage,
     lastJsonMessage, 
-    readyState, 
-    getWebSocket,
    } = useWebSocket("ws://localhost:8080/ws", {
     share: true,
     onOpen: () => console.log("WebSocket Connected"),
     onClose: () => console.log("WebSocket Disconnected"),
-    // Add other event handlers as needed
+    // Will attempt to reconnect on all close events, such as server shutting down
+    shouldReconnect: (closeEvent) => true,
   }, 
     loggedIn
   );
