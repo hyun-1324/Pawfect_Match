@@ -22,7 +22,7 @@ const Navbar = () => {
                 }
             }
             if (lastJsonMessage.event === "friendRequests") {
-                if (lastJsonMessage.data.ids.length > 0) {
+                if (lastJsonMessage.data.ids?.length > 0) {
                     setShowConnectionNotification(true);
                 } else {
                     setShowConnectionNotification(false);
