@@ -88,10 +88,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 			break
 		}
 
-		var event struct {
-			Event string          `json:"event"`
-			Data  json.RawMessage `json:"data"`
-		}
+		var event models.Event
 
 		if err := json.Unmarshal(message, &event); err != nil {
 			log.Printf("error: %v", err)
@@ -99,6 +96,15 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		}
 
 		switch event.Event {
+		case "send_request":
+			var requestData models.SendRequestData
+			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				log.Printf("error unmarshaling request data: %v", err)
+				continue
+			}
+			app.handleSendRequest(client, requestData.ToId)
+		case "accept_request":
+			app.handleAcceptRequest(client, event.Data)
 		case "create_room":
 			app.handleCreateRoom(client, event.Data)
 		case "join_room":
@@ -107,11 +113,6 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 			app.handleLeaveRoom(client, event.Data)
 		case "send_message":
 			app.handleSendMessage(client, event.Data)
-		case "send_request":
-			app.handleSendRequest(client, event.Data)
-		case "accept_request":
-			app.handleAcceptRequest(client, event.Data)
-			//add event handler
 		}
 	}
 }
@@ -215,6 +216,55 @@ func (app *App) joinRoom(client *Client, roomId string) {
 	r := room.(*Room)
 	r.clients[roomId] = client
 	client.rooms[roomId] = true
+}
+
+func (app *App) handleSendRequest(client *Client, toId string) {
+	err := saveRequest(app.DB, client.userId, toId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process friend request"}`)
+		fmt.Printf("error saving friend request from %s to %s: %v\n", client.userId, toId, err)
+		return
+	}
+
+	friendRequests, err := getRequests(app.DB, toId)
+	if err != nil {
+		fmt.Printf("error fetching friend requests for user %s: %v\n", toId, err)
+		return
+	}
+
+	if toClient, ok := app.clients.Load(toId); ok {
+		client, ok := toClient.(*Client)
+		if ok {
+			eventData, err := json.Marshal(friendRequests)
+			if err != nil {
+				fmt.Printf("error marshaling friend requests: %v\n", err)
+				return
+			}
+
+			event := models.Event{
+				Event: "friendRequests",
+				Data:  eventData,
+			}
+
+			response, err := json.Marshal(event)
+			if err != nil {
+				fmt.Printf("error marshaling event: %v\n", err)
+				return
+			}
+
+			select {
+			case client.send <- response:
+			default:
+				fmt.Printf("Falied to send friend request notification to user %s\n", toId)
+				app.unregisterClient(client)
+			}
+		}
+	}
+}
+
+func (app *App) handleAcceptRequest(client *Client, data json.RawMessage) {
+	// 수락 요청 처리 로직 구현
+	// app.DB를 사용하여 데이터베이스 작업 수행
 }
 
 func (app *App) handleCreateRoom(client *Client, data json.RawMessage) {
@@ -323,16 +373,6 @@ func (app *App) broadcastToRoom(roomId, senderId, message string) {
 	}
 }
 
-func (app *App) handleSendRequest(client *Client, data json.RawMessage) {
-	// 요청 처리 로직 구현
-	// app.DB를 사용하여 데이터베이스 작업 수행
-}
-
-func (app *App) handleAcceptRequest(client *Client, data json.RawMessage) {
-	// 수락 요청 처리 로직 구현
-	// app.DB를 사용하여 데이터베이스 작업 수행
-}
-
 func (app *App) SendToUser(userId string, message []byte) {
 	if client, ok := app.clients.Load(userId); ok {
 		client.(*Client).send <- message
@@ -350,83 +390,4 @@ func (app *App) Broadcast(message []byte) {
 		}
 		return true
 	})
-}
-
-func getRequests(db *sql.DB, userId string) (models.IdList, error) {
-	query := `
-	SELECT from_id 
-	FROM requests 
-	JOIN matches 
-		ON (
-		(matches.user_id1 = requests.from_id AND matches.user_id2 = requests.to_id)
-		OR 
-		(matches.user_id1 = requests.to_id AND matches.user_id2 = requests.from_id)
-		) 
-	WHERE requests.to_id = $1 
-	AND requests.processed = FALSE 
-	AND matches.requested = TRUE 
-	AND matches.rejected = FALSE
-	`
-	rows, err := db.Query(query, userId)
-	if err != nil {
-		return models.IdList{}, fmt.Errorf("failed to execute query: %v", err)
-	}
-	defer rows.Close()
-
-	var ids []int
-	for rows.Next() {
-		var id int
-		err := rows.Scan(&id)
-		if err != nil {
-			return models.IdList{}, fmt.Errorf("failed to scan row: %v", err)
-		}
-		ids = append(ids, id)
-	}
-
-	if err = rows.Err(); err != nil {
-		return models.IdList{}, fmt.Errorf("error iterating rows: %v", err)
-	}
-
-	return models.IdList{Ids: ids}, nil
-}
-
-func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
-	query := `SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE)`
-
-	var exists bool
-	err := db.QueryRow(query, userId).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("failed to check unread messages: %v", err)
-	}
-
-	return exists, nil
-}
-
-func getUserRooms(db *sql.DB, userId string) ([]string, error) {
-	query := `
-		SELECT id 
-		FROM rooms 
-		WHERE user_id1 = $1 OR user_id2 = $1
-	`
-	rows, err := db.Query(query, userId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute query: %v", err)
-	}
-	defer rows.Close()
-
-	var rooms []string
-	for rows.Next() {
-		var roomId string
-		err := rows.Scan(&roomId)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan row: %v", err)
-		}
-		rooms = append(rooms, roomId)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %v", err)
-	}
-
-	return rooms, nil
 }

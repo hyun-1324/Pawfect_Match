@@ -372,20 +372,20 @@ func extractJWTFromCookieHeader(cookieHeader string) string {
 // 	return models.IdList{Ids: ids}, nil
 // }
 
-func saveRequest(db *sql.DB, fromId, toId string) error {
+// func saveRequest(db *sql.DB, fromId, toId string) error {
 
-	_, err := db.Exec("INSERT INTO requests (from_id, to_id) VALUES ($1, $2)", fromId, toId)
-	if err != nil {
-		return fmt.Errorf("failed to execute query: %v", err)
-	}
+// 	_, err := db.Exec("INSERT INTO requests (from_id, to_id) VALUES ($1, $2)", fromId, toId)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to execute query: %v", err)
+// 	}
 
-	_, err = db.Exec("UPDATE matches SET requested = TRUE WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)", fromId, toId)
-	if err != nil {
-		return fmt.Errorf("failed to execute query: %v", err)
-	}
+// 	_, err = db.Exec("UPDATE matches SET requested = TRUE WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)", fromId, toId)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to execute query: %v", err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func saveAcceptance(db *sql.DB, fromId, toId string) error {
 
