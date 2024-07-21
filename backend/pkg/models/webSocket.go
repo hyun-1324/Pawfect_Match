@@ -16,11 +16,16 @@ type RequestData struct {
 
 type Message struct {
 	Id      int       `json:"id"`
-	RoomID  string    `json:"room_id"`
-	FromID  string    `json:"from_id"`
-	ToID    string    `json:"to_id"`
+	RoomId  string    `json:"room_id"`
+	FromId  string    `json:"from_id"`
+	ToId    string    `json:"to_id"`
 	Message string    `json:"message"` // 255 characters
 	SentAt  time.Time `json:"sent_at"`
+}
+
+type GetMessages struct {
+	RoomId        string `json:"room_id"`
+	LastMessageId int    `json:"last_message_id"`
 }
 
 type ChatList struct {

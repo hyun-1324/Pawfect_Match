@@ -136,8 +136,23 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "leave_room":
 			app.handleLeaveRoom(client, event.Data)
 		case "send_message":
-			app.handleSendMessage(client, event.Data)
+			var messageData models.Message
+			if err := json.Unmarshal(event.Data, &messageData); err != nil {
+				log.Printf("error unmarshaling message data: %v", err)
+				continue
+			}
+			app.handleSendMessage(client, messageData)
 		case "get_messages":
+			var messageData models.GetMessages
+			if err := json.Unmarshal(event.Data, &messageData); err != nil {
+				log.Printf("error unmarshaling message data: %v", err)
+				continue
+			}
+			app.handleGetMessages(client, messageData)
+		case "check_unread_messages":
+			app.handleCheckUnreadMessages(client)
+		case "get_chat_list":
+			app.handleGetChatList(client)
 		}
 	}
 }
@@ -411,19 +426,6 @@ func (app *App) handleLeaveRoom(client *Client, data json.RawMessage) {
 	client.send <- jsonResponse
 }
 
-func (app *App) handleSendMessage(client *Client, data json.RawMessage) {
-	var messageData struct {
-		RoomId  string `json:"roomId"`
-		Message string `json:"message"`
-	}
-	if err := json.Unmarshal(data, &messageData); err != nil {
-		log.Printf("error unmarshaling message data: %v", err)
-		return
-	}
-
-	app.broadcastToRoom(messageData.RoomId, client.userId, messageData.Message)
-}
-
 func (app *App) leaveRoom(client *Client, roomId string) {
 	room, ok := app.rooms.Load(roomId)
 	if !ok {
@@ -440,44 +442,121 @@ func (app *App) leaveRoom(client *Client, roomId string) {
 	}
 }
 
-func (app *App) broadcastToRoom(roomId, senderId, message string) {
-	room, ok := app.rooms.Load(roomId)
+func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
+
+	messageId, err := saveMessage(app.DB, messageInfo.RoomId, client.userId, messageInfo.ToId, messageInfo.Message, messageInfo.SentAt)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
+		fmt.Printf("error saving message from %s to %s: %v\n", client.userId, messageInfo.ToId, err)
+		return
+	}
+
+	messageInfo.Id = messageId
+	messageInfo.FromId = client.userId
+
+	if toClient, ok := app.clients.Load(messageInfo.ToId); ok {
+		toClient, ok := toClient.(*Client)
+		if ok {
+			chatList, err := getChatList(app.DB, messageInfo.ToId)
+			if err != nil {
+				toClient.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+				fmt.Printf("error fetching chat list for user %s: %v\n", messageInfo.ToId, err)
+				return
+			}
+			response, err := changeToEvent("get_chat_list", chatList)
+			if err != nil {
+				toClient.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+				fmt.Printf("error marshaling chat list: %v\n", err)
+				return
+			}
+
+			select {
+			case toClient.send <- response:
+			default:
+				toClient.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+				fmt.Printf("Falied to send chat list to user %s\n", messageInfo.ToId)
+				app.unregisterClient(toClient)
+			}
+		}
+	}
+
+	app.broadcastToRoom(messageInfo)
+}
+
+func (app *App) broadcastToRoom(messageInfo models.Message) {
+	response, err := changeToEvent("new_message", messageInfo)
+	if err != nil {
+		log.Printf("error marshaling new message: %v", err)
+		return
+	}
+
+	room, ok := app.rooms.Load(messageInfo.RoomId)
 	if !ok {
-		log.Printf("Room %s not found", roomId)
+		log.Printf("Room %s not found", messageInfo.RoomId)
 		return
 	}
 
 	r := room.(*Room)
-	messageData := map[string]string{
-		"event":    "new_message",
-		"senderId": senderId,
-		"message":  message,
-	}
-	jsonMessage, _ := json.Marshal(messageData)
 
-	for client := range r.clients {
+	for _, client := range r.clients {
 		select {
-		case client.send <- jsonMessage:
+		case client.send <- response:
 		default:
 			app.unregisterClient(client)
 		}
 	}
 }
 
-func (app *App) SendToUser(userId string, message []byte) {
-	if client, ok := app.clients.Load(userId); ok {
-		client.(*Client).send <- message
+func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages) {
+	messages, err := getMessagesForRoom(app.DB, messageInfo.RoomId, client.userId, messageInfo.LastMessageId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+		fmt.Printf("error fetching messages for room %s: %v\n", messageInfo.RoomId, err)
+		return
 	}
-}
 
-func (app *App) Broadcast(message []byte) {
-	app.clients.Range(func(key, value interface{}) bool {
-		client := value.(*Client)
-		select {
-		case client.send <- message:
-		default:
-			app.unregisterClient(client)
-		}
-		return true
-	})
+	err = markMessagesAsRead(app.DB, client.userId, messageInfo.RoomId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
+		fmt.Printf("error marking messages as read for room %s: %v\n", messageInfo.RoomId, err)
+		return
+	}
+
+	chatList, err := getChatList(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
+		return
+	}
+
+	messageResponse, err := changeToEvent("get_messages", messages)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+		fmt.Printf("error marshaling messages: %v\n", err)
+		return
+	}
+
+	chatListResponse, err := changeToEvent("get_chat_list", chatList)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+		fmt.Printf("error marshaling chat list: %v\n", err)
+		return
+	}
+
+	select {
+	case client.send <- messageResponse:
+	default:
+		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+		fmt.Printf("Falied to send messages to user %s\n", client.userId)
+		app.unregisterClient(client)
+	}
+
+	select {
+	case client.send <- chatListResponse:
+	default:
+		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+		fmt.Printf("Falied to send messages to user %s\n", client.userId)
+		app.unregisterClient(client)
+	}
+
 }
