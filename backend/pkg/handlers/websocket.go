@@ -46,7 +46,7 @@ type App struct {
 func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		utils.HandleError(w, "Failed to upgrade connection", http.StatusUnauthorized, fmt.Errorf("Failed to upgrade connection: %v", err))
+		utils.HandleError(w, "Failed to upgrade connection", http.StatusUnauthorized, fmt.Errorf("failed to upgrade connection: %v", err))
 		return
 	}
 
