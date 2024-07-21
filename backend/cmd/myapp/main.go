@@ -8,10 +8,6 @@ import (
 	"matchMe/pkg/middleware"
 	"net/http"
 
-	socketio "github.com/googollee/go-socket.io"
-	"github.com/googollee/go-socket.io/engineio"
-	"github.com/googollee/go-socket.io/engineio/transport"
-	"github.com/googollee/go-socket.io/engineio/transport/websocket"
 	"github.com/rs/cors"
 )
 
@@ -42,20 +38,7 @@ func main() {
 		AllowCredentials: true,
 	})
 
-	server := socketio.NewServer(&engineio.Options{
-		Transports: []transport.Transport{&websocket.Transport{
-			CheckOrigin: func(r *http.Request) bool {
-				return corsMiddleware.OriginAllowed(r)
-			},
-		}},
-	})
-
-	handlers.RegisterSocketHandlers(server, database)
-
-	go server.Serve()
-	defer server.Close()
-
-	http.Handle("/socket.io/", server)
+	http.Handle("/ws", middleware.AuthMiddleware(database, http.HandlerFunc(app.HandleConnections)))
 
 	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
 	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
