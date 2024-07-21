@@ -1,4 +1,4 @@
-
+CREATE EXTENSION postgis;
 
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
