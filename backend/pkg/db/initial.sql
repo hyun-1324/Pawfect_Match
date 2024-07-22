@@ -87,7 +87,8 @@ CREATE TABLE requests (
   processed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY("from_id") REFERENCES "users"("id") ON DELETE CASCADE,
-  FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE
+  FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE,
+  CONSTRAINT unique_request UNIQUE (LEAST(from_id, to_id), GREATEST(from_id, to_id))
 );
 
 CREATE TABLE matches (
