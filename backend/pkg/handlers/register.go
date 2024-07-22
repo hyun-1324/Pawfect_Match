@@ -101,7 +101,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = processProfilePictureData(r, app, req.Id, true)
+	err = processProfilePictureData(r, app, req.Id, req.AddPicture)
 	if err != nil {
 		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to process profile picture data: %v", err))
 		return
@@ -223,7 +223,7 @@ func checkLocationData(location string) (float64, float64, error) {
 func processProfilePictureData(r *http.Request, app *App, userId int, addFile bool) error {
 	profilePicture, fileHeader, err := r.FormFile("profilePicture")
 	if err != nil {
-		if err == http.ErrMissingFile || !addFile {
+		if err == http.ErrMissingFile && !addFile {
 			query := `DELETE FROM profile_pictures WHERE user_id = $1`
 			_, err = app.DB.Exec(query, userId)
 			if err != nil {

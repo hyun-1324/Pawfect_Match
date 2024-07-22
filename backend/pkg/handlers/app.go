@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 
 	"matchMe/pkg/middleware"
@@ -15,8 +16,9 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
 	userId := middleware.GetUserId(r)
 	user.Id = r.PathValue("id")
+	var fileURL sql.NullString
 
-	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
+	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &fileURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			utils.HandleError(w, "status not found", http.StatusNotFound, fmt.Errorf("user with id %s not found", user.Id))
@@ -24,6 +26,10 @@ func (app *App) User(w http.ResponseWriter, r *http.Request) {
 		}
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, fmt.Errorf("failed to fetch data for user: %v", err))
 		return
+	}
+
+	if fileURL.Valid {
+		user.Picture = template.URL(fileURL.String)
 	}
 
 	err = checkRecommendationAndConnectionStatus(app.DB, userId, user.Id)
@@ -180,11 +186,16 @@ func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
 	userId := middleware.GetUserId(r)
 	user.Id = userId
+	var fileURL sql.NullString
 
-	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &user.Picture)
+	err := app.DB.QueryRow("SELECT users.dog_name, profile_pictures.file_url FROM users LEFT JOIN profile_pictures ON profile_pictures.user_id = users.id WHERE users.id = $1", user.Id).Scan(&user.DogName, &fileURL)
 	if err != nil {
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, fmt.Errorf("failed to fetch data for my user info: %v", err))
 		return
+	}
+
+	if fileURL.Valid {
+		user.Picture = template.URL(fileURL.String)
 	}
 
 	err = json.NewEncoder(w).Encode(user)
