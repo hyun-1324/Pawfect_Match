@@ -111,7 +111,7 @@ const Login = () => {
                 <div className="oneColumnCardCentered">
                     <h2>Login</h2>
                     {error && <div className="errorBox">Error:<br/>{error}</div>}
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={ (event) => handleSubmit(event)}>
                         <label htmlFor="email">E-mail:</label><br />
                         <input 
                             type="email" 

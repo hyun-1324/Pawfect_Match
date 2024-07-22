@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import  useFetch  from "../../tools/useFetch";
 import { useAuth } from '../../tools/AuthContext';
+import fetchUserData from "../../tools/fetchUserInfo";
 
 const Recommendations = () => {
     const navigate = useNavigate();
@@ -89,12 +90,12 @@ const Recommendations = () => {
         if (recommendations && recommendations.length > 0 && isRecommendationsLoaded) { 
             // for each id in recommendations, fetch the data
             Promise.allSettled(recommendations.map((id) => 
-                fetchRecommendationData(id, {signal})
-                    .then(({ recommendationData, error }) => {
+                fetchUserData(id, {signal})
+                    .then(({ userData, error }) => {
                         if (error) {
                             setErrorMessage(error.message);
                         } else {
-                            setRecommendationsList((prevList) => [...prevList, recommendationData]);
+                            setRecommendationsList((prevList) => [...prevList, userData]);
                         }
                     })
                     .catch((error) => {
@@ -110,20 +111,6 @@ const Recommendations = () => {
         }
         return () => abortController.abort(); 
     }, [recommendations, isRecommendationsLoaded]);
-
-
-    const fetchRecommendationData = async (id, {signal}) => {
-        const response = await fetch(`/users/${id}`, { signal });
-        if (!response.ok) {
-            const errorResponse = await response.json();
-            const error = new Error();
-            error.status = response.status;
-            error.message = errorResponse.Message || "Unknown error";
-            return { recommendationData: null, error };
-        }
-        const data = await response.json(); // data.id, data.dog_name, data.picture
-        return { recommendationData: data, error: null };
-    };
     
 
     const fetchRecommendations = async ({signal}) => {
@@ -167,10 +154,10 @@ const Recommendations = () => {
 
     const handleRejectRequest = useCallback((userId) => {
         const dataObject = { id: userId };
-        sendJsonMessage({ event: "reject_request", data: dataObject });
+        sendJsonMessage({ event: "reject_recommendation", data: dataObject });
         // remove the usercard with key userId from recommendations
         setRecommendationsList((prevList) => prevList.filter((user) => user.id !== userId));
-    }, []);
+    }, [sendJsonMessage]);
     
     const makeRecommendationCards = (recommendationsList) => {
         if (!recommendationsList || recommendationsList.length === 0) {
@@ -183,12 +170,29 @@ const Recommendations = () => {
 
         return recommendationsList.map((dogData) => (
             <div key={dogData.id} className="card userCard">
-                <img className="cardPicture" src={dogData.picture} alt="dog" onClick={() => navigate(`/profile/${dogData.id}`)} />
+                <img className="cardPicture" 
+                    src={
+                        dogData.picture
+                        ? dogData.picture
+                        : `${process.env.PUBLIC_URL}/images/defaultProfileDog.png`
+                    } 
+                    alt="profile picture, click to see profile" 
+                    onClick={() => navigate(`/profile/${dogData.id}`)} />
                 <div className="nameAndButtons">
                     <p>{dogData.dog_name}</p>
                     <div className="buttonContainer">
-                        <button className="button userCardButton" onClick={() => handleSendRequest(dogData.id)}><img src={`${process.env.PUBLIC_URL}/images/accept.png`} alt="Send connection request" /></button>
-                        <button className="button userCardButton" onClick={() => handleRejectRequest(dogData.id)}><img src={`${process.env.PUBLIC_URL}/images/dismiss.png`} alt="Dismiss recommendation" /></button>
+                        <button className="button userCardButton" 
+                            onClick={() => handleSendRequest(dogData.id)}>
+                            <img 
+                                src={`${process.env.PUBLIC_URL}/images/accept.png`} 
+                                alt="Send connection request" />
+                        </button>
+                        <button className="button userCardButton" 
+                            onClick={() => handleRejectRequest(dogData.id)}>
+                                <img 
+                                    src={`${process.env.PUBLIC_URL}/images/dismiss.png`} 
+                                    alt="Dismiss recommendation" />
+                        </button>
                     </div>
                 </div>
                 

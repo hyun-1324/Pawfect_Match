@@ -5,31 +5,7 @@ import { useAuth } from '../../tools/AuthContext';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const { logout } = useAuth(); 
-    const { lastJsonMessage } = useAuth();
-
-    const [showConnectionNotification, setShowConnectionNotification] = useState(false);
-    const [showChatNotification, setShowChatNotification] = useState(false);
-
-    useEffect(() => {
-        if (lastJsonMessage) {
-            console.log(lastJsonMessage);
-            if (lastJsonMessage.event === "unreadMessages") {
-                if (lastJsonMessage.data === true) {
-                    setShowChatNotification(true);
-                } else if (lastJsonMessage.data === false) {
-                    setShowChatNotification(false);
-                }
-            }
-            if (lastJsonMessage.event === "friendRequests") {
-                if (lastJsonMessage.data.ids?.length > 0) {
-                    setShowConnectionNotification(true);
-                } else {
-                    setShowConnectionNotification(false);
-                }
-            }
-        }
-    }, [lastJsonMessage]);
+    const { logout, friendRequests, unreadMessages } = useAuth(); 
 
     if (window.location.pathname === "/login" || window.location.pathname === "/register") {
         return (
@@ -57,7 +33,7 @@ const Navbar = () => {
                 <Link to="/myconnections">
                     <div className="notificationImageContainer">
                         <img className="button navButton" src={`${process.env.PUBLIC_URL}/images/connections.png`} alt="Connections"></img>
-                        {showConnectionNotification&&<div id="connectionNotification" className="notificationMark"></div>}
+                        {friendRequests.length > 0 && <div id="connectionNotification" className="notificationMark"></div>}
                     </div>
                     <span className="navText">Connections</span>
                 </Link>
@@ -66,7 +42,7 @@ const Navbar = () => {
                 <Link to="/chat">
                 <div className="notificationImageContainer">
                     <img className="button navButton" src={`${process.env.PUBLIC_URL}/images/chat.png`} alt="Messages"></img>
-                    {showChatNotification&&<div id="chatNotification" className="notificationMark"></div>}
+                    {unreadMessages && <div id="chatNotification" className="notificationMark"></div>}
                 </div>
                 <span className="navText">Messages</span>
                 </Link>

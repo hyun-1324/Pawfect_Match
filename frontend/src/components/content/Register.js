@@ -191,7 +191,7 @@ const Register = () => {
         suitable play mates. This info can be modified later in the profile
         settings. Mandatory fields are marked with an asterisk (*).
       </p>
-      <form className="twoColumnCard" onSubmit={handleSubmit}>
+      <form className="twoColumnCard" onSubmit={(event) => handleSubmit(event)}>
         <div className="oneColumnCardLeft">
           <h4>Owner info</h4>
           <label htmlFor="email">E-mail: *</label>
