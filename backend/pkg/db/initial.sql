@@ -75,7 +75,14 @@ CREATE TABLE connections (
   FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
   UNIQUE (user_id1, user_id2),
   CHECK (user_id1 < user_id2)
-);
+)
+
+CREATE TABLE new_connections (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER,
+  new_connection BOOLEAN DEFAULT FALSE,
+  FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE
+)
 
 CREATE TABLE requests (
   id SERIAL PRIMARY KEY,
@@ -87,7 +94,6 @@ CREATE TABLE requests (
   FOREIGN KEY("from_id") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE
 );
-
 
 CREATE TABLE matches (
   id SERIAL PRIMARY KEY,
@@ -163,7 +169,6 @@ CREATE TABLE rooms (
   UNIQUE (user_id1, user_id2),
   CHECK(user_id1 < user_id2)
 );
-
 
 CREATE TABLE messages (
   id SERIAL PRIMARY KEY,

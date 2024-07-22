@@ -35,7 +35,15 @@ const MyProfile = () => {
       <div className="profile-header">
         <h2>{user.dog_name}</h2>
       </div>
-      <img src={user.picture} alt="Dog" height="200vh" />
+      <img
+        src={
+          user.picture
+            ? user.picture
+            : `${process.env.PUBLIC_URL}/images/profile.png`
+        }
+        alt="Dog"
+        height="200vh"
+      />
       <h3>About me and my owner</h3>
       <p>{userProfile.about_me}</p>
       <h3>Bio</h3>
