@@ -294,7 +294,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 			if ok {
 				response, err := changeToEvent("friend_request", client.userId)
 				if err != nil {
-					toclient.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+					client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 					fmt.Printf("error marshaling friend requests: %v\n", err)
 					return
 				}

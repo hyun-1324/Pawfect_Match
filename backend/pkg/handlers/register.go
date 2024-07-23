@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -151,12 +150,7 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("invalid dog gender")
 	}
 
-	floatSize, err := strconv.ParseFloat(req.Size, 64)
-	if err != nil {
-		return fmt.Errorf("failed to parse dog size")
-	}
-
-	if !(floatSize > 0 && floatSize <= 30) {
+	if !(req.Size > 0 && req.Size <= 100) {
 		return fmt.Errorf("invalid dog size")
 	}
 
@@ -168,21 +162,11 @@ func checkUserDataValidation(req models.Register) error {
 		return fmt.Errorf("invalid dog favorite play style")
 	}
 
-	intAge, err := strconv.Atoi(req.Age)
-	if err != nil {
-		return fmt.Errorf("failed to parse dog age")
-	}
-
-	if intAge < 0 || intAge > 30 {
+	if req.Age < 0 || req.Age > 30 {
 		return fmt.Errorf("invalid dog age")
 	}
 
-	intPreferredDistance, err := strconv.Atoi(req.PreferredDistance)
-	if err != nil {
-		return fmt.Errorf("failed to parse preferred distance")
-	}
-
-	if intPreferredDistance <= 0 || intPreferredDistance > 30 {
+	if req.PreferredDistance <= 0 || req.PreferredDistance > 30 {
 		return fmt.Errorf("invalid preferred distance")
 	}
 
@@ -221,6 +205,10 @@ func checkLocationData(location string) (float64, float64, error) {
 }
 
 func processProfilePictureData(r *http.Request, app *App, userId int, addFile bool) error {
+	if !addFile {
+		return nil
+	}
+
 	profilePicture, fileHeader, err := r.FormFile("profilePicture")
 	if err != nil {
 		if err == http.ErrMissingFile && !addFile {
@@ -265,13 +253,13 @@ func processProfilePictureData(r *http.Request, app *App, userId int, addFile bo
 	fileURL := "/profile_pictures/" + newFileName
 
 	query := `INSERT INTO profile_pictures (user_id, file_name, file_data, file_type, file_url)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (user_id)
-DO UPDATE SET
-    file_name = EXCLUDED.file_name,
-    file_data = EXCLUDED.file_data,
-    file_type = EXCLUDED.file_type,
-    file_url = EXCLUDED.file_url`
+								VALUES ($1, $2, $3, $4, $5)
+								ON CONFLICT (user_id)
+								DO UPDATE SET
+    							file_name = EXCLUDED.file_name,
+    							file_data = EXCLUDED.file_data,
+    							file_type = EXCLUDED.file_type,
+    							file_url = EXCLUDED.file_url`
 	_, err = app.DB.Exec(query, userId, newFileName, fileBytes, mimeType, fileURL)
 	if err != nil {
 		return err
