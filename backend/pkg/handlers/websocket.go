@@ -300,7 +300,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 				}
 
 				select {
-				case client.send <- response:
+				case toclient.send <- response:
 				default:
 					client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 					fmt.Printf("Falied to send friend request notification to user %s\n", toId)
