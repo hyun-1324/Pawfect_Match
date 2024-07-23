@@ -290,11 +290,11 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 
 	if !previousRequest && !processed {
 		if toClient, ok := app.clients.Load(toId); ok {
-			client, ok := toClient.(*Client)
+			toclient, ok := toClient.(*Client)
 			if ok {
 				response, err := changeToEvent("friend_request", client.userId)
 				if err != nil {
-					client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+					toclient.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 					fmt.Printf("error marshaling friend requests: %v\n", err)
 					return
 				}
