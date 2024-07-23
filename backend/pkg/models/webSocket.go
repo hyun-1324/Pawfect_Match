@@ -41,3 +41,8 @@ type Typing struct {
 	RoomId string `json:"room_id"`
 	ToId   string `json:"to_id"`
 }
+
+type NewConnection struct {
+	Id       int  `json:"id"`
+	IsSender bool `json:"is_sender"`
+}

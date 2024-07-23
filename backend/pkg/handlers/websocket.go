@@ -9,6 +9,7 @@ import (
 	"matchMe/pkg/models"
 	"matchMe/pkg/utils"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -101,6 +102,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "send_request":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 				log.Printf("error unmarshaling request data: %v", err)
 				continue
 			}
@@ -108,6 +110,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "accept_request":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 				log.Printf("error unmarshaling request data: %v", err)
 				continue
 			}
@@ -115,6 +118,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "decline_request":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the decline request"}`)
 				log.Printf("error unmarshaling request data: %v", err)
 				continue
 			}
@@ -122,6 +126,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "check_new_connection":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the check new connection request"}`)
 				log.Printf("error unmarshaling request data: %v", err)
 				continue
 			}
@@ -129,6 +134,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "reject_recommendation":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the rejection request"}`)
 				log.Printf("error unmarshaling request data: %v", err)
 				continue
 			}
@@ -136,6 +142,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "create_room":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the create room request"}`)
 				log.Printf("error unmarshaling create room request: %v", err)
 				continue
 			}
@@ -143,6 +150,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "leave_room":
 			var LeaveRoomData models.LeaveRoom
 			if err := json.Unmarshal(event.Data, &LeaveRoomData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the leave room request"}`)
 				log.Printf("error unmarshaling leave room data: %v", err)
 				continue
 			}
@@ -150,6 +158,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "send_message":
 			var messageData models.Message
 			if err := json.Unmarshal(event.Data, &messageData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the send message request"}`)
 				log.Printf("error unmarshaling message data: %v", err)
 				continue
 			}
@@ -157,6 +166,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "get_messages":
 			var messageData models.GetMessages
 			if err := json.Unmarshal(event.Data, &messageData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the get messages request"}`)
 				log.Printf("error unmarshaling message data: %v", err)
 				continue
 			}
@@ -168,6 +178,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		case "typing":
 			var typingData models.Typing
 			if err := json.Unmarshal(event.Data, &typingData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the typing request"}`)
 				log.Printf("error unmarshaling typing data: %v", err)
 				continue
 			}
@@ -309,14 +320,36 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 			}
 		}
 	} else if previousRequest && !processed {
-		responseForClient, err := changeToEvent("new_connection", toId)
+		var sender1 models.NewConnection
+		var sender2 models.NewConnection
+
+		numUserId, err := strconv.Atoi(client.userId)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+			fmt.Printf("error converting user id to integer: %v\n", err)
+			return
+		}
+
+		numToId, err := strconv.Atoi(toId)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+			fmt.Printf("error converting to id to integer: %v\n", err)
+			return
+		}
+
+		sender1.Id = numUserId
+		sender1.IsSender = true
+		sender2.Id = numToId
+		sender2.IsSender = true
+
+		responseForClient, err := changeToEvent("new_connection", sender2)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 			fmt.Printf("error marshaling connection update: %v\n", err)
 			return
 		}
 
-		responseForToId, err := changeToEvent("new_connection", client.userId)
+		responseForToId, err := changeToEvent("new_connection", sender1)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 			fmt.Printf("error marshaling connection update: %v\n", err)
@@ -354,14 +387,36 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 		return
 	}
 
-	responseForFromId, err := changeToEvent("new_connection", client.userId)
+	var sender1 models.NewConnection
+	var sender2 models.NewConnection
+
+	numUserId, err := strconv.Atoi(client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+		fmt.Printf("error converting user id to integer: %v\n", err)
+		return
+	}
+
+	numFromId, err := strconv.Atoi(fromId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+		fmt.Printf("error converting to id to integer: %v\n", err)
+		return
+	}
+
+	sender1.Id = numUserId
+	sender1.IsSender = true
+	sender2.Id = numFromId
+	sender2.IsSender = false
+
+	responseForFromId, err := changeToEvent("new_connection", sender1)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 		fmt.Printf("error marshaling connection update: %v\n", err)
 		return
 	}
 
-	responseForToId, err := changeToEvent("new_connection", fromId)
+	responseForToId, err := changeToEvent("new_connection", sender2)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 		fmt.Printf("error marshaling connection update: %v\n", err)
@@ -382,7 +437,7 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 			select {
 			case toClient.send <- responseForFromId:
 			default:
-				toClient.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+				client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 				fmt.Printf("Falied to send connection update notification to user %s\n", fromId)
 				app.unregisterClient(toClient)
 			}
@@ -498,13 +553,13 @@ func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
 		if ok {
 			chatList, err := getChatList(app.DB, messageInfo.ToId)
 			if err != nil {
-				toClient.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+				client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 				fmt.Printf("error fetching chat list for user %s: %v\n", messageInfo.ToId, err)
 				return
 			}
 			response, err := changeToEvent("get_chat_list", chatList)
 			if err != nil {
-				toClient.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+				client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 				fmt.Printf("error marshaling chat list: %v\n", err)
 				return
 			}
