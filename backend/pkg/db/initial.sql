@@ -77,7 +77,7 @@ CREATE TABLE connections (
   FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
   UNIQUE (user_id1, user_id2),
   CHECK (user_id1 < user_id2)
-)
+);
 
 CREATE TABLE requests (
   id SERIAL PRIMARY KEY,
@@ -87,8 +87,12 @@ CREATE TABLE requests (
   processed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY("from_id") REFERENCES "users"("id") ON DELETE CASCADE,
-  FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE,
-  CONSTRAINT unique_request UNIQUE (LEAST(from_id, to_id), GREATEST(from_id, to_id))
+  FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX unique_request ON requests (
+  LEAST(from_id, to_id), 
+  GREATEST(from_id, to_id)
 );
 
 CREATE TABLE matches (
