@@ -210,8 +210,8 @@ h3 {
 }
 
 .profile-container {
-  max-width: 100%; /* 또는 원하는 너비 (예: 500px) */
-  margin: 0 auto; /* 중앙 정렬 */
+  max-width: 100%;
+  margin: 0 auto;
   word-wrap: break-word;
   overflow-wrap: break-word;
   position: relative;
