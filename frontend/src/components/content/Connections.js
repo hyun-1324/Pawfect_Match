@@ -5,11 +5,11 @@ import useFetch from "../../tools/useFetch";
 import fetchUserData from "../../tools/fetchUserInfo";
 
 const Connections = () => {
-    const { loggedIn, friendRequests, sendJsonMessage, login, clearFriendNotification } = useAuth();
+    const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification } = useAuth();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [connections, setConnections] = useState([]);
+    const [connections, setConnections] = useState([]);  /* []{id, dog_name, picture} */ 
     const [requests, setRequests] = useState([]);
 
     // use custom hook to fetch connections
@@ -92,28 +92,50 @@ const Connections = () => {
     const handleRemoveRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
+        // Clear notification mark if there is only one request left
+        if (requests.length == 1) {
+            clearFriendNotification();
+        }
         // Remove the user from requests
         setRequests((prevList) => prevList.filter((user) => user.id !== userId));
     }, [sendJsonMessage]);
 
     const handleAcceptRequest = useCallback((userId) => {
         const dataObject = { id: userId };
-        console.log(dataObject);
         sendJsonMessage({ event: "accept_request", data: dataObject });
-        // Find the user in requests
-        const userObject = requests.find((user) => user.id === userId);
-        // Remove the user from requests
-        setRequests((prevList) => prevList.filter((user) => user.id !== userId)); 
-        // Add the user to connections
-        setConnections((prevList) => [userObject, ...prevList]);
-    }, [sendJsonMessage]);
-
-    useEffect(() => {
-        if (requests.length === 0 && friendRequests.length !== 0 && !isLoading) {
+        // Clear notification mark if there is only one request left
+        if (requests.length == 1) {
             clearFriendNotification();
         }
-    }, [requests])
-    
+        // Remove the user from requests
+        setRequests((prevList) => prevList.filter((user) => user.id !== userId)); 
+        
+    }, [sendJsonMessage, clearFriendNotification, requests]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        const signal = controller.signal;
+        if (lastJsonMessage) {
+            console.log("lastJsonMessage in connections:", lastJsonMessage);
+            if (lastJsonMessage.event === "new_connection") {
+                // Add new value to connections state
+                fetchUserData(lastJsonMessage.data, {signal}).then(({ userData, error }) => {
+                    if (error) {
+                        setErrorMessage(error.message);
+                    } else {
+                        console.log("userData: ", userData);
+                        console.log("connections: ", connections);
+                        setConnections((prevList) => [userData, ...prevList]);
+                    }
+                });
+            } else if (lastJsonMessage.event === "error") {
+                setErrorMessage(lastJsonMessage.data);
+            }
+        }  
+        return () => controller.abort();
+    }, [lastJsonMessage]);  
+
+
     const makeConnectionCards = (connections) => {
         if (!connections || connections.length === 0) {
             return (

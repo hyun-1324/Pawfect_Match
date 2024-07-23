@@ -3,6 +3,7 @@
   --logo-font-color: #6d594d;
   --content-font-color: #332d2a;
   --yellow: #fceece;
+  --green: #E6EDB7;
 }
 
 @font-face {
@@ -374,20 +375,44 @@ button {
 /* Notification styling */
 
 .notificationImageContainer {
-    position: relative;
-    display: inline-block; 
+  position: relative;
+  display: inline-block; 
 }
 
 .notificationMark {
-    position: absolute;
-    top: 10px; 
-    right: 10px; 
-    width: 15px; 
-    height: 15px; 
-    background-color: red;
-    border-radius: 50%; 
-    border: var(--content-font-color) solid 1px;
+  position: absolute;
+  top: 10px; 
+  right: 10px; 
+  width: 15px; 
+  height: 15px; 
+  background-color: red;
+  border-radius: 50%; 
+  border: var(--content-font-color) solid 1px;
 }
 
+/* Modal styling */
+.modalStyle {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--green);
+  padding: 20px;
+  z-index: 1000;
+  border-radius: 3px;
+  text-align: center;
+  img {
+    max-width: 100%;
+    border-radius: 3px;
+  }
+}
 
-
+.overlayStyle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, .7);
+  z-index: 1000;
+};

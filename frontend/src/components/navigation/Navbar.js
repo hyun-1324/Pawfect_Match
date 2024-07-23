@@ -6,6 +6,23 @@ import { useAuth } from '../../tools/AuthContext';
 const Navbar = () => {
     const navigate = useNavigate();
     const { logout, friendRequests, unreadMessages } = useAuth(); 
+    const [newFriendRequests, setNewFriendRequests] = useState(false);
+    const [newMessages, setNewMessages] = useState(false);
+    useEffect(() => {
+        if (friendRequests?.length > 0) {
+            setNewFriendRequests(true);
+        } else {
+            setNewFriendRequests(false);
+        }
+    }, [friendRequests]);
+    useEffect(() => {
+        if (unreadMessages) {
+            setNewMessages(true);
+        } else {
+            setNewMessages(false);
+        }
+    }, [unreadMessages]);
+        
 
     if (window.location.pathname === "/login" || window.location.pathname === "/register") {
         return (
@@ -33,7 +50,7 @@ const Navbar = () => {
                 <Link to="/myconnections">
                     <div className="notificationImageContainer">
                         <img className="button navButton" src={`${process.env.PUBLIC_URL}/images/connections.png`} alt="Connections"></img>
-                        {friendRequests.length > 0 && <div id="connectionNotification" className="notificationMark"></div>}
+                        {newFriendRequests && <div id="connectionNotification" className="notificationMark"></div>}
                     </div>
                     <span className="navText">Connections</span>
                 </Link>
@@ -42,7 +59,7 @@ const Navbar = () => {
                 <Link to="/chat">
                 <div className="notificationImageContainer">
                     <img className="button navButton" src={`${process.env.PUBLIC_URL}/images/chat.png`} alt="Messages"></img>
-                    {unreadMessages && <div id="chatNotification" className="notificationMark"></div>}
+                    {newMessages&& <div id="chatNotification" className="notificationMark"></div>}
                 </div>
                 <span className="navText">Messages</span>
                 </Link>
