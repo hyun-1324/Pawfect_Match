@@ -11,7 +11,7 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [controller, setController] = useState(null); 
     
-    const { login } = useAuth(); 
+    const { login, logout } = useAuth(); 
     
     const navigate = useNavigate();
     // Redirect to recommendations page if user is already logged in
@@ -32,8 +32,9 @@ const Login = () => {
             try {
                 const response = await fetch('/login_status');
                 if (response.ok) {
-                    navigate('/'); // Adjust the path as needed
+                    navigate('/'); 
                 } else {
+                    logout();
                     const errorResponse = await response.json();
                     const error = new Error();
                     error.status = response.status; // Include the status code
@@ -111,7 +112,7 @@ const Login = () => {
                 <div className="oneColumnCardCentered">
                     <h2>Login</h2>
                     {error && <div className="errorBox">Error:<br/>{error}</div>}
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={ (event) => handleSubmit(event)}>
                         <label htmlFor="email">E-mail:</label><br />
                         <input 
                             type="email" 

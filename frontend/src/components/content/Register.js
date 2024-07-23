@@ -13,11 +13,11 @@ const Register = () => {
     dog_name: "",
     gender: "male",
     neutered: false,
-    size: "",
+    size: 0,
     energy_level: "low",
     favorite_play_style: "wrestling",
-    age: "",
-    preferred_distance: "1",
+    age: -1,
+    preferred_distance: 1,
     preferred_gender: "any",
     preferred_neutered: false,
     about_me: "",
@@ -122,12 +122,6 @@ const Register = () => {
       const formData = new FormData();
       // Check that age and size are valid numbers
       try {
-        if (form.age < 0 || form.age > 30) {
-          throw new Error("Age must be between 0 and 30 years!");
-        }
-        if (form.size < 0 || form.size > 100) {
-          throw new Error("Size must be between 0 and 100 kg!");
-        }
         if (form.password !== form.confirm_password) {
           throw new Error("Passwords do not match!");
         }
@@ -149,8 +143,14 @@ const Register = () => {
         setError(err.message);
         return;
       }
+
+      form.age = Number(form.age);
+      form.size = Number(form.size);
+      form.preferred_distance = Number(form.preferred_distance);
       
       formData.append("json", JSON.stringify(form));
+      console.log("form", form);
+      console.log("formData", formData);
 
       let response = await fetch("http://localhost:3000/handle_register", {
         method: "POST",
@@ -191,7 +191,7 @@ const Register = () => {
         suitable play mates. This info can be modified later in the profile
         settings. Mandatory fields are marked with an asterisk (*).
       </p>
-      <form className="twoColumnCard" onSubmit={handleSubmit}>
+      <form className="twoColumnCard" onSubmit={(event) => handleSubmit(event)}>
         <div className="oneColumnCardLeft">
           <h4>Owner info</h4>
           <label htmlFor="email">E-mail: *</label>
@@ -263,9 +263,11 @@ const Register = () => {
             type="number"
             id="age"
             name="age"
+            min={0}
+            max={30}
             placeholder="age in years"
             required
-            value={form.age}
+            value={form.age === -1 ? "" : form.age}
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
@@ -287,8 +289,10 @@ const Register = () => {
             placeholder="size in kilograms"
             id="size"
             name="size"
+            min={1}
+            max={100}
             required
-            value={form.size}
+            value={form.size === 0 ? "" : form.size}
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
