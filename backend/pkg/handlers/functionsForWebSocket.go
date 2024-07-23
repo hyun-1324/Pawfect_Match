@@ -74,6 +74,33 @@ func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
 	return exists, nil
 }
 
+func getNewConnections(db *sql.DB, userId string) (models.IdList, error) {
+
+	query := `SELECT user_id2 AS connected_user FROM connections WHERE user_id1 = $1 AND id1_check = FALSE UNION SELECT user_id1 FROM connections WHERE user_id2 = $1 AND id2_check = FALSE`
+
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return models.IdList{}, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			return models.IdList{}, fmt.Errorf("failed to scan row: %v", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err = rows.Err(); err != nil {
+		return models.IdList{}, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return models.IdList{Ids: ids}, nil
+}
+
 func getUserRooms(db *sql.DB, userId string) ([]string, error) {
 	query := `
 		SELECT id 
@@ -103,23 +130,60 @@ func getUserRooms(db *sql.DB, userId string) ([]string, error) {
 	return rooms, nil
 }
 
-func saveRequest(db *sql.DB, fromId, toId string) error {
-
-	_, err := db.Exec("INSERT INTO requests (from_id, to_id) VALUES ($1, $2)", fromId, toId)
+func saveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
+	var previousRequest bool
+	query := `SELECT EXISTS (SELECT 1 FROM requests WHERE user_id1 = $1 AND user_id2 = $2)`
+	err := db.QueryRow(query, toId, fromId).Scan(&previousRequest)
 	if err != nil {
-		return fmt.Errorf("failed to execute query: %v", err)
+		return false, true, fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	_, err = db.Exec("UPDATE matches SET requested = TRUE WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)", fromId, toId)
+	var processed bool
+	query = `SELECT processed FROM requests WHERE from_id = $1 AND to_id = $2`
+	err = db.QueryRow(query, fromId, toId).Scan(&processed)
 	if err != nil {
-		return fmt.Errorf("failed to execute query: %v", err)
+		return false, true, fmt.Errorf("failed to execute query: %v", err)
 	}
 
-	return nil
+	if previousRequest && !processed {
+		_, err = db.Exec("UPDATE requests SET processed = TRUE, accepted = TRUE WHERE from_id = $1 AND to_id = $2", toId, fromId)
+		if err != nil {
+			return true, false, fmt.Errorf("failed to update data: %v", err)
+		}
+
+		numToId, err := strconv.Atoi(toId)
+		if err != nil {
+			return true, false, fmt.Errorf("failed to change string to int: %v", err)
+		}
+
+		numFromId, err := strconv.Atoi(fromId)
+		if err != nil {
+			return true, false, fmt.Errorf("failed to change string to int: %v", err)
+		}
+
+		smallId, largeId := utils.OrderPair(numToId, numFromId)
+
+		_, err = db.Exec("INSERT INTO connections (user_id1, user_id2) VALUES ($1, $2) ON CONFLICT (user_id1, user_id2) DO NOTHING", smallId, largeId)
+		if err != nil {
+			return true, false, fmt.Errorf("failed to insert data: %v", err)
+		}
+
+	} else if !previousRequest && !processed {
+		_, err = db.Exec("INSERT INTO requests (from_id, to_id) VALUES ($1, $2)", fromId, toId)
+		if err != nil {
+			return false, false, fmt.Errorf("failed to execute query: %v", err)
+		}
+
+		_, err = db.Exec("UPDATE matches SET requested = TRUE WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)", fromId, toId)
+		if err != nil {
+			return false, false, fmt.Errorf("failed to execute query: %v", err)
+		}
+	}
+
+	return previousRequest, processed, nil
 }
 
 func saveAcceptance(db *sql.DB, fromId, toId string) error {
-
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
 		return fmt.Errorf("failed to change string to int: %v", err)
@@ -171,6 +235,12 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to update data: %v", err)
 	}
 
+	query = "DELETE FROM connections WHERE user_id1 = $1 AND user_id2 = $2"
+	_, err = db.Exec(query, smallId, largeId)
+	if err != nil {
+		return fmt.Errorf("failed to delete data: %v", err)
+	}
+
 	return nil
 }
 
@@ -205,6 +275,35 @@ func saveRejection(db *sql.DB, fromId, toId string) error {
 	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
+	}
+
+	return nil
+}
+
+func saveCheckedNewConnection(db *sql.DB, userId, checkedId string) error {
+	numUserId, err := strconv.Atoi(userId)
+	if err != nil {
+		return fmt.Errorf("failed to change string to int: %v", err)
+	}
+	numCheckedId, err := strconv.Atoi(checkedId)
+	if err != nil {
+		return fmt.Errorf("failed to change string to int: %v", err)
+	}
+
+	smallId, largeId := utils.OrderPair(numUserId, numCheckedId)
+
+	if numUserId == smallId {
+		query := `UPDATE connections SET id1_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2`
+		_, err = db.Exec(query, smallId, largeId)
+		if err != nil {
+			return fmt.Errorf("failed to update data: %v", err)
+		}
+	} else if numUserId == largeId {
+		query := `UPDATE connections SET id2_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2`
+		_, err = db.Exec(query, smallId, largeId)
+		if err != nil {
+			return fmt.Errorf("failed to update data: %v", err)
+		}
 	}
 
 	return nil

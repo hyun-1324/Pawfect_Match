@@ -119,6 +119,13 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 				continue
 			}
 			app.handleDeclineRequest(client, requestData.Id)
+		case "check_new_connection":
+			var requestData models.RequestData
+			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				log.Printf("error unmarshaling request data: %v", err)
+				continue
+			}
+			app.handleCheckNewConnection(client, requestData.Id)
 		case "reject_recommendation":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
@@ -228,7 +235,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch friend requests"}`)
 		log.Printf("error fetching friend requests for user %s: %v\n", client.userId, err)
 	} else {
-		response, _ := changeToEvent("friendRequests", friendRequests)
+		response, _ := changeToEvent("friend_requests", friendRequests)
 		client.send <- response
 	}
 
@@ -237,7 +244,16 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch unread messages"}`)
 		log.Printf("error fetching unread messages for user %s: %v\n", client.userId, err)
 	} else {
-		response, _ := changeToEvent("unreadMessages", hasUnreadMessages)
+		response, _ := changeToEvent("unread_messages", hasUnreadMessages)
+		client.send <- response
+	}
+
+	newConnections, err := getNewConnections(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to fetch new connections"}`)
+		log.Printf("error fetching new connections for user %s: %v\n", client.userId, err)
+	} else {
+		response, _ := changeToEvent("new_connections", newConnections)
 		client.send <- response
 	}
 
@@ -265,36 +281,66 @@ func (app *App) joinRoom(client *Client, roomId string) {
 }
 
 func (app *App) handleSendRequest(client *Client, toId string) {
-	err := saveRequest(app.DB, client.userId, toId)
+	previousRequest, processed, err := saveRequest(app.DB, client.userId, toId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 		fmt.Printf("error saving friend request from %s to %s: %v\n", client.userId, toId, err)
 		return
 	}
 
-	friendRequests, err := getRequests(app.DB, toId)
-	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
-		fmt.Printf("error fetching friend requests for user %s: %v\n", toId, err)
-		return
-	}
+	if !previousRequest && !processed {
+		if toClient, ok := app.clients.Load(toId); ok {
+			client, ok := toClient.(*Client)
+			if ok {
+				response, err := changeToEvent("friend_request", client.userId)
+				if err != nil {
+					client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+					fmt.Printf("error marshaling friend requests: %v\n", err)
+					return
+				}
 
-	if toClient, ok := app.clients.Load(toId); ok {
-		client, ok := toClient.(*Client)
-		if ok {
-			response, err := changeToEvent("friendRequests", friendRequests)
-			if err != nil {
-				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
-				fmt.Printf("error marshaling friend requests: %v\n", err)
-				return
+				select {
+				case client.send <- response:
+				default:
+					client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
+					fmt.Printf("Falied to send friend request notification to user %s\n", toId)
+					app.unregisterClient(client)
+				}
 			}
+		}
+	} else if previousRequest && !processed {
+		responseForClient, err := changeToEvent("new_connection", toId)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+			fmt.Printf("error marshaling connection update: %v\n", err)
+			return
+		}
 
-			select {
-			case client.send <- response:
-			default:
-				client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
-				fmt.Printf("Falied to send friend request notification to user %s\n", toId)
-				app.unregisterClient(client)
+		responseForToId, err := changeToEvent("new_connection", client.userId)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+			fmt.Printf("error marshaling connection update: %v\n", err)
+			return
+		}
+
+		select {
+		case client.send <- responseForClient:
+		default:
+			client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+			fmt.Printf("Falied to send connection update notification to user %s\n", client.userId)
+			app.unregisterClient(client)
+		}
+
+		if toClient, ok := app.clients.Load(toId); ok {
+			toClient, ok := toClient.(*Client)
+			if ok {
+				select {
+				case toClient.send <- responseForToId:
+				default:
+					toClient.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+					fmt.Printf("Falied to send connection update notification to user %s\n", toId)
+					app.unregisterClient(toClient)
+				}
 			}
 		}
 	}
@@ -308,7 +354,14 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 		return
 	}
 
-	response, err := changeToEvent("connection_update", `"connection_update": "true"`)
+	responseForFromId, err := changeToEvent("new_connection", client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
+		fmt.Printf("error marshaling connection update: %v\n", err)
+		return
+	}
+
+	responseForToId, err := changeToEvent("new_connection", fromId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 		fmt.Printf("error marshaling connection update: %v\n", err)
@@ -316,7 +369,7 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 	}
 
 	select {
-	case client.send <- response:
+	case client.send <- responseForToId:
 	default:
 		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 		fmt.Printf("Falied to send connection update notification to user %s\n", fromId)
@@ -327,7 +380,7 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 		toClient, ok := toClient.(*Client)
 		if ok {
 			select {
-			case toClient.send <- response:
+			case toClient.send <- responseForFromId:
 			default:
 				toClient.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 				fmt.Printf("Falied to send connection update notification to user %s\n", fromId)
@@ -346,6 +399,15 @@ func (app *App) handleDeclineRequest(client *Client, fromId string) {
 	}
 }
 
+func (app *App) handleCheckNewConnection(client *Client, fromId string) {
+	err := saveCheckedNewConnection(app.DB, client.userId, fromId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to process the check new connection request"}`)
+		fmt.Printf("error saving checked new connection from %s to %s: %v\n", fromId, client.userId, err)
+		return
+	}
+}
+
 func (app *App) handleRejectRecommendation(client *Client, fromId string) {
 	err := saveRejection(app.DB, fromId, client.userId)
 	if err != nil {
@@ -354,7 +416,7 @@ func (app *App) handleRejectRecommendation(client *Client, fromId string) {
 		return
 	}
 
-	response, err := changeToEvent("recommendation_update", `"recommendation_update": "true"`)
+	response, err := changeToEvent("recommendation_update", true)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the rejection request"}`)
 		fmt.Printf("error marshaling recommendation update: %v\n", err)
@@ -590,7 +652,7 @@ func (app *App) handleTyping(client *Client, typingData models.Typing) {
 	if toClient, ok := app.clients.Load(typingData.ToId); ok {
 		toClient, ok := toClient.(*Client)
 		if ok {
-			response, err := changeToEvent("typing", typingData)
+			response, err := changeToEvent("typing", typingData.RoomId)
 			if err != nil {
 				client.send <- []byte(`{"event":"error", "data":"unable to send typing notification"}`)
 				fmt.Printf("error marshaling typing notification: %v\n", err)

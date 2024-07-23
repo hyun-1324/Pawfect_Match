@@ -38,6 +38,6 @@ type LeaveRoom struct {
 }
 
 type Typing struct {
-	Typing bool   `json:"typing"`
+	RoomId string `json:"room_id"`
 	ToId   string `json:"to_id"`
 }

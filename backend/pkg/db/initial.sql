@@ -70,18 +70,13 @@ CREATE TABLE connections (
   id SERIAL PRIMARY KEY,
   user_id1 INTEGER,
   user_id2 INTEGER,
+  id1_check BOOLEAN DEFAULT FALSE,
+  id2_check BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("user_id2") REFERENCES "users"("id") ON DELETE CASCADE,
   UNIQUE (user_id1, user_id2),
   CHECK (user_id1 < user_id2)
-)
-
-CREATE TABLE new_connections (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER,
-  new_connection BOOLEAN DEFAULT FALSE,
-  FOREIGN KEY("user_id1") REFERENCES "users"("id") ON DELETE CASCADE
 )
 
 CREATE TABLE requests (
@@ -92,7 +87,8 @@ CREATE TABLE requests (
   processed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY("from_id") REFERENCES "users"("id") ON DELETE CASCADE,
-  FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE
+  FOREIGN KEY("to_id") REFERENCES "users"("id") ON DELETE CASCADE,
+  CONSTRAINT unique_request UNIQUE (LEAST(from_id, to_id), GREATEST(from_id, to_id))
 );
 
 CREATE TABLE matches (
