@@ -139,7 +139,7 @@ func saveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
 	}
 
 	var processed bool
-	query = `SELECT processed FROM requests WHERE from_id = $1 AND to_id = $2`
+	query = `SELECT EXISTS (SELECT 1 FROM requests WHERE from_id = $1 AND to_id = $2)`
 	err = db.QueryRow(query, fromId, toId).Scan(&processed)
 	if err != nil {
 		return false, true, fmt.Errorf("failed to execute query: %v", err)
