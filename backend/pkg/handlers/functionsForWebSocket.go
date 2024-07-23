@@ -132,7 +132,7 @@ func getUserRooms(db *sql.DB, userId string) ([]string, error) {
 
 func saveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
 	var previousRequest bool
-	query := `SELECT EXISTS (SELECT 1 FROM requests WHERE user_id1 = $1 AND user_id2 = $2)`
+	query := `SELECT EXISTS (SELECT 1 FROM requests WHERE from_id = $1 AND to_id = $2)`
 	err := db.QueryRow(query, toId, fromId).Scan(&previousRequest)
 	if err != nil {
 		return false, true, fmt.Errorf("failed to execute query: %v", err)
