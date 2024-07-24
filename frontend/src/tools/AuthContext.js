@@ -62,6 +62,9 @@ export const AuthProvider = ({ children }) => {
         }
       // Add new value to newConnections state
       } else if (lastJsonMessage.event === "new_connection") {
+        // If new connection exists in friendRequests, remove it
+        const id = parseInt(lastJsonMessage.data.id);
+        setFriendRequests((prev) => prev.filter((requestId) => requestId !== id));
         // Add to newConnections if reciever is the original request sender
         if (lastJsonMessage.data.is_sender === true) {
           // Make sure the id is a number type
