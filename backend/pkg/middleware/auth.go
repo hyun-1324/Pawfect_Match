@@ -176,7 +176,7 @@ func AddTokenToBlacklist(db *sql.DB, token string) error {
 
 	expTime := time.Unix(expirationTime, 0)
 
-	_, err = db.Exec(`INSERT INTO jwt_blacklist (token, expires_at) VALUES ($1, $2)`,
+	_, err = db.Exec("INSERT INTO jwt_blacklist (token, expires_at) VALUES ($1, $2)",
 		token, expTime)
 	if err != nil {
 		return err

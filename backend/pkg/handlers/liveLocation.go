@@ -19,7 +19,15 @@ func (app *App) UpdateLivelocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `INSERT INTO locations (user_id, latitude, longitude, option) VALUES ($1, $2, $3, 'Live') ON CONFLICT (user_id) DO UPDATE SET latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude;`
+	query := `
+	INSERT INTO 
+		locations (user_id, latitude, longitude, option) VALUES ($1, $2, $3, 'Live') 
+	ON CONFLICT (user_id) 
+	DO UPDATE 
+	SET 
+		latitude = EXCLUDED.latitude, 
+		longitude = EXCLUDED.longitude;
+	`
 	_, err = app.DB.Exec(query, userId, liveLoc.Latitude, liveLoc.Longitude)
 	if err != nil {
 		utils.HandleError(w, "failed to insert data", http.StatusInternalServerError, fmt.Errorf("failed to insert live location data: %v", err))

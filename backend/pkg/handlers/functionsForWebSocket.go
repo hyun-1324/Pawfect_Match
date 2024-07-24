@@ -76,7 +76,15 @@ func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
 
 func getNewConnections(db *sql.DB, userId string) (models.IdList, error) {
 
-	query := `SELECT user_id2 AS connected_user FROM connections WHERE user_id1 = $1 AND id1_check = FALSE UNION SELECT user_id1 FROM connections WHERE user_id2 = $1 AND id2_check = FALSE`
+	query := `
+	SELECT 
+		user_id2 AS connected_user 
+	FROM connections 
+	WHERE user_id1 = $1 AND id1_check = FALSE 
+	UNION 
+	SELECT 
+		user_id1 FROM connections 
+	WHERE user_id2 = $1 AND id2_check = FALSE`
 
 	rows, err := db.Query(query, userId)
 	if err != nil {
@@ -102,12 +110,7 @@ func getNewConnections(db *sql.DB, userId string) (models.IdList, error) {
 }
 
 func getUserRooms(db *sql.DB, userId string) ([]string, error) {
-	query := `
-		SELECT id 
-		FROM rooms 
-		WHERE user_id1 = $1 OR user_id2 = $1
-	`
-	rows, err := db.Query(query, userId)
+	rows, err := db.Query("SELECT id FROM rooms WHERE user_id1 = $1 OR user_id2 = $1", userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
@@ -229,7 +232,7 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to update data: %v", err)
 	}
 
-	query = "UPDATE matches SET rejected = TRUE WHERE from_id = $1 AND to_id = $2"
+	query = "UPDATE matches SET rejected = TRUE WHERE user_id1 = $1 AND user_id2 = $2"
 	_, err = db.Exec(query, smallId, largeId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
@@ -322,11 +325,12 @@ func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 	smallId, largeId := utils.OrderPair(numFromId, numToId)
 
 	var roomId string
-	err = db.QueryRow(`
-		INSERT INTO rooms (user_id1, user_id2) 
-		VALUES ($1, $2) 
-		ON CONFLICT (user_id1, user_id2) DO NOTHING 
-		RETURNING id`, smallId, largeId).Scan(&roomId)
+	query := `
+		INSERT INTO rooms (user_id1, user_id2) VALUES ($1, $2) 
+		ON CONFLICT (user_id1, user_id2) 
+		DO NOTHING 
+		RETURNING id`
+	err = db.QueryRow(query, smallId, largeId).Scan(&roomId)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to insert data: %v", err)
@@ -387,7 +391,8 @@ func getMessagesForRoom(db *sql.DB, roomId string, userId string, lastMessageId 
 	limit := 10
 
 	query := `
-	SELECT id, room_id, from_id, to_id, message, sent_at
+	SELECT 
+		id, room_id, from_id, to_id, message, sent_at
 	FROM messages
 	WHERE room_id = $1 AND (from_id = $2 OR to_id = $2) AND id < $3
 	ORDER BY sent_at DESC
@@ -418,12 +423,7 @@ func getMessagesForRoom(db *sql.DB, roomId string, userId string, lastMessageId 
 }
 
 func markMessagesAsRead(db *sql.DB, userId, roomId string) error {
-	query := `
-	UPDATE messages
-	SET read = TRUE
-	WHERE to_id = $1 AND room_id = $2
-	`
-	_, err := db.Exec(query, userId, roomId)
+	_, err := db.Exec("UPDATE messages SET read = TRUE WHERE to_id = $1 AND room_id = $2", userId, roomId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
 	}

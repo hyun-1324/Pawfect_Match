@@ -108,9 +108,12 @@ func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
 	userId := middleware.GetUserId(r)
 	bio.Id = r.PathValue("id")
-	err := app.DB.QueryRow(`SELECT dog_gender, dog_neutered, dog_size, 
-	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
-	preferred_gender, preferred_neutered, option FROM biographical_data JOIN locations ON locations.user_id = biographical_data.user_id WHERE biographical_data.user_id = $1`,
+	err := app.DB.QueryRow(`
+	SELECT 
+		dog_gender, dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, preferred_gender, preferred_neutered, option 
+	FROM biographical_data JOIN locations 
+	ON locations.user_id = biographical_data.user_id
+	WHERE biographical_data.user_id = $1`,
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.PreferredLocation)
 	if err != nil {
@@ -227,9 +230,11 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
 	userId := middleware.GetUserId(r)
 	bio.Id = userId
-	err := app.DB.QueryRow(`SELECT dog_gender, dog_neutered, dog_size, 
-	dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, 
-	preferred_gender, preferred_neutered, preferred_location FROM biographical_data WHERE user_id = $1`,
+	err := app.DB.QueryRow(`
+	SELECT 
+		dog_gender, dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, preferred_gender, preferred_neutered, preferred_location 
+	FROM biographical_data 
+	WHERE user_id = $1`,
 		bio.Id).Scan(&bio.Gender, &bio.Neutered, &bio.Size, &bio.EnergyLevel,
 		&bio.FavoritePlayStyle, &bio.Age, &bio.PreferredDistance, &bio.PreferredGender, &bio.PreferredNeutered, &bio.PreferredLocation)
 	if err != nil {
@@ -247,17 +252,23 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	userId := middleware.GetUserId(r)
 
-	query := `SELECT
-	CASE
-		WHEN user_id1 = $1 THEN user_id2
-		WHEN user_id2 = $1 THEN user_id1
-	END AS matched_user_id
-		FROM matches
-		WHERE (user_id1 = $1 OR user_id2 = $1) AND 
-		compatible_neutered = true AND compatible_gender = true AND
-		compatible_play_style = true AND compatible_size = true AND compatible_distance = true AND rejected = FALSE AND requested = FALSE
-		ORDER BY match_score DESC LIMIT 10
-		`
+	query := `
+	SELECT
+		CASE
+			WHEN user_id1 = $1 THEN user_id2
+			WHEN user_id2 = $1 THEN user_id1
+		END AS matched_user_id
+	FROM matches
+	WHERE (user_id1 = $1 OR user_id2 = $1) AND 
+	compatible_neutered = true AND 
+	compatible_gender = true AND
+	compatible_play_style = true AND 
+	compatible_size = true AND 
+	compatible_distance = true AND 
+	rejected = FALSE AND 
+	requested = FALSE
+	ORDER BY match_score DESC LIMIT 10
+	`
 	rows, err := app.DB.Query(query, userId)
 	if err != nil {
 		utils.HandleError(w, "failed to fetch data", http.StatusInternalServerError, fmt.Errorf("failed to fetch recommendations: %v", err))
@@ -285,11 +296,12 @@ func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) GetConnections(w http.ResponseWriter, r *http.Request) {
 	userId := middleware.GetUserId(r)
-	query := `SELECT
-	CASE
-		WHEN user_id1 = $1 THEN user_id2
-		WHEN user_id2 = $1 THEN user_id1
-	END AS connectied_user_id
+	query := `
+	SELECT
+		CASE
+			WHEN user_id1 = $1 THEN user_id2
+			WHEN user_id2 = $1 THEN user_id1
+		END AS connectied_user_id
 	FROM connections
 	WHERE user_id1 = $1 OR user_id2 = $1`
 	rows, err := app.DB.Query(query, userId)
