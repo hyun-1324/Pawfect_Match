@@ -46,3 +46,8 @@ type NewConnection struct {
 	Id       int  `json:"id"`
 	IsSender bool `json:"is_sender"`
 }
+
+type UserStatus struct {
+	Id     string `json:"id"`
+	Status bool   `json:"status"`
+}
