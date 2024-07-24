@@ -30,7 +30,7 @@ CREATE TABLE locations (
   option VARCHAR(15) NOT NULL CHECK (option IN ('Live', 'Helsinki', 'Tampere', 'Turku', 'Jyväskylä', 'Kuopio')),
   latitude DOUBLE PRECISION NOT NULL DEFAULT 0.0,
   longitude DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-  geom GEOMETRY(POINT, 4326),
+  geom GEOGRAPHY(POINT, 4326),
   FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE,
   CONSTRAINT unique_user_id UNIQUE (user_id)
 );
@@ -40,7 +40,7 @@ CREATE INDEX idx_locations_geom ON locations USING GIST(geom);
 CREATE OR REPLACE FUNCTION update_geom()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326);
+  NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude)::GEOGRAPHY, 4326);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
