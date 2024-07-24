@@ -40,7 +40,7 @@ CREATE INDEX idx_locations_geom ON locations USING GIST(geom);
 CREATE OR REPLACE FUNCTION update_geom()
 RETURNS TRIGGER AS $$
 BEGIN
-  NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::GEOMETRY;
+  NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -138,8 +138,8 @@ BEGIN
   SET compatible_distance = (
     SELECT
       CASE
-        WHEN ST_Distance(l1.geom::GEOMETRY, l2.geom::GEOMETRY) / 1000 <= 
-        LEAST(bd1.preferred_distance, bd2.preferred_distance)
+        WHEN ST_DistanceSphere(l1.geom, l2.geom) / 1000 <= 
+            LEAST(bd1.preferred_distance, bd2.preferred_distance)
         THEN TRUE
         ELSE FALSE
       END
