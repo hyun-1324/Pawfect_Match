@@ -12,7 +12,7 @@ func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("jwt_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
-			utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, fmt.Errorf("JWT token not found when checking login status: %v", err))
+			utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, nil)
 			return
 		}
 		utils.HandleError(w, "failed to check login status", http.StatusInternalServerError, fmt.Errorf("failed to get JWT token when checking login status: %v", err))
