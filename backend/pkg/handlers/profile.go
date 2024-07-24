@@ -88,7 +88,10 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	query := `UPDATE biographical_data SET dog_gender = $1, dog_neutered = $2, dog_size = $3, dog_energy_level = $4, dog_favorite_play_style = $5, dog_age = $6, preferred_distance = $7, preferred_gender = $8, preferred_neutered = $9 WHERE biographical_data.user_id = $10`
+	query := `
+	UPDATE 
+		biographical_data SET dog_gender = $1, dog_neutered = $2, dog_size = $3, dog_energy_level = $4, dog_favorite_play_style = $5, dog_age = $6, preferred_distance = $7, preferred_gender = $8, preferred_neutered = $9 
+	WHERE biographical_data.user_id = $10`
 	_, err = app.DB.Exec(query, req.Gender, req.Neutered, req.Size, req.EnergyLevel, req.FavoritePlayStyle, req.Age, req.PreferredDistance, req.PreferredGender, req.PreferredNeutered, numId)
 	if err != nil {
 		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to update bio data for updating profile: %v", err))

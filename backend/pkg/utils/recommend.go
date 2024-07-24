@@ -22,7 +22,12 @@ func CalculateRecommendationScore(app *sql.DB, userId int) error {
 }
 
 func getUserBioData(db *sql.DB) (map[int]models.UserBioResponse, error) {
-	rows, err := db.Query("SELECT user_id, dog_gender, dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, preferred_gender, preferred_neutered FROM biographical_data")
+	query := `
+	SELECT 
+		user_id, dog_gender, dog_neutered, dog_size, dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, preferred_gender, preferred_neutered 
+	FROM biographical_data
+	`
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}

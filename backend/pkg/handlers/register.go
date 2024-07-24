@@ -252,14 +252,17 @@ func processProfilePictureData(r *http.Request, app *App, userId int, addFile bo
 
 	fileURL := "/profile_pictures/" + newFileName
 
-	query := `INSERT INTO profile_pictures (user_id, file_name, file_data, file_type, file_url)
-								VALUES ($1, $2, $3, $4, $5)
-								ON CONFLICT (user_id)
-								DO UPDATE SET
-    							file_name = EXCLUDED.file_name,
-    							file_data = EXCLUDED.file_data,
-    							file_type = EXCLUDED.file_type,
-    							file_url = EXCLUDED.file_url`
+	query := `
+	INSERT INTO profile_pictures 
+		(user_id, file_name, file_data, file_type, file_url)
+		VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT (user_id)
+	DO UPDATE SET
+    file_name = EXCLUDED.file_name,
+    file_data = EXCLUDED.file_data,
+    file_type = EXCLUDED.file_type,
+    file_url = EXCLUDED.file_url
+	`
 	_, err = app.DB.Exec(query, userId, newFileName, fileBytes, mimeType, fileURL)
 	if err != nil {
 		return err
