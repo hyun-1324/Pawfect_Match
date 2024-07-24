@@ -42,8 +42,6 @@ const MyProfile = () => {
             : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
         }
         alt="Dog"
-        height="200vh"
-        style={{ marginLeft: "50px" }}
       />
       <h3>About me and my owner</h3>
       <p>{userProfile.about_me}</p>

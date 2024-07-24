@@ -43,7 +43,9 @@ export const AuthProvider = ({ children }) => {
         }
       // Add new value to friendRequests state
       } else if (lastJsonMessage.event === "friend_request") {
-        setFriendRequests((prev) => [...prev, lastJsonMessage.data]);
+        // Make sure the id is a number type
+        const id = parseInt(lastJsonMessage.data);
+        setFriendRequests((prev) => [...prev, id]);
       // Save unread messages to state
       } else if (lastJsonMessage.event === "unread_messages") {
         if (lastJsonMessage.data === true) {

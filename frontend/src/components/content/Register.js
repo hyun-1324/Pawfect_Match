@@ -149,8 +149,6 @@ const Register = () => {
       form.preferred_distance = Number(form.preferred_distance);
       
       formData.append("json", JSON.stringify(form));
-      console.log("form", form);
-      console.log("formData", formData);
 
       let response = await fetch("http://localhost:3000/handle_register", {
         method: "POST",

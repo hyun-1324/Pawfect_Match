@@ -16,7 +16,7 @@ const EditProfile = () => {
     size: 0,
     energy_level: "low",
     favorite_play_style: "wrestling",
-    age: 0,
+    age: -1,
     preferred_distance: 1,
     preferred_gender: "any",
     preferred_neutered: false,
@@ -29,8 +29,7 @@ const EditProfile = () => {
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
+ 
   const navigate = useNavigate();
 
   const {
@@ -110,46 +109,6 @@ const EditProfile = () => {
     };
   }, [controller]);
 
-  useEffect(() => {
-    setIsLoading(true);
-    const checkLoginStatus = async () => {
-      const controller = new AbortController();
-      setController(controller);
-      setIsLoading(true);
-      try {
-        const response = await fetch("/login_status", {
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          navigate("/");
-        } else {
-          const errorResponse = await response.json();
-          const error = new Error();
-          error.status = response.status; // Include the status code
-          error.message = errorResponse.Message || "Unknown error"; // Include the error message;
-          throw error;
-        }
-      } catch (error) {
-        if (error.name === "AbortError") {
-          // The request was aborted
-          console.log("Fetch aborted");
-        } else if (error.status === 401) {
-          // User is not logged in, continue
-          return;
-        } else if (error.status !== 401 && error.message) {
-          // Handle internal server errors
-          setError(error.message);
-        } else {
-          // This is likely a network error
-          setError("Network error, please try again.");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    checkLoginStatus();
-  }, [navigate]);
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsPending(true);
@@ -160,12 +119,6 @@ const EditProfile = () => {
     try {
       const formData = new FormData();
       try {
-        if (form.age <= 0 || form.age > 30) {
-          throw new Error("Age must be between 0 and 30 years!");
-        }
-        if (form.size <= 0 || form.size > 100) {
-          throw new Error("Size must be between 0 and 100 kg!");
-        }
         if (form.password || form.confirm_password) {
           if (form.password !== form.confirm_password) {
             throw new Error("Passwords do not match!");
@@ -231,7 +184,7 @@ const EditProfile = () => {
     }
   };
 
-  if (isLoading || isPending1 || isPending2 || isPending3)
+  if (isPending1 || isPending2 || isPending3)
     return <div>Loading...</div>;
   if (error1 || error2 || error3)
     return <div>Error: {error1 || error2 || error3}</div>;
@@ -269,7 +222,7 @@ const EditProfile = () => {
           <select
             name="preferred_location"
             id="prefLocation"
-            value={form.location_options}
+            value={form.preferred_location}
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           >
             <option value="Live">Use my live location</option>
@@ -298,11 +251,13 @@ const EditProfile = () => {
             type="number"
             id="age"
             name="age"
+            min={0}
+            max={30}
             placeholder="age in years"
             required
-            value={form.age}
+            value={form.age === -1 ? "" : form.age}
             onChange={(e) =>
-              handleChange(e.target.name, Number(e.target.value))
+              handleChange(e.target.name, e.target.value)
             }
           />
           <br />
@@ -324,8 +279,10 @@ const EditProfile = () => {
             placeholder="size in kilograms"
             id="size"
             name="size"
+            min={1}
+            max={100}
             required
-            value={form.size}
+            value={form.size === 0 ? "" : form.size}
             onChange={(e) =>
               handleChange(e.target.name, Number(e.target.value))
             }
@@ -501,7 +458,7 @@ const EditProfile = () => {
           {!isPending && (
             <button className="button" type="submit">
               <img
-                src={`${process.env.PUBLIC_URL}/images/forward.png`}
+                src={`${process.env.PUBLIC_URL}/images/save.png`}
                 alt="Register"
               ></img>
             </button>
