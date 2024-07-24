@@ -29,7 +29,6 @@ const useFetch = (url) => {
           setIsPending(false);
           if (err.name === 'AbortError') {
               // The request was aborted
-              console.log('Fetch aborted in custom hook');
           } else if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
             // Network error or CORS issue
             setError({ message: "Network error: Unable to reach the server", status: 'NETWORK_ERROR' });
