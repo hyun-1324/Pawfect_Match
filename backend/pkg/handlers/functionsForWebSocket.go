@@ -261,7 +261,7 @@ func saveRejection(db *sql.DB, fromId, toId string) error {
 
 	smallId, largeId := utils.OrderPair(numToId, numFromId)
 
-	query := "UPDATE matches SET rejected = TRUE WHERE from_id = $1 AND to_id = $2"
+	query := "UPDATE matches SET rejected = TRUE WHERE user_id1 = $1 AND user_id2 = $2"
 	_, err = db.Exec(query, smallId, largeId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
