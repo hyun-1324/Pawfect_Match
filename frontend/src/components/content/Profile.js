@@ -56,12 +56,6 @@ const Profile = () => {
       <p>Energy level: {userBio.energy_level}</p>
       <p>Favorite play style: {userBio.play_style}</p>
       <p>Age: {userBio.age}</p>
-
-      <h3>Preferences</h3>
-      <p>Preferred gender: {userBio.preferred_gender}</p>
-      <p>Preferred Neutered: {userBio.preferred_neutered ? "Yes" : "No"}</p>
-      <p>Preferred location: {userBio.preferred_location}</p>
-      <p>Preferred Distance: {userBio.preferred_distance}</p>
     </div>
   );
 };
