@@ -23,11 +23,11 @@ const MyProfile = () => {
   }
 
   if (error1 || error2 || error3) {
-    return <div>Error: {error1 || error2 || error3}</div>;
+    return <div className="errorBox">Error: {error1.message || error2.message || error3.message}</div>;
   }
 
   if (!user || !userProfile || !userBio) {
-    return <div>Loading data...</div>;
+    return <div className="card centered">Loading data...</div>;
   }
 
   return (

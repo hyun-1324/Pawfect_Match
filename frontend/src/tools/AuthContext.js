@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import useWebSocket from 'react-use-websocket';
 import AlertModal from '../components/navigation/Modal';
 import fetchUserData from './fetchUserInfo';
@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     onClose: () => console.log("WebSocket Disconnected"),
     // Will attempt to reconnect on all close events, such as server shutting down
     shouldReconnect: (closeEvent) => true,
+    reconnectAttempts: 10,
   }, 
     loggedIn
   );
@@ -59,9 +60,15 @@ export const AuthProvider = ({ children }) => {
         }
       // Add new value to newConnections state
       } else if (lastJsonMessage.event === "new_connection") {
-        // Make sure the id is a number type
-        const id = parseInt(lastJsonMessage.data);
-        setNewConnections((prev) => [...prev, id]);
+        // Add to newConnections if reciever is the original request sender
+        if (lastJsonMessage.data.is_sender === true) {
+          // Make sure the id is a number type
+          const id = parseInt(lastJsonMessage.data.id);
+          setNewConnections((prev) => [...prev, id]);
+        } else {
+          sendJsonMessage({ event: "check_new_connection", data: { id: String(lastJsonMessage.data.id) } });
+        }
+
       } else if (lastJsonMessage.event === "error") {
         console.log("WS ERROR!" + lastJsonMessage.data);
       }
@@ -69,9 +76,7 @@ export const AuthProvider = ({ children }) => {
   }, [lastJsonMessage]);
  
   // Show modal when there are new connections
-
   useEffect(() => {
-    console.log("newConnections: ", newConnections);
     if (newConnections.length > 0) {
       const userId = newConnections[0];
       const controller = new AbortController();
@@ -101,7 +106,6 @@ export const AuthProvider = ({ children }) => {
     // Remove id from newConnections state
     setNewConnections((prev) => {
       const updated = prev.filter((id) => id !== userId);
-      console.log("updated: ", updated);
       return updated;
     });
     setShowModal(false); // Hide the modal
@@ -111,7 +115,7 @@ export const AuthProvider = ({ children }) => {
     if (showModal && userDataForModal) {
       return (
         <AlertModal open={showModal} onClose={() => closePopup(userDataForModal.id)}>
-          <img src={userDataForModal.picture ? userDataForModal.picture : `${process.env.PUBLIC_URL}/images/defaultProfileDog.png`} alt="dog" />
+          <img src={userDataForModal.picture ? userDataForModal.picture : `${process.env.PUBLIC_URL}/images/defaultProfile.png`} alt="dog" />
           <p>{userDataForModal.dog_name} is your new connection!</p>
         </AlertModal>
       );
@@ -119,7 +123,6 @@ export const AuthProvider = ({ children }) => {
     return null;
   };
   
-
   // Functions to handle socket connection
   const login = () => {
     setLoggedIn(true);
@@ -129,10 +132,11 @@ export const AuthProvider = ({ children }) => {
   }
 
   // Functions to clear notifications
-  const clearFriendNotification = () => {
-    setFriendRequests([]);
-  }
-
+  const clearFriendNotification = (idToRemove) => {
+    idToRemove = Number(idToRemove);
+    setFriendRequests((prevList) => prevList.filter((id) => id !== idToRemove));
+    console.log("Friend request notification cleared for id: ", idToRemove)
+  };
 
   return (
     <AuthContext.Provider value={{ 
