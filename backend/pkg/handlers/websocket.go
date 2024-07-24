@@ -27,11 +27,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	conn       *websocket.Conn
-	send       chan []byte
-	userId     string
-	rooms      map[string]bool
-	userStatus bool
+	conn   *websocket.Conn
+	send   chan []byte
+	userId string
+	rooms  map[string]bool
 }
 
 type Room struct {

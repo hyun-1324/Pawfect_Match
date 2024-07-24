@@ -409,7 +409,7 @@ button {
   z-index: 1000;
   border-radius: 3px;
   text-align: center;
-  font-family: "contentFont", "sans-serif";  
+  font-family: "contentFont", "sans-serif";
   color: var(--content-font-color);
   img {
     max-width: 100%;
