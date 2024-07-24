@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import  useFetch  from "../../tools/useFetch";
 import { useAuth } from '../../tools/AuthContext';
-import fetchUserData from "../../tools/fetchUserInfo";
+import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
 
 const Recommendations = () => {
     const navigate = useNavigate();
@@ -50,7 +50,8 @@ const Recommendations = () => {
                         setLocationUpdated(true);
                     }).catch((error) => {
                         if (error.name === "AbortError") {
-                            console.log("Fetch aborted");
+                        } else {
+                            setErrorMessage(error.message);
                         }
                     });
                 });
@@ -67,16 +68,17 @@ const Recommendations = () => {
         const signal = abortController.signal; 
         // fetch recommendations
         if (locationUpdated && bioData && !recommendations && !isRecommendationsLoaded) {
-           fetchRecommendations({signal}).then(({ recommendationsData, error }) => {
+           fetchFromEndpoint("/recommendations", {signal}).then(({ data, error }) => {
                 if (error) {
                     setErrorMessage(error.message);
                 } else {
                     setIsRecommendationsLoaded(true);
-                    setRecommendations(recommendationsData);
+                    setRecommendations(data.ids);
                 }
               }).catch((error) => {
                 if (error.name === "AbortError") {
-                    console.log("Fetch aborted");
+                } else {
+                    setErrorMessage(error.message);
                 }
             });
         }
@@ -90,18 +92,19 @@ const Recommendations = () => {
         if (recommendations && recommendations.length > 0 && isRecommendationsLoaded) { 
             // for each id in recommendations, fetch the data
             Promise.allSettled(recommendations.map((id) => 
-                fetchUserData(id, {signal})
-                    .then(({ userData, error }) => {
+                fetchFromEndpoint(`/users/${id}`, {signal})
+                    .then(({ data, error }) => {
                         if (error) {
                             setErrorMessage(error.message);
                         } else {
-                            setRecommendationsList((prevList) => [...prevList, userData]);
+                            setRecommendationsList((prevList) => [...prevList, data]);
                         }
                     })
                     .catch((error) => {
                         if (error.name === "AbortError") {
-                            console.log("Fetch aborted");
-                        } 
+                        } else {
+                            setErrorMessage(error.message);
+                        }
                     })
             )).finally(() => {
                 setIsLoading(false);
@@ -111,21 +114,6 @@ const Recommendations = () => {
         }
         return () => abortController.abort(); 
     }, [recommendations, isRecommendationsLoaded]);
-    
-
-    const fetchRecommendations = async ({signal}) => {
-        const response = await fetch("/recommendations", { signal });
-        if (!response.ok) {
-            const errorResponse = await response.json();
-            const error = new Error();
-            error.status = response.status;
-            error.message = errorResponse.Message || "Unknown error";
-            return { recommendationsData: null, error };
-        }
-        const data = await response.json();
-        return { recommendationsData: data.ids, error: null };
-
-    };
 
     const sendLocation = async ({ latitude, longitude }, {signal}) => {
         const locationResponse = await fetch("/handle_live", {

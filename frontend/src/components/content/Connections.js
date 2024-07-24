@@ -1,74 +1,103 @@
 import { useAuth } from "../../tools/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import useFetch from "../../tools/useFetch";
-import fetchUserData from "../../tools/fetchUserInfo";
+import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
 
 const Connections = () => {
     const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification } = useAuth();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState(null);
+    const [connectionsList, setConnectionsList] = useState([]); /* []int */
     const [connections, setConnections] = useState([]);  /* []{id, dog_name, picture} */ 
     const [requests, setRequests] = useState([]);
+    const [triggerFetch, setTriggerFetch] = useState(false);
 
-    // use custom hook to fetch connections
-    const { data: connectionsData, isPending, error } = useFetch("/connections");
-
+    // Fetch connections
     useEffect(() => {
-        if (error) {
-            setErrorMessage(error.message);
+        const abortController = new AbortController(); 
+        const signal = abortController.signal; 
+        if (triggerFetch || lastJsonMessage?.event === "new_connection" || connectionsList.length === 0) {
+            fetchFromEndpoint("/connections", { signal })
+            .then(({ data, error }) => {
+                if (error) {
+                    setErrorMessage(error.message);
+                }
+                if (data.ids) {
+                    setConnectionsList(data.ids);
+                } else {
+                    setConnectionsList([]);
+                }
+            })
+            .catch((error) => {
+                if (error.name === "AbortError") {
+                } else {
+                    setErrorMessage(error.message);
+                }
+            })
+            .finally(() => {
+                setTriggerFetch(false);
+            });
         }
-    }, [error]);
+    
+        return () => abortController.abort();
+    }, [lastJsonMessage, triggerFetch]);
+
+    // Connect websocket if not already connected
+    useEffect(() => {
+        if (!loggedIn) {
+            login();
+        }
+    }, [loggedIn]);
 
     // Get other information needed for connections
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
-        // Connect websocket if not already connected
-        if (!loggedIn && !isPending && !error) {
-            login();
-        }
-        if (!isPending && !error && connectionsData?.ids?.length > 0) {
+        if (connectionsList.length > 0 && !errorMessage) {
             setConnections([]);
             // Trigger the second fetch here
-            Promise.allSettled(connectionsData.ids.map((id) => 
-                fetchUserData(id, {signal})
-                    .then(({ userData, error }) => {
+            Promise.allSettled(connectionsList.map((id) => 
+                fetchFromEndpoint(`/users/${id}`, {signal})
+                    .then(({ data, error }) => {
                         if (error) {
                             setErrorMessage(error.message);
                         } else {
-                            setConnections((prevList) => [...prevList, userData]);
+                            setConnections((prevList) => [...prevList, data]);
                         }
                     })
                     .catch((error) => {
                         if (error.name === "AbortError") {
-                            console.log("Fetch aborted");
-                        } 
+                        } else {
+                            setErrorMessage(error.message);
+                        }
                     })
                 ));
-        } 
+        } else if (connectionsList.length === 0) {
+            setConnections([]);
+        }
         return () => abortController.abort(); 
-    }, [isPending, connectionsData?.ids]);
+    }, [connectionsList]);
 
     // Get other information needed for requests
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
-        if ( friendRequests.length > 0 && !error) {
+        if ( friendRequests.length > 0 && !errorMessage) {
             setRequests([]);
             Promise.allSettled(friendRequests.map((id) => 
-                fetchUserData(id, {signal})
-                    .then(({ userData, error }) => {
+                fetchFromEndpoint(`/users/${id}`, {signal})
+                    .then(({ data, error }) => {
                         if (error) {
                             setErrorMessage(error.message);
                         } else {
-                            setRequests((prevList) => [...prevList, userData]);
+                            setRequests((prevList) => [...prevList, data]);
                         }
                     })
                     .catch((error) => {
                         if (error.name === "AbortError") {
-                            console.log("Fetch aborted");
-                        } 
+                        } else {
+                            setErrorMessage(error.message);
+                        }
                     })
             ));
         } else if (friendRequests.length === 0) {
@@ -78,38 +107,11 @@ const Connections = () => {
         return () => abortController.abort(); 
     }, [friendRequests]);
 
-    // Add new user to connectionlist when new connection is made
-    useEffect(() => {
-        const controller = new AbortController();
-        const signal = controller.signal;
-        if (lastJsonMessage) {
-            if (lastJsonMessage.event === "new_connection") {
-                // Add new value to connections state
-                fetchUserData(lastJsonMessage.data.id, {signal})
-                .then(({ userData, error }) => {
-                    if (error) {
-                        setErrorMessage(error.message);
-                    } else {
-                        setConnections((prevList) => [userData, ...prevList]);
-                    }
-                }).catch((error) => {
-                    if (error.name === "AbortError") {
-                        console.log("Fetch aborted");
-                    }
-                });
-            } else if (lastJsonMessage.event === "error") {
-                setErrorMessage("Error: " + lastJsonMessage.data);
-            }
-        }  
-        return () => controller.abort();
-    }, [lastJsonMessage]);  
-
     // Functions to handle removing connections and accepting/dismissing requests
     const handleRemoveConnection = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
-        // Remove the user from connections
-        setConnections((prevList) => prevList.filter((user) => user.id !== userId));
+        setTriggerFetch(true);
     }, [sendJsonMessage]);
 
     const handleRemoveRequest = useCallback((userId) => {

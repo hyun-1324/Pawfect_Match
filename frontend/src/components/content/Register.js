@@ -94,7 +94,6 @@ const Register = () => {
         } catch (error) {
             if (error.name === 'AbortError') {
                 // The request was aborted
-                console.log('Fetch aborted');
             } else if (error.status === 401) {
                 // User is not logged in, continue
                 return;
