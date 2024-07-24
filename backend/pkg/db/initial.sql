@@ -138,7 +138,7 @@ BEGIN
   SET compatible_distance = (
     SELECT
       CASE
-        WHEN ST_DistanceSphere(l1.geom, l2.geom) / 1000 <= 
+        WHEN ST_Distance(l1.geom, l2.geom) / 1000 <= 
             LEAST(bd1.preferred_distance, bd2.preferred_distance)
         THEN TRUE
         ELSE FALSE
