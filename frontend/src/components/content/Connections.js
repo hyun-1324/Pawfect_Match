@@ -8,7 +8,6 @@ const Connections = () => {
     const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification } = useAuth();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [connections, setConnections] = useState([]);  /* []{id, dog_name, picture} */ 
     const [requests, setRequests] = useState([]);
 
@@ -56,7 +55,6 @@ const Connections = () => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
         if ( friendRequests.length > 0 && !error) {
-            setIsLoading(true);
             setRequests([]);
             Promise.allSettled(friendRequests.map((id) => 
                 fetchUserData(id, {signal})
@@ -72,16 +70,41 @@ const Connections = () => {
                             console.log("Fetch aborted");
                         } 
                     })
-            )).finally(() => {
-                if (requests.length !== 0) {
-                    setIsLoading(false);
-                }
-            });
+            ));
+        } else if (friendRequests.length === 0) {
+            setRequests([]);
         }
 
         return () => abortController.abort(); 
     }, [friendRequests]);
 
+    // Add new user to connectionlist when new connection is made
+    useEffect(() => {
+        const controller = new AbortController();
+        const signal = controller.signal;
+        if (lastJsonMessage) {
+            if (lastJsonMessage.event === "new_connection") {
+                // Add new value to connections state
+                fetchUserData(lastJsonMessage.data.id, {signal})
+                .then(({ userData, error }) => {
+                    if (error) {
+                        setErrorMessage(error.message);
+                    } else {
+                        setConnections((prevList) => [userData, ...prevList]);
+                    }
+                }).catch((error) => {
+                    if (error.name === "AbortError") {
+                        console.log("Fetch aborted");
+                    }
+                });
+            } else if (lastJsonMessage.event === "error") {
+                setErrorMessage("Error: " + lastJsonMessage.data);
+            }
+        }  
+        return () => controller.abort();
+    }, [lastJsonMessage]);  
+
+    // Functions to handle removing connections and accepting/dismissing requests
     const handleRemoveConnection = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
@@ -92,50 +115,17 @@ const Connections = () => {
     const handleRemoveRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
-        // Clear notification mark if there is only one request left
-        if (requests.length == 1) {
-            clearFriendNotification();
-        }
-        // Remove the user from requests
-        setRequests((prevList) => prevList.filter((user) => user.id !== userId));
+        clearFriendNotification(userId);
     }, [sendJsonMessage]);
 
     const handleAcceptRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "accept_request", data: dataObject });
-        // Clear notification mark if there is only one request left
-        if (requests.length == 1) {
-            clearFriendNotification();
-        }
-        // Remove the user from requests
-        setRequests((prevList) => prevList.filter((user) => user.id !== userId)); 
+        clearFriendNotification(userId);
         
     }, [sendJsonMessage, clearFriendNotification, requests]);
 
-    useEffect(() => {
-        const controller = new AbortController();
-        const signal = controller.signal;
-        if (lastJsonMessage) {
-            console.log("lastJsonMessage in connections:", lastJsonMessage);
-            if (lastJsonMessage.event === "new_connection") {
-                // Add new value to connections state
-                fetchUserData(lastJsonMessage.data, {signal}).then(({ userData, error }) => {
-                    if (error) {
-                        setErrorMessage(error.message);
-                    } else {
-                        console.log("userData: ", userData);
-                        console.log("connections: ", connections);
-                        setConnections((prevList) => [userData, ...prevList]);
-                    }
-                });
-            } else if (lastJsonMessage.event === "error") {
-                setErrorMessage(lastJsonMessage.data);
-            }
-        }  
-        return () => controller.abort();
-    }, [lastJsonMessage]);  
-
-
+    // Function to generate connection cards
     const makeConnectionCards = (connections) => {
         if (!connections || connections.length === 0) {
             return (
@@ -151,7 +141,7 @@ const Connections = () => {
                     src={
                         dogData.picture
                         ? dogData.picture
-                        : `${process.env.PUBLIC_URL}/images/defaultProfileDog.png`
+                        : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
                     } 
                     alt="dog" 
                     onClick={() => navigate(`/profile/${dogData.id}`)} />
@@ -177,6 +167,7 @@ const Connections = () => {
         ));
     };
 
+    // Function to generate request cards
     const makeRequestCards = (requests) => {
         if (!requests || requests.length === 0) {
             return <></>;
@@ -188,7 +179,7 @@ const Connections = () => {
                     src={
                         dogData.picture
                         ? dogData.picture
-                        : `${process.env.PUBLIC_URL}/images/defaultProfileDog.png`
+                        : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
                     } 
                     alt="dog" 
                     onClick={() => navigate(`/profile/${dogData.id}`)} />
@@ -214,10 +205,7 @@ const Connections = () => {
         ));
     }
 
-
-
-
-
+    // Return the component
     return (
     <div>
         <h2>Connections</h2>

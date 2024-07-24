@@ -174,7 +174,7 @@ const Recommendations = () => {
                     src={
                         dogData.picture
                         ? dogData.picture
-                        : `${process.env.PUBLIC_URL}/images/defaultProfileDog.png`
+                        : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
                     } 
                     alt="profile picture, click to see profile" 
                     onClick={() => navigate(`/profile/${dogData.id}`)} />

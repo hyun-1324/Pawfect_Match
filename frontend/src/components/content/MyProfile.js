@@ -23,11 +23,11 @@ const MyProfile = () => {
   }
 
   if (error1 || error2 || error3) {
-    return <div>Error: {error1 || error2 || error3}</div>;
+    return <div className="errorBox">Error: {error1.message || error2.message || error3.message}</div>;
   }
 
   if (!user || !userProfile || !userBio) {
-    return <div>Loading data...</div>;
+    return <div className="card centered">Loading data...</div>;
   }
 
   return (
@@ -42,8 +42,6 @@ const MyProfile = () => {
             : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
         }
         alt="Dog"
-        height="200vh"
-        style={{ marginLeft: "50px" }}
       />
       <h3>About me and my owner</h3>
       <p>{userProfile.about_me}</p>

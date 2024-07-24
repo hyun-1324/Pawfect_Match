@@ -215,6 +215,12 @@ h3 {
   word-wrap: break-word;
   overflow-wrap: break-word;
   position: relative;
+  img {
+    margin-left: 50px;
+    max-width: 80%;
+    max-height: 200px;
+    border-radius: 3px;
+  }
 }
 
 .edit-button {
@@ -403,6 +409,8 @@ button {
   z-index: 1000;
   border-radius: 3px;
   text-align: center;
+  font-family: "contentFont", "sans-serif";  
+  color: var(--content-font-color);
   img {
     max-width: 100%;
     border-radius: 3px;

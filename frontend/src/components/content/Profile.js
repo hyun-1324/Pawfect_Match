@@ -8,28 +8,28 @@ const Profile = () => {
     data: user,
     isPending: isPending1,
     error: error1,
-  } = useFetch(`http://localhost:3000/${id}`);
+  } = useFetch(`http://localhost:3000/users/${id}`);
   const {
     data: userProfile,
     isPending: isPending2,
     error: error2,
-  } = useFetch(`http://localhost:3000/${id}/profile`);
+  } = useFetch(`http://localhost:3000/users/${id}/profile`);
   const {
     data: userBio,
     isPending: isPending3,
     error: error3,
-  } = useFetch(`http://localhost:3000/${id}/bio`);
+  } = useFetch(`http://localhost:3000/users/${id}/bio`);
 
   if (isPending1 || isPending2 || isPending3) {
     return <div>Loading...</div>;
   }
 
   if (error1 || error2 || error3) {
-    return <div>Error: {error1 || error2 || error3}</div>;
+    return <div className="errorBox">Error: {error1.message || error2.message || error3.message}</div>;
   }
 
   if (!user || !userProfile || !userBio) {
-    return <div>Loading data...</div>;
+    return <div className="card centered">Loading data...</div>;
   }
 
   return (
@@ -44,8 +44,6 @@ const Profile = () => {
             : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
         }
         alt="Dog"
-        height="200vh"
-        style={{ marginLeft: "50px" }}
       />
       <h3>About me and my owner</h3>
       <p>{userProfile.about_me}</p>
