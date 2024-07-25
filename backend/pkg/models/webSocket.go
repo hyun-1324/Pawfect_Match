@@ -29,8 +29,9 @@ type GetMessages struct {
 }
 
 type ChatList struct {
-	RoomId        int  `json:"id"`
-	UnReadMessage bool `json:"unReadMessage"`
+	RoomId        int    `json:"id"`
+	UnReadMessage bool   `json:"unReadMessage"`
+	UserId        string `json:"user_id"`
 }
 
 type LeaveRoom struct {
