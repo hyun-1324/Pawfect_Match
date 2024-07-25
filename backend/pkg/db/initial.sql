@@ -177,6 +177,8 @@ CREATE TABLE messages (
   room_id INTEGER NOT NULL,
   from_id INTEGER NOT NULL,
   to_id INTEGER NOT NULL,
+  from_id_connected BOOLEAN,
+  to_id_connected BOOLEAN,
   message TEXT NOT NULL,
   sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
   read BOOLEAN DEFAULT FALSE,
@@ -184,3 +186,32 @@ CREATE TABLE messages (
   FOREIGN KEY (from_id) REFERENCES users (id) ON DELETE SET NULL,
   FOREIGN KEY (to_id) REFERENCES users (id) ON DELETE SET NULL
 );
+
+CREATE OR REPLACE FUNCTION update_messages_connected_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE messages
+    SET from_id_connected = 
+        CASE 
+            WHEN (NEW.user_id1 = messages.from_id AND NEW.user1_connected = TRUE) OR
+                 (NEW.user_id2 = messages.from_id AND NEW.user2_connected = TRUE)
+            THEN TRUE
+            ELSE FALSE
+        END,
+        to_id_connected = 
+        CASE 
+            WHEN (NEW.user_id1 = messages.to_id AND NEW.user1_connected = TRUE) OR
+                 (NEW.user_id2 = messages.to_id AND NEW.user2_connected = TRUE)
+            THEN TRUE
+            ELSE FALSE
+        END
+    WHERE messages.room_id = NEW.id
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_messages_connected_status_trigger
+AFTER INSERT OR UPDATE OF user1_connected, user2_connected ON rooms
+FOR EACH ROW
+EXECUTE FUNCTION update_messages_connected_status();

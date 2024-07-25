@@ -368,17 +368,25 @@ func saveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.T
 
 func getChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 	query := `
-SELECT 
-  room_id,
-  EXISTS (
-    SELECT 1
-    FROM messages m
-    WHERE m.room_id = messages.room_id AND m.read = FALSE
-  ) AS has_unread
-FROM messages 
-WHERE (to_id = $1 OR from_id = $1)
-GROUP BY room_id
-ORDER BY MAX(sent_at) DESC;
+	SELECT 
+  	m.room_id,
+  	EXISTS (
+    	SELECT 1
+    	FROM messages sub
+    	WHERE sub.room_id = m.room_id AND sub.read = FALSE AND sub.to_id = $1
+  	) AS has_unread,
+		CASE
+			WHEN m.from_id = $1 THEN m.to_id
+			WHEN m.to_id = $1 THEN m.from_id
+		END AS user_id
+	FROM messages m
+	WHERE ((m.from_id = $1 AND m.from_id_connected = TRUE) OR (m.to_id = $1 AND m.to_id_connected = TRUE))
+	GROUP BY room_id,
+		CASE
+			WHEN m.from_id = $1 THEN m.to_id
+			WHEN m.to_id = $1 THEN m.from_id
+		END
+	ORDER BY MAX(m.sent_at) DESC;
 	`
 	rows, err := db.Query(query, userId)
 	if err != nil {
@@ -389,7 +397,7 @@ ORDER BY MAX(sent_at) DESC;
 	var chatList []models.ChatList
 	for rows.Next() {
 		var msg models.ChatList
-		err := rows.Scan(&msg.RoomId, &msg.UnReadMessage)
+		err := rows.Scan(&msg.RoomId, &msg.UnReadMessage, &msg.UserId)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
