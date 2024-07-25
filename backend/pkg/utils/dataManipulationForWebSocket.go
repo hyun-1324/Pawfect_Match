@@ -1,30 +1,14 @@
-package handlers
+package utils
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"matchMe/pkg/models"
-	"matchMe/pkg/utils"
 	"strconv"
 	"time"
 )
 
-func changeToEvent(event string, data interface{}) ([]byte, error) {
-	eventData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Printf("failed to marshal data: %v\n", err)
-		return nil, fmt.Errorf("failed to marshal data: %v", err)
-	}
-	eventStruct := models.Event{
-		Event: event,
-		Data:  json.RawMessage(eventData),
-	}
-
-	return json.Marshal(eventStruct)
-}
-
-func getRequests(db *sql.DB, userId string) (models.IdList, error) {
+func GetRequests(db *sql.DB, userId string) (models.IdList, error) {
 	query := `
 	SELECT from_id 
 	FROM requests 
@@ -62,7 +46,7 @@ func getRequests(db *sql.DB, userId string) (models.IdList, error) {
 	return models.IdList{Ids: ids}, nil
 }
 
-func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
+func CheckUnreadMessages(db *sql.DB, userId string) (bool, error) {
 	query := `SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE AND to_id_connected = TRUE)`
 
 	var exists bool
@@ -74,7 +58,7 @@ func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
 	return exists, nil
 }
 
-func getNewConnections(db *sql.DB, userId string) (models.IdList, error) {
+func GetNewConnections(db *sql.DB, userId string) (models.IdList, error) {
 
 	query := `
 	SELECT 
@@ -109,7 +93,7 @@ func getNewConnections(db *sql.DB, userId string) (models.IdList, error) {
 	return models.IdList{Ids: ids}, nil
 }
 
-func getUserRooms(db *sql.DB, userId string) ([]string, error) {
+func GetUserRooms(db *sql.DB, userId string) ([]string, error) {
 	rows, err := db.Query("SELECT id FROM rooms WHERE (user_id1 = $1 AND user1_connected = TRUE) OR (user_id2 = $1 AND user2_connected = TRUE)", userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
@@ -133,7 +117,7 @@ func getUserRooms(db *sql.DB, userId string) ([]string, error) {
 	return rooms, nil
 }
 
-func saveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
+func SaveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
 	var previousRequest bool
 	query := `SELECT EXISTS (SELECT 1 FROM requests WHERE from_id = $1 AND to_id = $2)`
 	err := db.QueryRow(query, toId, fromId).Scan(&previousRequest)
@@ -164,7 +148,7 @@ func saveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
 			return true, false, fmt.Errorf("failed to change string to int: %v", err)
 		}
 
-		smallId, largeId := utils.OrderPair(numToId, numFromId)
+		smallId, largeId := OrderPair(numToId, numFromId)
 
 		_, err = db.Exec("INSERT INTO connections (user_id1, user_id2) VALUES ($1, $2) ON CONFLICT (user_id1, user_id2) DO NOTHING", smallId, largeId)
 		if err != nil {
@@ -186,7 +170,7 @@ func saveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
 	return previousRequest, processed, nil
 }
 
-func saveAcceptance(db *sql.DB, fromId, toId string) error {
+func SaveAcceptance(db *sql.DB, fromId, toId string) error {
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
 		return fmt.Errorf("failed to change string to int: %v", err)
@@ -197,7 +181,7 @@ func saveAcceptance(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := utils.OrderPair(numToId, numFromId)
+	smallId, largeId := OrderPair(numToId, numFromId)
 
 	_, err = db.Exec("INSERT INTO connections (user_id1, user_id2) VALUES ($1, $2) ON CONFLICT (user_id1, user_id2) DO NOTHING", smallId, largeId)
 	if err != nil {
@@ -212,7 +196,7 @@ func saveAcceptance(db *sql.DB, fromId, toId string) error {
 	return nil
 }
 
-func saveDecline(db *sql.DB, fromId, toId string) error {
+func SaveDecline(db *sql.DB, fromId, toId string) error {
 
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
@@ -224,7 +208,7 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := utils.OrderPair(numToId, numFromId)
+	smallId, largeId := OrderPair(numToId, numFromId)
 
 	query := "UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2"
 	_, err = db.Exec(query, fromId, toId)
@@ -247,7 +231,7 @@ func saveDecline(db *sql.DB, fromId, toId string) error {
 	return nil
 }
 
-func saveRejection(db *sql.DB, fromId, toId string) error {
+func SaveRejection(db *sql.DB, fromId, toId string) error {
 
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
@@ -259,7 +243,7 @@ func saveRejection(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := utils.OrderPair(numToId, numFromId)
+	smallId, largeId := OrderPair(numToId, numFromId)
 
 	query := "UPDATE matches SET rejected = TRUE WHERE user_id1 = $1 AND user_id2 = $2"
 	_, err = db.Exec(query, smallId, largeId)
@@ -283,7 +267,7 @@ func saveRejection(db *sql.DB, fromId, toId string) error {
 	return nil
 }
 
-func saveCheckedNewConnection(db *sql.DB, userId, checkedId string) error {
+func SaveCheckedNewConnection(db *sql.DB, userId, checkedId string) error {
 	numUserId, err := strconv.Atoi(userId)
 	if err != nil {
 		return fmt.Errorf("failed to change string to int: %v", err)
@@ -293,7 +277,7 @@ func saveCheckedNewConnection(db *sql.DB, userId, checkedId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := utils.OrderPair(numUserId, numCheckedId)
+	smallId, largeId := OrderPair(numUserId, numCheckedId)
 
 	if numUserId == smallId {
 		query := `UPDATE connections SET id1_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2`
@@ -312,7 +296,7 @@ func saveCheckedNewConnection(db *sql.DB, userId, checkedId string) error {
 	return nil
 }
 
-func createRoom(db *sql.DB, fromId, toId string) (string, error) {
+func CreateRoom(db *sql.DB, fromId, toId string) (string, error) {
 	numFromId, err := strconv.Atoi(fromId)
 	if err != nil {
 		return "", fmt.Errorf("failed to change string to int: %v", err)
@@ -322,7 +306,7 @@ func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 		return "", fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := utils.OrderPair(numFromId, numToId)
+	smallId, largeId := OrderPair(numFromId, numToId)
 
 	var roomId string
 	query := `
@@ -339,7 +323,7 @@ func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 	return roomId, nil
 }
 
-func saveLeaveRoom(db *sql.DB, userId, roomId string) error {
+func SaveLeaveRoom(db *sql.DB, userId, roomId string) error {
 	query := `
 	UPDATE rooms 
 	SET 
@@ -355,7 +339,7 @@ func saveLeaveRoom(db *sql.DB, userId, roomId string) error {
 	return nil
 }
 
-func canGetMessages(db *sql.DB, roomId, userId string) (bool, error) {
+func CanGetMessages(db *sql.DB, roomId, userId string) (bool, error) {
 	query := `
 	SELECT EXISTS (
 		SELECT 1 
@@ -373,7 +357,7 @@ func canGetMessages(db *sql.DB, roomId, userId string) (bool, error) {
 	return exists, nil
 }
 
-func saveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.Time, canGetmessages bool) (int, error) {
+func SaveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.Time, canGetmessages bool) (int, error) {
 
 	var messageId int
 	err := db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, sent_at, to_id_connected) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", roomId, fromId, toId, message, sentAt, canGetmessages).Scan(&messageId)
@@ -384,7 +368,7 @@ func saveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.T
 	return messageId, nil
 }
 
-func getChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
+func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 	query := `
 	SELECT 
   	m.room_id,
@@ -429,7 +413,7 @@ func getChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 	return chatList, nil
 }
 
-func getMessagesForRoom(db *sql.DB, roomId string, userId string, lastMessageId int) ([]models.Message, error) {
+func GetMessagesForRoom(db *sql.DB, roomId string, userId string, lastMessageId int) ([]models.Message, error) {
 	limit := 10
 
 	query := `
@@ -464,7 +448,7 @@ func getMessagesForRoom(db *sql.DB, roomId string, userId string, lastMessageId 
 	return messages, nil
 }
 
-func markMessagesAsRead(db *sql.DB, userId, roomId string) error {
+func MarkMessagesAsRead(db *sql.DB, userId, roomId string) error {
 	_, err := db.Exec("UPDATE messages SET read = TRUE WHERE to_id = $1 AND room_id = $2", userId, roomId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
