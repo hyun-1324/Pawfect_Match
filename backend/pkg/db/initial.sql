@@ -205,7 +205,7 @@ BEGIN
             THEN TRUE
             ELSE FALSE
         END
-    WHERE messages.room_id = NEW.id
+    WHERE messages.room_id = NEW.id;
 
     RETURN NEW;
 END;
