@@ -110,7 +110,7 @@ func getNewConnections(db *sql.DB, userId string) (models.IdList, error) {
 }
 
 func getUserRooms(db *sql.DB, userId string) ([]string, error) {
-	rows, err := db.Query("SELECT id FROM rooms WHERE user_id1 = $1 OR user_id2 = $1", userId)
+	rows, err := db.Query("SELECT id FROM rooms WHERE (user_id1 = $1 AND user1_connected = TRUE) OR (user_id2 = $1 AND user2_connected = TRUE)", userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
 	}
@@ -337,6 +337,22 @@ func createRoom(db *sql.DB, fromId, toId string) (string, error) {
 	}
 
 	return roomId, nil
+}
+
+func saveLeaveRoom(db *sql.DB, userId, roomId string) error {
+	query := `
+	UPDATE rooms 
+	SET 
+			user1_connected = CASE WHEN user_id1 = $1 THEN FALSE ELSE user1_connected END,
+			user2_connected = CASE WHEN user_id2 = $1 THEN FALSE ELSE user2_connected END
+	WHERE id = $2
+	`
+	_, err := db.Exec(query, userId, roomId)
+	if err != nil {
+		return fmt.Errorf("failed to delete data: %v", err)
+	}
+
+	return nil
 }
 
 func saveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.Time) (int, error) {

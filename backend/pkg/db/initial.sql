@@ -164,6 +164,8 @@ CREATE TABLE rooms (
   id SERIAL PRIMARY KEY,
   user_id1 INTEGER NOT NULL,
   user_id2 INTEGER NOT NULL,
+  user1_connected BOOLEAN DEFAULT TRUE,
+  user2_connected BOOLEAN DEFAULT TRUE,
   FOREIGN KEY (user_id1) REFERENCES users (id) ON DELETE CASCADE,
   FOREIGN KEY (user_id2) REFERENCES users (id) ON DELETE CASCADE,
   UNIQUE (user_id1, user_id2),
