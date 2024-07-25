@@ -593,8 +593,17 @@ func (app *App) handleLeaveRoom(client *Client, roomId string) {
 }
 
 func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
+	canGetMessages, err := canGetMessages(app.DB, messageInfo.RoomId, messageInfo.ToId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
+		fmt.Printf("error checking if user %s can get messages from %s: %v\n", client.userId, messageInfo.ToId, err)
+		return
+	}
 
-	messageId, err := saveMessage(app.DB, messageInfo.RoomId, client.userId, messageInfo.ToId, messageInfo.Message, messageInfo.SentAt)
+	messageInfo.FromId = client.userId
+	messageInfo.CanGetMessages = canGetMessages
+
+	messageId, err := saveMessage(app.DB, messageInfo.RoomId, client.userId, messageInfo.ToId, messageInfo.Message, messageInfo.SentAt, messageInfo.CanGetMessages)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
 		fmt.Printf("error saving message from %s to %s: %v\n", client.userId, messageInfo.ToId, err)
@@ -602,30 +611,31 @@ func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
 	}
 
 	messageInfo.Id = messageId
-	messageInfo.FromId = client.userId
 
-	if toClient, ok := app.clients.Load(messageInfo.ToId); ok {
-		toClient, ok := toClient.(*Client)
-		if ok {
-			chatList, err := getChatList(app.DB, messageInfo.ToId)
-			if err != nil {
-				client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
-				fmt.Printf("error fetching chat list for user %s: %v\n", messageInfo.ToId, err)
-				return
-			}
-			response, err := changeToEvent("get_chat_list", chatList)
-			if err != nil {
-				client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
-				fmt.Printf("error marshaling chat list: %v\n", err)
-				return
-			}
+	if canGetMessages {
+		if toClient, ok := app.clients.Load(messageInfo.ToId); ok {
+			toClient, ok := toClient.(*Client)
+			if ok {
+				chatList, err := getChatList(app.DB, messageInfo.ToId)
+				if err != nil {
+					client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+					fmt.Printf("error fetching chat list for user %s: %v\n", messageInfo.ToId, err)
+					return
+				}
+				response, err := changeToEvent("get_chat_list", chatList)
+				if err != nil {
+					client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+					fmt.Printf("error marshaling chat list: %v\n", err)
+					return
+				}
 
-			select {
-			case toClient.send <- response:
-			default:
-				toClient.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
-				fmt.Printf("Falied to send chat list to user %s\n", messageInfo.ToId)
-				app.unregisterClient(toClient)
+				select {
+				case toClient.send <- response:
+				default:
+					toClient.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+					fmt.Printf("Falied to send chat list to user %s\n", messageInfo.ToId)
+					app.unregisterClient(toClient)
+				}
 			}
 		}
 	}
@@ -658,55 +668,64 @@ func (app *App) broadcastToRoom(messageInfo models.Message) {
 }
 
 func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages) {
-	messages, err := getMessagesForRoom(app.DB, messageInfo.RoomId, client.userId, messageInfo.LastMessageId)
+	canGetMessages, err := canGetMessages(app.DB, messageInfo.RoomId, client.userId)
 	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
-		fmt.Printf("error fetching messages for room %s: %v\n", messageInfo.RoomId, err)
+		client.send <- []byte(`{"event":"error", "data":"unable to get message"}`)
+		fmt.Printf("error checking if user %s can get messages: %v\n", client.userId, err)
 		return
 	}
 
-	err = markMessagesAsRead(app.DB, client.userId, messageInfo.RoomId)
-	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
-		fmt.Printf("error marking messages as read for room %s: %v\n", messageInfo.RoomId, err)
-		return
-	}
+	if canGetMessages {
+		messages, err := getMessagesForRoom(app.DB, messageInfo.RoomId, client.userId, messageInfo.LastMessageId)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+			fmt.Printf("error fetching messages for room %s: %v\n", messageInfo.RoomId, err)
+			return
+		}
 
-	chatList, err := getChatList(app.DB, client.userId)
-	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
-		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
-		return
-	}
+		err = markMessagesAsRead(app.DB, client.userId, messageInfo.RoomId)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
+			fmt.Printf("error marking messages as read for room %s: %v\n", messageInfo.RoomId, err)
+			return
+		}
 
-	messageResponse, err := changeToEvent("get_messages", messages)
-	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
-		fmt.Printf("error marshaling messages: %v\n", err)
-		return
-	}
+		chatList, err := getChatList(app.DB, client.userId)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+			fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
+			return
+		}
 
-	chatListResponse, err := changeToEvent("get_chat_list", chatList)
-	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
-		fmt.Printf("error marshaling chat list: %v\n", err)
-		return
-	}
+		messageResponse, err := changeToEvent("get_messages", messages)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+			fmt.Printf("error marshaling messages: %v\n", err)
+			return
+		}
 
-	select {
-	case client.send <- messageResponse:
-	default:
-		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
-		fmt.Printf("Falied to send messages to user %s\n", client.userId)
-		app.unregisterClient(client)
-	}
+		chatListResponse, err := changeToEvent("get_chat_list", chatList)
+		if err != nil {
+			client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+			fmt.Printf("error marshaling chat list: %v\n", err)
+			return
+		}
 
-	select {
-	case client.send <- chatListResponse:
-	default:
-		client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
-		fmt.Printf("Falied to send messages to user %s\n", client.userId)
-		app.unregisterClient(client)
+		select {
+		case client.send <- messageResponse:
+		default:
+			client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+			fmt.Printf("Falied to send messages to user %s\n", client.userId)
+			app.unregisterClient(client)
+		}
+
+		select {
+		case client.send <- chatListResponse:
+		default:
+			client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
+			fmt.Printf("Falied to send messages to user %s\n", client.userId)
+			app.unregisterClient(client)
+		}
 	}
 
 }

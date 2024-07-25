@@ -15,12 +15,13 @@ type RequestData struct {
 }
 
 type Message struct {
-	Id      int       `json:"id"`
-	RoomId  string    `json:"room_id"`
-	FromId  string    `json:"from_id"`
-	ToId    string    `json:"to_id"`
-	Message string    `json:"message"` // 255 characters
-	SentAt  time.Time `json:"sent_at"`
+	Id             int       `json:"id"`
+	RoomId         string    `json:"room_id"`
+	FromId         string    `json:"from_id"`
+	ToId           string    `json:"to_id"`
+	CanGetMessages bool      `json:"can_get_message"`
+	Message        string    `json:"message"` // 255 characters
+	SentAt         time.Time `json:"sent_at"`
 }
 
 type GetMessages struct {
