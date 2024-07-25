@@ -343,8 +343,8 @@ func saveLeaveRoom(db *sql.DB, userId, roomId string) error {
 	query := `
 	UPDATE rooms 
 	SET 
-			user1_connected = CASE WHEN user_id1 = $1 THEN FALSE ELSE user1_connected END,
-			user2_connected = CASE WHEN user_id2 = $1 THEN FALSE ELSE user2_connected END
+		user1_connected = CASE WHEN user_id1 = $1 THEN FALSE ELSE user1_connected END,
+		user2_connected = CASE WHEN user_id2 = $1 THEN FALSE ELSE user2_connected END
 	WHERE id = $2
 	`
 	_, err := db.Exec(query, userId, roomId)
