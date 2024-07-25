@@ -39,9 +39,10 @@ type Room struct {
 }
 
 type App struct {
-	DB      *sql.DB
-	clients sync.Map
-	rooms   sync.Map
+	DB         *sql.DB
+	clients    sync.Map
+	rooms      sync.Map
+	userStatus sync.Map
 }
 
 func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +56,9 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	client := &Client{conn: conn, send: make(chan []byte, 256), userId: userId}
 
 	app.clients.Store(userId, client)
+	app.userStatus.Store(userId, true)
+
+	app.broadcastStatusChange(userId, true)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -65,6 +69,31 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	wg.Wait()
 
 	go app.sendInitialData(client)
+
+}
+
+func (app *App) broadcastStatusChange(userId string, status bool) {
+	var userStatus = models.UserStatus{
+		Id:     userId,
+		Status: status,
+	}
+
+	response, err := changeToEvent("user_status", userStatus)
+	if err != nil {
+		log.Printf("error marshaling connection status: %v", err)
+		return
+	}
+
+	app.clients.Range(func(key, value interface{}) bool {
+		client := value.(*Client)
+		select {
+		case client.send <- response:
+		default:
+			app.unregisterClient(client)
+		}
+		return true
+	})
+
 }
 
 func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
@@ -99,6 +128,14 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 		}
 
 		switch event.Event {
+		case "get_status":
+			var requestData models.RequestData
+			if err := json.Unmarshal(event.Data, &requestData); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the status request"}`)
+				log.Printf("error unmarshaling status request: %v", err)
+				continue
+			}
+			app.handleGetStatus(client, requestData.Id)
 		case "send_request":
 			var requestData models.RequestData
 			if err := json.Unmarshal(event.Data, &requestData); err != nil {
@@ -200,7 +237,10 @@ func (app *App) removeClientFromAllRooms(client *Client) {
 
 func (app *App) unregisterClient(client *Client) {
 	app.clients.Delete(client.userId)
+	app.userStatus.Store(client.userId, false)
 	close(client.send)
+
+	app.broadcastStatusChange(client.userId, false)
 }
 
 func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
@@ -289,6 +329,21 @@ func (app *App) joinRoom(client *Client, roomId string) {
 	r := room.(*Room)
 	r.clients[roomId] = client
 	client.rooms[roomId] = true
+}
+
+func (app *App) handleGetStatus(client *Client, userId string) {
+	status, ok := app.userStatus.Load(userId)
+	if !ok {
+		status = false
+	}
+
+	response, err := changeToEvent("user_status", status)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get user status"}`)
+		return
+	}
+
+	client.send <- response
 }
 
 func (app *App) handleSendRequest(client *Client, toId string) {
