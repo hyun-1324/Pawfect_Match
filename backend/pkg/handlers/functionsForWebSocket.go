@@ -63,7 +63,7 @@ func getRequests(db *sql.DB, userId string) (models.IdList, error) {
 }
 
 func checkUnreadMessages(db *sql.DB, userId string) (bool, error) {
-	query := `SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE)`
+	query := `SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE AND to_id_connected = TRUE)`
 
 	var exists bool
 	err := db.QueryRow(query, userId).Scan(&exists)
@@ -355,10 +355,28 @@ func saveLeaveRoom(db *sql.DB, userId, roomId string) error {
 	return nil
 }
 
-func saveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.Time) (int, error) {
+func canGetMessages(db *sql.DB, roomId, userId string) (bool, error) {
+	query := `
+	SELECT EXISTS (
+		SELECT 1 
+		FROM rooms 
+		WHERE id = $1 
+		AND ((user_id1 = $2 AND user1_connected = TRUE) OR (user_id2 = $2 AND user2_connected = TRUE))
+		)
+	`
+	var exists bool
+	err := db.QueryRow(query, roomId, userId).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	return exists, nil
+}
+
+func saveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.Time, canGetmessages bool) (int, error) {
 
 	var messageId int
-	err := db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, sent_at) VALUES ($1, $2, $3, $4, $5) RETURNING id", roomId, fromId, toId, message, sentAt).Scan(&messageId)
+	err := db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, sent_at, to_id_connected) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", roomId, fromId, toId, message, sentAt, canGetmessages).Scan(&messageId)
 	if err != nil {
 		return 0, fmt.Errorf("failed to save message: %v", err)
 	}
