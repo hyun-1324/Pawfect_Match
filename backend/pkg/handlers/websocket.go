@@ -578,6 +578,7 @@ func (app *App) handleCreateRoom(client *Client, toId string) {
 }
 
 func (app *App) handleLeaveRoom(client *Client, roomId string) {
+	saveLeaveRoom(app.DB, client.userId, roomId)
 	room, ok := app.rooms.Load(roomId)
 	if !ok {
 		log.Printf("Room %s not found", roomId)
