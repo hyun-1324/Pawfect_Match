@@ -181,7 +181,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 				log.Printf("error unmarshaling message data: %v", err)
 				continue
 			}
-			app.handleCheckUnreadMessage(client, unreadMessage)
+			app.handleCheckUnreadMessages(client, unreadMessage)
 		case "get_chat_list":
 			app.handleGetChatList(client)
 		case "typing":
@@ -748,7 +748,7 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 
 }
 
-func (app *App) handleCheckUnreadMessage(client *Client, checkUnreadMessage models.CheckUnreadMessage) {
+func (app *App) handleCheckUnreadMessages(client *Client, checkUnreadMessage models.CheckUnreadMessage) {
 	err := utils.MarkMessagesAsRead(app.DB, client.userId, checkUnreadMessage.RoomId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
