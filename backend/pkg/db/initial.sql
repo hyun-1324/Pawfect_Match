@@ -177,7 +177,7 @@ CREATE TABLE messages (
   room_id INTEGER,
   from_id INTEGER,
   to_id INTEGER,
-  from_id_connected BOOLEAN NOT NULL,
+  from_id_connected BOOLEAN,
   to_id_connected BOOLEAN NOT NULL,
   message TEXT NOT NULL,
   sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
