@@ -420,9 +420,9 @@ func CanGetMessagesUsingRoomId(db *sql.DB, roomId, userId string) (bool, error) 
 	return exists, nil
 }
 
-func SaveMessage(db *sql.DB, messageInfo models.Message) (int, error) {
+func SaveMessage(db *sql.DB, messageInfo *models.Message) (int, error) {
 
-	query := `SELECT room_id FROM rooms WHERE (user_id = $1 AND user_id = $2) OR (user_id = $2 AND user_id = $1)`
+	query := `SELECT id FROM rooms WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id2 = $2 AND user_id1 = $1)`
 	err := db.QueryRow(query, messageInfo.FromId, messageInfo.ToId).Scan(&messageInfo.RoomId)
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute query: %v", err)

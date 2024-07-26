@@ -174,9 +174,9 @@ CREATE TABLE rooms (
 
 CREATE TABLE messages (
   id SERIAL PRIMARY KEY,
-  room_id INTEGER NOT NULL,
-  from_id INTEGER NOT NULL,
-  to_id INTEGER NOT NULL,
+  room_id INTEGER,
+  from_id INTEGER,
+  to_id INTEGER,
   from_id_connected BOOLEAN NOT NULL,
   to_id_connected BOOLEAN NOT NULL,
   message TEXT NOT NULL,

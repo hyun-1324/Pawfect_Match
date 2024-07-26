@@ -20,9 +20,9 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		allowedOrigin := "http://localhost:3000"
-		origin := r.Header.Get("Origin")
-		return origin == allowedOrigin
+		// allowedOrigin := "http://localhost:3000"
+		// origin := r.Header.Get("Origin")
+		return true
 	},
 }
 
@@ -165,7 +165,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 				log.Printf("error unmarshaling message data: %v", err)
 				continue
 			}
-			app.handleSendMessage(client, messageData)
+			app.handleSendMessage(client, &messageData)
 		case "get_messages":
 			var messageData models.GetMessages
 			if err := json.Unmarshal(event.Data, &messageData); err != nil {
@@ -603,7 +603,7 @@ func (app *App) handleLeaveRoom(client *Client, roomId string) {
 	}
 }
 
-func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
+func (app *App) handleSendMessage(client *Client, messageInfo *models.Message) {
 	canGetMessages, err := utils.CanGetMessagesUsingIds(app.DB, client.userId, messageInfo.ToId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
@@ -654,7 +654,7 @@ func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
 	app.broadcastToRoom(messageInfo)
 }
 
-func (app *App) broadcastToRoom(messageInfo models.Message) {
+func (app *App) broadcastToRoom(messageInfo *models.Message) {
 	response, err := changeToEvent("new_message", messageInfo)
 	if err != nil {
 		log.Printf("error marshaling new message: %v", err)
