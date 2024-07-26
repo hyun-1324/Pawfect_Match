@@ -254,7 +254,7 @@ func (app *App) broadcastStatusChange(userId string, status bool) {
 				select {
 				case toClient.send <- response:
 				default:
-					log.Printf("Falied to send connection status to user %d\n", connectedUser)
+					log.Printf("Falied to send connection status to user %s\n", connectedUser)
 					app.unregisterClient(toClient)
 				}
 			}

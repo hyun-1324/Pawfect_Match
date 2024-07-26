@@ -8,33 +8,34 @@ import (
 	"time"
 )
 
-func GetConnectedUsers(db *sql.DB, userId string) ([]int, error) {
+func GetConnectedUsers(db *sql.DB, userId string) ([]string, error) {
 	query := `
-	SELECT user_id2 AS connected_user 
+	SELECT user_id2
 	FROM connections 
-	WHERE user_id1 = $1 AND id1_check = TRUE 
+	WHERE user_id1 = $1
 	UNION 
-	SELECT user_id1 FROM connections 
-	WHERE user_id2 = $1 AND id2_check = TRUE
+	SELECT user_id1
+	FROM connections 
+	WHERE user_id2 = $1
 	`
 	rows, err := db.Query(query, userId)
 	if err != nil {
-		return []int{}, fmt.Errorf("failed to execute query: %v", err)
+		return []string{}, fmt.Errorf("failed to execute query: %v", err)
 	}
 	defer rows.Close()
 
-	var ids []int
+	var ids []string
 	for rows.Next() {
-		var id int
+		var id string
 		err := rows.Scan(&id)
 		if err != nil {
-			return []int{}, fmt.Errorf("failed to scan row: %v", err)
+			return []string{}, fmt.Errorf("failed to scan row: %v", err)
 		}
 		ids = append(ids, id)
 	}
 
 	if err = rows.Err(); err != nil {
-		return []int{}, fmt.Errorf("error iterating rows: %v", err)
+		return []string{}, fmt.Errorf("error iterating rows: %v", err)
 	}
 
 	return ids, nil
