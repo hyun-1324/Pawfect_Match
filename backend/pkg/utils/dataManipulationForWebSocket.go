@@ -8,6 +8,38 @@ import (
 	"time"
 )
 
+func GetConnectedUsers(db *sql.DB, userId string) ([]int, error) {
+	query := `
+	SELECT user_id2 AS connected_user 
+	FROM connections 
+	WHERE user_id1 = $1 AND id1_check = TRUE 
+	UNION 
+	SELECT user_id1 FROM connections 
+	WHERE user_id2 = $1 AND id2_check = TRUE
+	`
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return []int{}, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			return []int{}, fmt.Errorf("failed to scan row: %v", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err = rows.Err(); err != nil {
+		return []int{}, fmt.Errorf("error iterating rows: %v", err)
+	}
+
+	return ids, nil
+}
+
 func GetRequests(db *sql.DB, userId string) (models.IdList, error) {
 	query := `
 	SELECT from_id 
@@ -223,6 +255,12 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 	}
 
 	query = "DELETE FROM connections WHERE user_id1 = $1 AND user_id2 = $2"
+	_, err = db.Exec(query, smallId, largeId)
+	if err != nil {
+		return fmt.Errorf("failed to delete data: %v", err)
+	}
+
+	query = "DELETE FROM rooms WHERE user_id1 = $1 AND user_id2 = $2"
 	_, err = db.Exec(query, smallId, largeId)
 	if err != nil {
 		return fmt.Errorf("failed to delete data: %v", err)

@@ -58,8 +58,6 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	app.clients.Store(userId, client)
 	app.userStatus.Store(userId, true)
 
-	app.broadcastStatusChange(userId, true)
-
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -84,16 +82,25 @@ func (app *App) broadcastStatusChange(userId string, status bool) {
 		return
 	}
 
-	app.clients.Range(func(key, value interface{}) bool {
-		client := value.(*Client)
-		select {
-		case client.send <- response:
-		default:
-			app.unregisterClient(client)
-		}
-		return true
-	})
+	getConnectedUsers, err := utils.GetConnectedUsers(app.DB, userId)
+	if err != nil {
+		log.Printf("error fetching connected users for user %s: %v", userId, err)
+		return
+	}
 
+	for _, connectedUser := range getConnectedUsers {
+		if toClient, ok := app.clients.Load(connectedUser); ok {
+			toClient, ok := toClient.(*Client)
+			if ok {
+				select {
+				case toClient.send <- response:
+				default:
+					log.Printf("Falied to send connection status to user %d\n", connectedUser)
+					app.unregisterClient(toClient)
+				}
+			}
+		}
+	}
 }
 
 func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
@@ -323,6 +330,8 @@ func (app *App) sendInitialData(client *Client) {
 	for _, roomId := range rooms {
 		app.joinRoom(client, roomId)
 	}
+
+	app.broadcastStatusChange(client.userId, true)
 }
 
 func (app *App) joinRoom(client *Client, roomId string) {
