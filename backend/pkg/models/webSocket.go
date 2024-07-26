@@ -53,3 +53,8 @@ type UserStatus struct {
 	Id     string `json:"id"`
 	Status bool   `json:"status"`
 }
+
+type CheckUnreadMessage struct {
+	RoomId string `json:"room_id"`
+	UserId string `json:"user_id"`
+}

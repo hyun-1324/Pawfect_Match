@@ -20,9 +20,9 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		allowedOrigin := "http://localhost:3000"
-		origin := r.Header.Get("Origin")
-		return origin == allowedOrigin
+		// allowedOrigin := "http://localhost:3000"
+		// origin := r.Header.Get("Origin")
+		return true
 	},
 }
 
@@ -53,12 +53,10 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userId := middleware.GetUserId(r)
-	client := &Client{conn: conn, send: make(chan []byte, 256), userId: userId}
+	client := &Client{conn: conn, send: make(chan []byte, 256), userId: userId, rooms: make(map[string]bool)}
 
 	app.clients.Store(userId, client)
 	app.userStatus.Store(userId, true)
-
-	app.broadcastStatusChange(userId, true)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -69,30 +67,6 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	wg.Wait()
 
 	go app.sendInitialData(client)
-
-}
-
-func (app *App) broadcastStatusChange(userId string, status bool) {
-	var userStatus = models.UserStatus{
-		Id:     userId,
-		Status: status,
-	}
-
-	response, err := changeToEvent("user_status", userStatus)
-	if err != nil {
-		log.Printf("error marshaling connection status: %v", err)
-		return
-	}
-
-	app.clients.Range(func(key, value interface{}) bool {
-		client := value.(*Client)
-		select {
-		case client.send <- response:
-		default:
-			app.unregisterClient(client)
-		}
-		return true
-	})
 
 }
 
@@ -176,14 +150,6 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 				continue
 			}
 			app.handleRejectRecommendation(client, requestData.Id)
-		case "create_room":
-			var requestData models.RequestData
-			if err := json.Unmarshal(event.Data, &requestData); err != nil {
-				client.send <- []byte(`{"event":"error", "data":"unable to process the create room request"}`)
-				log.Printf("error unmarshaling create room request: %v", err)
-				continue
-			}
-			app.handleCreateRoom(client, requestData.Id)
 		case "leave_room":
 			var LeaveRoomData models.LeaveRoom
 			if err := json.Unmarshal(event.Data, &LeaveRoomData); err != nil {
@@ -199,7 +165,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 				log.Printf("error unmarshaling message data: %v", err)
 				continue
 			}
-			app.handleSendMessage(client, messageData)
+			app.handleSendMessage(client, &messageData)
 		case "get_messages":
 			var messageData models.GetMessages
 			if err := json.Unmarshal(event.Data, &messageData); err != nil {
@@ -209,7 +175,13 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 			}
 			app.handleGetMessages(client, messageData)
 		case "check_unread_messages":
-			app.handleCheckUnreadMessages(client)
+			var unreadMessage models.CheckUnreadMessage
+			if err := json.Unmarshal(event.Data, &unreadMessage); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the get messages request"}`)
+				log.Printf("error unmarshaling message data: %v", err)
+				continue
+			}
+			app.handleCheckUnreadMessages(client, unreadMessage)
 		case "get_chat_list":
 			app.handleGetChatList(client)
 		case "typing":
@@ -222,6 +194,20 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 			app.handleTyping(client, typingData)
 		}
 	}
+}
+
+func changeToEvent(event string, data interface{}) ([]byte, error) {
+	eventData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Printf("failed to marshal data: %v\n", err)
+		return nil, fmt.Errorf("failed to marshal data: %v", err)
+	}
+	eventStruct := models.Event{
+		Event: event,
+		Data:  json.RawMessage(eventData),
+	}
+
+	return json.Marshal(eventStruct)
 }
 
 func (app *App) removeClientFromAllRooms(client *Client) {
@@ -241,6 +227,39 @@ func (app *App) unregisterClient(client *Client) {
 	close(client.send)
 
 	app.broadcastStatusChange(client.userId, false)
+}
+
+func (app *App) broadcastStatusChange(userId string, status bool) {
+	var userStatus = models.UserStatus{
+		Id:     userId,
+		Status: status,
+	}
+
+	response, err := changeToEvent("user_status", userStatus)
+	if err != nil {
+		log.Printf("error marshaling connection status: %v", err)
+		return
+	}
+
+	getConnectedUsers, err := utils.GetConnectedUsers(app.DB, userId)
+	if err != nil {
+		log.Printf("error fetching connected users for user %s: %v", userId, err)
+		return
+	}
+
+	for _, connectedUser := range getConnectedUsers {
+		if toClient, ok := app.clients.Load(connectedUser); ok {
+			toClient, ok := toClient.(*Client)
+			if ok {
+				select {
+				case toClient.send <- response:
+				default:
+					log.Printf("Falied to send connection status to user %s\n", connectedUser)
+					app.unregisterClient(toClient)
+				}
+			}
+		}
+	}
 }
 
 func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
@@ -281,7 +300,7 @@ func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
 }
 
 func (app *App) sendInitialData(client *Client) {
-	friendRequests, err := getRequests(app.DB, client.userId)
+	friendRequests, err := utils.GetRequests(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch friend requests"}`)
 		log.Printf("error fetching friend requests for user %s: %v\n", client.userId, err)
@@ -290,7 +309,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- response
 	}
 
-	hasUnreadMessages, err := checkUnreadMessages(app.DB, client.userId)
+	hasUnreadMessages, err := utils.HasUnreadMessages(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch unread messages"}`)
 		log.Printf("error fetching unread messages for user %s: %v\n", client.userId, err)
@@ -299,7 +318,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- response
 	}
 
-	newConnections, err := getNewConnections(app.DB, client.userId)
+	newConnections, err := utils.GetNewConnections(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch new connections"}`)
 		log.Printf("error fetching new connections for user %s: %v\n", client.userId, err)
@@ -308,26 +327,27 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- response
 	}
 
-	rooms, err := getUserRooms(app.DB, client.userId)
+	rooms, err := utils.GetUserRooms(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch user rooms"}`)
 		log.Printf("error fetching user rooms for user %s: %v\n", client.userId, err)
 	}
 
 	for _, roomId := range rooms {
-		app.joinRoom(client, roomId)
+		app.createAndJoinRoom(client, roomId)
 	}
+
+	app.broadcastStatusChange(client.userId, true)
 }
 
-func (app *App) joinRoom(client *Client, roomId string) {
-	room, ok := app.rooms.Load(roomId)
-	if !ok {
-		log.Printf("Room %s not found", roomId)
-		return
-	}
-
+func (app *App) createAndJoinRoom(client *Client, roomId string) {
+	room, _ := app.rooms.LoadOrStore(roomId, &Room{
+		id:      roomId,
+		clients: make(map[string]*Client),
+	})
 	r := room.(*Room)
-	r.clients[roomId] = client
+
+	r.clients[client.userId] = client
 	client.rooms[roomId] = true
 }
 
@@ -347,7 +367,7 @@ func (app *App) handleGetStatus(client *Client, userId string) {
 }
 
 func (app *App) handleSendRequest(client *Client, toId string) {
-	previousRequest, processed, err := saveRequest(app.DB, client.userId, toId)
+	previousRequest, processed, err := utils.SaveRequest(app.DB, client.userId, toId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 		fmt.Printf("error saving friend request from %s to %s: %v\n", client.userId, toId, err)
@@ -375,6 +395,8 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 			}
 		}
 	} else if previousRequest && !processed {
+		app.handleCreateRoom(client, toId)
+
 		var sender1 models.NewConnection
 		var sender2 models.NewConnection
 
@@ -411,6 +433,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 			return
 		}
 
+		app.handleGetChatList(client)
 		select {
 		case client.send <- responseForClient:
 		default:
@@ -422,6 +445,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 		if toClient, ok := app.clients.Load(toId); ok {
 			toClient, ok := toClient.(*Client)
 			if ok {
+				app.handleGetChatList(toClient)
 				select {
 				case toClient.send <- responseForToId:
 				default:
@@ -435,12 +459,14 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 }
 
 func (app *App) handleAcceptRequest(client *Client, fromId string) {
-	err := saveAcceptance(app.DB, fromId, client.userId)
+	err := utils.SaveAcceptance(app.DB, fromId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 		fmt.Printf("error saving acceptance from %s to %s: %v\n", fromId, client.userId, err)
 		return
 	}
+
+	app.handleCreateRoom(client, fromId)
 
 	var sender1 models.NewConnection
 	var sender2 models.NewConnection
@@ -478,6 +504,7 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 		return
 	}
 
+	app.handleGetChatList(client)
 	select {
 	case client.send <- responseForToId:
 	default:
@@ -489,6 +516,7 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 	if toClient, ok := app.clients.Load(fromId); ok {
 		toClient, ok := toClient.(*Client)
 		if ok {
+			app.handleGetChatList(toClient)
 			select {
 			case toClient.send <- responseForFromId:
 			default:
@@ -501,7 +529,7 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 }
 
 func (app *App) handleDeclineRequest(client *Client, fromId string) {
-	err := saveDecline(app.DB, fromId, client.userId)
+	err := utils.SaveDecline(app.DB, fromId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the decline request"}`)
 		fmt.Printf("error saving decline from %s to %s: %v\n", fromId, client.userId, err)
@@ -510,7 +538,7 @@ func (app *App) handleDeclineRequest(client *Client, fromId string) {
 }
 
 func (app *App) handleCheckNewConnection(client *Client, fromId string) {
-	err := saveCheckedNewConnection(app.DB, client.userId, fromId)
+	err := utils.SaveCheckedNewConnection(app.DB, client.userId, fromId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the check new connection request"}`)
 		fmt.Printf("error saving checked new connection from %s to %s: %v\n", fromId, client.userId, err)
@@ -519,7 +547,7 @@ func (app *App) handleCheckNewConnection(client *Client, fromId string) {
 }
 
 func (app *App) handleRejectRecommendation(client *Client, fromId string) {
-	err := saveRejection(app.DB, fromId, client.userId)
+	err := utils.SaveRejection(app.DB, fromId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the rejection request"}`)
 		fmt.Printf("error saving rejection from %s to %s: %v\n", fromId, client.userId, err)
@@ -543,42 +571,25 @@ func (app *App) handleRejectRecommendation(client *Client, fromId string) {
 }
 
 func (app *App) handleCreateRoom(client *Client, toId string) {
-	roomId, err := createRoom(app.DB, client.userId, toId)
+	roomId, err := utils.CreateRoom(app.DB, client.userId, toId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to create room"}`)
 		fmt.Printf("error creating room between %s and %s: %v\n", client.userId, toId, err)
 		return
 	}
 
-	room := &Room{
-		id:      roomId,
-		clients: make(map[string]*Client),
-	}
-
-	app.rooms.Store(roomId, room)
-	app.joinRoom(client, roomId)
+	app.createAndJoinRoom(client, roomId)
 
 	if toClient, ok := app.clients.Load(toId); ok {
 		toClient, ok := toClient.(*Client)
 		if ok {
-			app.joinRoom(toClient, roomId)
+			app.createAndJoinRoom(toClient, roomId)
 		}
 	}
-
-	data := map[string]string{"roomId": roomId}
-
-	response, err := changeToEvent("room_created", data)
-	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to create room"}`)
-		fmt.Printf("error marshaling room created event: %v\n", err)
-		return
-	}
-
-	client.send <- response
 }
 
 func (app *App) handleLeaveRoom(client *Client, roomId string) {
-	saveLeaveRoom(app.DB, client.userId, roomId)
+	utils.SaveLeaveRoom(app.DB, client.userId, roomId)
 	room, ok := app.rooms.Load(roomId)
 	if !ok {
 		log.Printf("Room %s not found", roomId)
@@ -592,8 +603,8 @@ func (app *App) handleLeaveRoom(client *Client, roomId string) {
 	}
 }
 
-func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
-	canGetMessages, err := canGetMessages(app.DB, messageInfo.RoomId, messageInfo.ToId)
+func (app *App) handleSendMessage(client *Client, messageInfo *models.Message) {
+	canGetMessages, err := utils.CanGetMessagesUsingIds(app.DB, client.userId, messageInfo.ToId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
 		fmt.Printf("error checking if user %s can get messages from %s: %v\n", client.userId, messageInfo.ToId, err)
@@ -603,7 +614,7 @@ func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
 	messageInfo.FromId = client.userId
 	messageInfo.CanGetMessages = canGetMessages
 
-	messageId, err := saveMessage(app.DB, messageInfo.RoomId, client.userId, messageInfo.ToId, messageInfo.Message, messageInfo.SentAt, messageInfo.CanGetMessages)
+	messageId, err := utils.SaveMessage(app.DB, messageInfo)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
 		fmt.Printf("error saving message from %s to %s: %v\n", client.userId, messageInfo.ToId, err)
@@ -616,7 +627,7 @@ func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
 		if toClient, ok := app.clients.Load(messageInfo.ToId); ok {
 			toClient, ok := toClient.(*Client)
 			if ok {
-				chatList, err := getChatList(app.DB, messageInfo.ToId)
+				chatList, err := utils.GetChatList(app.DB, messageInfo.ToId)
 				if err != nil {
 					client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 					fmt.Printf("error fetching chat list for user %s: %v\n", messageInfo.ToId, err)
@@ -643,7 +654,7 @@ func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
 	app.broadcastToRoom(messageInfo)
 }
 
-func (app *App) broadcastToRoom(messageInfo models.Message) {
+func (app *App) broadcastToRoom(messageInfo *models.Message) {
 	response, err := changeToEvent("new_message", messageInfo)
 	if err != nil {
 		log.Printf("error marshaling new message: %v", err)
@@ -668,7 +679,7 @@ func (app *App) broadcastToRoom(messageInfo models.Message) {
 }
 
 func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages) {
-	canGetMessages, err := canGetMessages(app.DB, messageInfo.RoomId, client.userId)
+	canGetMessages, err := utils.CanGetMessagesUsingRoomId(app.DB, messageInfo.RoomId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to get message"}`)
 		fmt.Printf("error checking if user %s can get messages: %v\n", client.userId, err)
@@ -676,21 +687,21 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 	}
 
 	if canGetMessages {
-		messages, err := getMessagesForRoom(app.DB, messageInfo.RoomId, client.userId, messageInfo.LastMessageId)
+		messages, err := utils.GetMessagesForRoom(app.DB, messageInfo.RoomId, client.userId, messageInfo.LastMessageId)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
 			fmt.Printf("error fetching messages for room %s: %v\n", messageInfo.RoomId, err)
 			return
 		}
 
-		err = markMessagesAsRead(app.DB, client.userId, messageInfo.RoomId)
+		err = utils.MarkMessagesAsRead(app.DB, client.userId, messageInfo.RoomId)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
 			fmt.Printf("error marking messages as read for room %s: %v\n", messageInfo.RoomId, err)
 			return
 		}
 
-		chatList, err := getChatList(app.DB, client.userId)
+		chatList, err := utils.GetChatList(app.DB, client.userId)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 			fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
@@ -730,18 +741,25 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 
 }
 
-func (app *App) handleCheckUnreadMessages(client *Client) {
-	hasUnreadMessages, err := checkUnreadMessages(app.DB, client.userId)
+func (app *App) handleCheckUnreadMessages(client *Client, checkUnreadMessage models.CheckUnreadMessage) {
+	err := utils.MarkMessagesAsRead(app.DB, client.userId, checkUnreadMessage.RoomId)
 	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)
-		fmt.Printf("error checking unread messages for user %s: %v\n", client.userId, err)
+		client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
+		fmt.Printf("error marking messages as read for room %s: %v\n", checkUnreadMessage.RoomId, err)
 		return
 	}
 
-	response, err := changeToEvent("check_unread_messages", hasUnreadMessages)
+	chatList, err := utils.GetChatList(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
+		return
+	}
+
+	response, err := changeToEvent("get_chat_list", chatList)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)
-		fmt.Printf("error marshaling check unread messages: %v\n", err)
+		fmt.Printf("error marshaling chat list: %v\n", err)
 		return
 	}
 
@@ -755,7 +773,7 @@ func (app *App) handleCheckUnreadMessages(client *Client) {
 }
 
 func (app *App) handleGetChatList(client *Client) {
-	chatList, err := getChatList(app.DB, client.userId)
+	chatList, err := utils.GetChatList(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
@@ -798,5 +816,4 @@ func (app *App) handleTyping(client *Client, typingData models.Typing) {
 			}
 		}
 	}
-
 }
