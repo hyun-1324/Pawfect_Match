@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"matchMe/pkg/models"
 	"strconv"
-	"time"
 )
 
 func GetConnectedUsers(db *sql.DB, userId string) ([]string, error) {
@@ -421,10 +420,16 @@ func CanGetMessagesUsingRoomId(db *sql.DB, roomId, userId string) (bool, error) 
 	return exists, nil
 }
 
-func SaveMessage(db *sql.DB, roomId, fromId, toId, message string, sentAt time.Time, canGetmessages bool) (int, error) {
+func SaveMessage(db *sql.DB, messageInfo models.Message) (int, error) {
+
+	query := `SELECT room_id FROM rooms WHERE (user_id = $1 AND user_id = $2) OR (user_id = $2 AND user_id = $1)`
+	err := db.QueryRow(query, messageInfo.FromId, messageInfo.ToId).Scan(&messageInfo.RoomId)
+	if err != nil {
+		return 0, fmt.Errorf("failed to execute query: %v", err)
+	}
 
 	var messageId int
-	err := db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, sent_at, to_id_connected) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", roomId, fromId, toId, message, sentAt, canGetmessages).Scan(&messageId)
+	err = db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, sent_at, to_id_connected) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", messageInfo.RoomId, messageInfo.FromId, messageInfo.ToId, messageInfo.Message, messageInfo.SentAt, messageInfo.CanGetMessages).Scan(&messageId)
 	if err != nil {
 		return 0, fmt.Errorf("failed to save message: %v", err)
 	}

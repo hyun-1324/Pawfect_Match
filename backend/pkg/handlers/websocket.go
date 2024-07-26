@@ -614,7 +614,7 @@ func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
 	messageInfo.FromId = client.userId
 	messageInfo.CanGetMessages = canGetMessages
 
-	messageId, err := utils.SaveMessage(app.DB, messageInfo.RoomId, client.userId, messageInfo.ToId, messageInfo.Message, messageInfo.SentAt, messageInfo.CanGetMessages)
+	messageId, err := utils.SaveMessage(app.DB, messageInfo)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
 		fmt.Printf("error saving message from %s to %s: %v\n", client.userId, messageInfo.ToId, err)
