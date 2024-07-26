@@ -334,21 +334,20 @@ func (app *App) sendInitialData(client *Client) {
 	}
 
 	for _, roomId := range rooms {
-		app.joinRoom(client, roomId)
+		app.createAndJoinRoom(client, roomId)
 	}
 
 	app.broadcastStatusChange(client.userId, true)
 }
 
-func (app *App) joinRoom(client *Client, roomId string) {
-	room, ok := app.rooms.Load(roomId)
-	if !ok {
-		log.Printf("Room %s not found", roomId)
-		return
-	}
-
+func (app *App) createAndJoinRoom(client *Client, roomId string) {
+	room, _ := app.rooms.LoadOrStore(roomId, &Room{
+		id:      roomId,
+		clients: make(map[string]*Client),
+	})
 	r := room.(*Room)
-	r.clients[roomId] = client
+
+	r.clients[client.userId] = client
 	client.rooms[roomId] = true
 }
 
@@ -579,18 +578,12 @@ func (app *App) handleCreateRoom(client *Client, toId string) {
 		return
 	}
 
-	room := &Room{
-		id:      roomId,
-		clients: make(map[string]*Client),
-	}
-
-	app.rooms.Store(roomId, room)
-	app.joinRoom(client, roomId)
+	app.createAndJoinRoom(client, roomId)
 
 	if toClient, ok := app.clients.Load(toId); ok {
 		toClient, ok := toClient.(*Client)
 		if ok {
-			app.joinRoom(toClient, roomId)
+			app.createAndJoinRoom(toClient, roomId)
 		}
 	}
 }
