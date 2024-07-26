@@ -53,7 +53,7 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userId := middleware.GetUserId(r)
-	client := &Client{conn: conn, send: make(chan []byte, 256), userId: userId}
+	client := &Client{conn: conn, send: make(chan []byte, 256), userId: userId, rooms: make(map[string]bool)}
 
 	app.clients.Store(userId, client)
 	app.userStatus.Store(userId, true)
