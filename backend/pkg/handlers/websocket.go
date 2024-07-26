@@ -175,7 +175,13 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 			}
 			app.handleGetMessages(client, messageData)
 		case "check_unread_messages":
-			app.handleCheckUnreadMessages(client)
+			var unreadMessage models.CheckUnreadMessage
+			if err := json.Unmarshal(event.Data, &unreadMessage); err != nil {
+				client.send <- []byte(`{"event":"error", "data":"unable to process the get messages request"}`)
+				log.Printf("error unmarshaling message data: %v", err)
+				continue
+			}
+			app.handleCheckUnreadMessage(client, unreadMessage)
 		case "get_chat_list":
 			app.handleGetChatList(client)
 		case "typing":
@@ -605,7 +611,7 @@ func (app *App) handleLeaveRoom(client *Client, roomId string) {
 }
 
 func (app *App) handleSendMessage(client *Client, messageInfo models.Message) {
-	canGetMessages, err := utils.CanGetMessages(app.DB, messageInfo.RoomId, messageInfo.ToId)
+	canGetMessages, err := utils.CanGetMessagesUsingIds(app.DB, client.userId, messageInfo.ToId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
 		fmt.Printf("error checking if user %s can get messages from %s: %v\n", client.userId, messageInfo.ToId, err)
@@ -680,7 +686,7 @@ func (app *App) broadcastToRoom(messageInfo models.Message) {
 }
 
 func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages) {
-	canGetMessages, err := utils.CanGetMessages(app.DB, messageInfo.RoomId, client.userId)
+	canGetMessages, err := utils.CanGetMessagesUsingRoomId(app.DB, messageInfo.RoomId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to get message"}`)
 		fmt.Printf("error checking if user %s can get messages: %v\n", client.userId, err)
@@ -742,7 +748,7 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 
 }
 
-func (app *App) handleCheckUnreadMessages(client *Client) {
+func (app *App) handleCheckUnreadMessage(client *Client, checkUnreadMessage models.CheckUnreadMessage) {
 	hasUnreadMessages, err := utils.CheckUnreadMessages(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)

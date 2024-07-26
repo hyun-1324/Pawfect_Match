@@ -384,7 +384,25 @@ func SaveLeaveRoom(db *sql.DB, userId, roomId string) error {
 	return nil
 }
 
-func CanGetMessages(db *sql.DB, roomId, userId string) (bool, error) {
+func CanGetMessagesUsingIds(db *sql.DB, fromId, toId string) (bool, error) {
+	query := `
+	SELECT EXISTS (
+		SELECT 1 
+		FROM rooms 
+		WHERE (user_id1 = $1 AND user_id2 = $2 AND user2_connected = TRUE)
+		OR (user_id1 = $2 AND user_id2 = $1 AND user1_connected = TRUE)
+		)
+	`
+	var exists bool
+	err := db.QueryRow(query, fromId, toId).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute query: %v", err)
+	}
+
+	return exists, nil
+}
+
+func CanGetMessagesUsingRoomId(db *sql.DB, roomId, userId string) (bool, error) {
 	query := `
 	SELECT EXISTS (
 		SELECT 1 
