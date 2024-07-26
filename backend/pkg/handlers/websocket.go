@@ -309,7 +309,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- response
 	}
 
-	hasUnreadMessages, err := utils.CheckUnreadMessages(app.DB, client.userId)
+	hasUnreadMessages, err := utils.HasUnreadMessages(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch unread messages"}`)
 		log.Printf("error fetching unread messages for user %s: %v\n", client.userId, err)
@@ -749,17 +749,24 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 }
 
 func (app *App) handleCheckUnreadMessage(client *Client, checkUnreadMessage models.CheckUnreadMessage) {
-	hasUnreadMessages, err := utils.CheckUnreadMessages(app.DB, client.userId)
+	err := utils.MarkMessagesAsRead(app.DB, client.userId, checkUnreadMessage.RoomId)
 	if err != nil {
-		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)
-		fmt.Printf("error checking unread messages for user %s: %v\n", client.userId, err)
+		client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
+		fmt.Printf("error marking messages as read for room %s: %v\n", checkUnreadMessage.RoomId, err)
 		return
 	}
 
-	response, err := changeToEvent("check_unread_messages", hasUnreadMessages)
+	chatList, err := utils.GetChatList(app.DB, client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
+		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
+		return
+	}
+
+	response, err := changeToEvent("get_chat_list", chatList)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to check unread messages"}`)
-		fmt.Printf("error marshaling check unread messages: %v\n", err)
+		fmt.Printf("error marshaling chat list: %v\n", err)
 		return
 	}
 
@@ -816,5 +823,4 @@ func (app *App) handleTyping(client *Client, typingData models.Typing) {
 			}
 		}
 	}
-
 }

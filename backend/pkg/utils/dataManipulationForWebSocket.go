@@ -78,7 +78,7 @@ func GetRequests(db *sql.DB, userId string) (models.IdList, error) {
 	return models.IdList{Ids: ids}, nil
 }
 
-func CheckUnreadMessages(db *sql.DB, userId string) (bool, error) {
+func HasUnreadMessages(db *sql.DB, userId string) (bool, error) {
 	query := `
 	SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE AND to_id_connected = TRUE)
 	`
