@@ -70,39 +70,6 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (app *App) broadcastStatusChange(userId string, status bool) {
-	var userStatus = models.UserStatus{
-		Id:     userId,
-		Status: status,
-	}
-
-	response, err := changeToEvent("user_status", userStatus)
-	if err != nil {
-		log.Printf("error marshaling connection status: %v", err)
-		return
-	}
-
-	getConnectedUsers, err := utils.GetConnectedUsers(app.DB, userId)
-	if err != nil {
-		log.Printf("error fetching connected users for user %s: %v", userId, err)
-		return
-	}
-
-	for _, connectedUser := range getConnectedUsers {
-		if toClient, ok := app.clients.Load(connectedUser); ok {
-			toClient, ok := toClient.(*Client)
-			if ok {
-				select {
-				case toClient.send <- response:
-				default:
-					log.Printf("Falied to send connection status to user %d\n", connectedUser)
-					app.unregisterClient(toClient)
-				}
-			}
-		}
-	}
-}
-
 func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 	defer func() {
 		app.removeClientFromAllRooms(client)
@@ -254,6 +221,39 @@ func (app *App) unregisterClient(client *Client) {
 	close(client.send)
 
 	app.broadcastStatusChange(client.userId, false)
+}
+
+func (app *App) broadcastStatusChange(userId string, status bool) {
+	var userStatus = models.UserStatus{
+		Id:     userId,
+		Status: status,
+	}
+
+	response, err := changeToEvent("user_status", userStatus)
+	if err != nil {
+		log.Printf("error marshaling connection status: %v", err)
+		return
+	}
+
+	getConnectedUsers, err := utils.GetConnectedUsers(app.DB, userId)
+	if err != nil {
+		log.Printf("error fetching connected users for user %s: %v", userId, err)
+		return
+	}
+
+	for _, connectedUser := range getConnectedUsers {
+		if toClient, ok := app.clients.Load(connectedUser); ok {
+			toClient, ok := toClient.(*Client)
+			if ok {
+				select {
+				case toClient.send <- response:
+				default:
+					log.Printf("Falied to send connection status to user %d\n", connectedUser)
+					app.unregisterClient(toClient)
+				}
+			}
+		}
+	}
 }
 
 func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
