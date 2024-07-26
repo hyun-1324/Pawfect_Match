@@ -79,7 +79,9 @@ func GetRequests(db *sql.DB, userId string) (models.IdList, error) {
 }
 
 func CheckUnreadMessages(db *sql.DB, userId string) (bool, error) {
-	query := `SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE AND to_id_connected = TRUE)`
+	query := `
+	SELECT EXISTS (SELECT 1 FROM messages WHERE to_id = $1 AND read = FALSE AND to_id_connected = TRUE)
+	`
 
 	var exists bool
 	err := db.QueryRow(query, userId).Scan(&exists)
@@ -242,26 +244,33 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 
 	smallId, largeId := OrderPair(numToId, numFromId)
 
-	query := "UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2"
-	_, err = db.Exec(query, fromId, toId)
+	_, err = db.Exec("UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2", fromId, toId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
 	}
 
-	query = "UPDATE matches SET rejected = TRUE WHERE user_id1 = $1 AND user_id2 = $2"
-	_, err = db.Exec(query, smallId, largeId)
+	_, err = db.Exec("UPDATE matches SET rejected = TRUE WHERE user_id1 = $1 AND user_id2 = $2", smallId, largeId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
 	}
 
-	query = "DELETE FROM connections WHERE user_id1 = $1 AND user_id2 = $2"
-	_, err = db.Exec(query, smallId, largeId)
+	_, err = db.Exec("DELETE FROM connections WHERE user_id1 = $1 AND user_id2 = $2", smallId, largeId)
 	if err != nil {
 		return fmt.Errorf("failed to delete data: %v", err)
 	}
 
-	query = "DELETE FROM rooms WHERE user_id1 = $1 AND user_id2 = $2"
-	_, err = db.Exec(query, smallId, largeId)
+	query := `
+	UPDATE rooms 
+	SET user1_connected = CASE
+			WHERE user1_id = $1 AND user2_id = $2 THEN FALSE
+			ELSE user1_connected
+	END,
+	user2_connected = CASE
+			WHEN user1_id = $2 AND user2_id = $1 THEN FALSE
+			ELSE user2_connected
+	END
+	WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)`
+	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
 		return fmt.Errorf("failed to delete data: %v", err)
 	}
@@ -318,14 +327,12 @@ func SaveCheckedNewConnection(db *sql.DB, userId, checkedId string) error {
 	smallId, largeId := OrderPair(numUserId, numCheckedId)
 
 	if numUserId == smallId {
-		query := `UPDATE connections SET id1_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2`
-		_, err = db.Exec(query, smallId, largeId)
+		_, err = db.Exec("UPDATE connections SET id1_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2", smallId, largeId)
 		if err != nil {
 			return fmt.Errorf("failed to update data: %v", err)
 		}
 	} else if numUserId == largeId {
-		query := `UPDATE connections SET id2_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2`
-		_, err = db.Exec(query, smallId, largeId)
+		_, err = db.Exec("UPDATE connections SET id2_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2", smallId, largeId)
 		if err != nil {
 			return fmt.Errorf("failed to update data: %v", err)
 		}
