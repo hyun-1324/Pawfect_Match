@@ -262,7 +262,7 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 	query := `
 	UPDATE rooms 
 	SET user1_connected = CASE
-			WHERE user1_id = $1 AND user2_id = $2 THEN FALSE
+			WHEN user1_id = $1 AND user2_id = $2 THEN FALSE
 			ELSE user1_connected
 	END,
 	user2_connected = CASE
