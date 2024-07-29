@@ -457,7 +457,7 @@ func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 	WHERE (r.user_id1 = $1 AND r.user1_connected = TRUE)
      OR (r.user_id2 = $1 AND r.user2_connected = TRUE)
 	GROUP BY r.room_id, r.user_id1, r.user_id2, r.created_at
-	ORDER COALESCE(MAX(m.sent_at), r.created_at) DESC;
+	ORDER BY COALESCE(MAX(m.sent_at), r.created_at) DESC;
 	`
 
 	rows, err := db.Query(query, userId)
