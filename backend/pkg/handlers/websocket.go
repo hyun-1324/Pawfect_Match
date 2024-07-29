@@ -20,9 +20,9 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		// allowedOrigin := "http://localhost:3000"
-		// origin := r.Header.Get("Origin")
-		return true
+		allowedOrigin := "http://localhost:3000"
+		origin := r.Header.Get("Origin")
+		return allowedOrigin == origin
 	},
 }
 
@@ -35,7 +35,7 @@ type Client struct {
 
 type Room struct {
 	id      string
-	clients map[string]*Client
+	clients sync.Map
 }
 
 type App struct {
@@ -213,8 +213,14 @@ func changeToEvent(event string, data interface{}) ([]byte, error) {
 func (app *App) removeClientFromAllRooms(client *Client) {
 	app.rooms.Range(func(key, value interface{}) bool {
 		room := value.(*Room)
-		delete(room.clients, client.userId)
-		if len(room.clients) == 0 {
+		room.clients.Delete(client.userId)
+		empty := true
+		room.clients.Range(func(_, _ interface{}) bool {
+			empty = false
+			return false
+		})
+
+		if empty {
 			app.rooms.Delete(key)
 		}
 		return true
@@ -343,11 +349,11 @@ func (app *App) sendInitialData(client *Client) {
 func (app *App) createAndJoinRoom(client *Client, roomId string) {
 	room, _ := app.rooms.LoadOrStore(roomId, &Room{
 		id:      roomId,
-		clients: make(map[string]*Client),
+		clients: sync.Map{},
 	})
 	r := room.(*Room)
 
-	r.clients[client.userId] = client
+	r.clients.Store(client.userId, client)
 	client.rooms[roomId] = true
 }
 
@@ -596,9 +602,15 @@ func (app *App) handleLeaveRoom(client *Client, roomId string) {
 		return
 	}
 	r := room.(*Room)
-	delete(r.clients, client.userId)
+	r.clients.Delete(client.userId)
 
-	if len(r.clients) == 0 {
+	empty := true
+	r.clients.Range(func(_, _ interface{}) bool {
+		empty = false
+		return false
+	})
+
+	if empty {
 		app.rooms.Delete(roomId)
 	}
 }
@@ -669,13 +681,17 @@ func (app *App) broadcastToRoom(messageInfo *models.Message) {
 
 	r := room.(*Room)
 
-	for _, client := range r.clients {
-		select {
-		case client.send <- response:
-		default:
-			app.unregisterClient(client)
+	r.clients.Range(func(_, clientValue interface{}) bool {
+		client, ok := clientValue.(*Client)
+		if ok {
+			select {
+			case client.send <- response:
+			default:
+				app.unregisterClient(client)
+			}
 		}
-	}
+		return true
+	})
 }
 
 func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages) {
