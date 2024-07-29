@@ -439,26 +439,26 @@ func SaveMessage(db *sql.DB, messageInfo *models.Message) (int, error) {
 
 func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 	query := `
-	SELECT 
-  	m.room_id,
-  	EXISTS (
-    	SELECT 1
-    	FROM messages sub
-    	WHERE sub.room_id = m.room_id AND sub.read = FALSE AND sub.to_id = $1
-  	) AS has_unread,
+	SELECT
+		r.id AS room_id,
+		EXISTS (
+			SELECT 1
+			FROM messages sub
+			WHERE sub.room_id = r.room_id AND sub.read = FALSE AND sub.to_id = $1
+		) AS has_unread,
 		CASE
-			WHEN m.from_id = $1 THEN m.to_id
-			WHEN m.to_id = $1 THEN m.from_id
-		END AS user_id
-	FROM messages m
-	WHERE ((m.from_id = $1 AND m.from_id_connected = TRUE) OR (m.to_id = $1 AND m.to_id_connected = TRUE))
-	GROUP BY room_id,
-		CASE
-			WHEN m.from_id = $1 THEN m.to_id
-			WHEN m.to_id = $1 THEN m.from_id
-		END
-	ORDER BY MAX(m.sent_at) DESC;
+			WHEN r.user_id1 = $1 THEN r.user_id2
+			WHEN r.user_id2 = $1 THEN r.user_id1
+		END AS user_id,
+		COALESCE(MAX(m.sent_at), r.created_at) AS last_activity
+	FROM rooms r
+	LEFT JOIN messages m ON r.room_id = m.room_id
+	WHERE (r.user_id1 = $1 AND r.user1_connected = TRUE)
+     OR (r.user_id2 = $1 AND r.user2_connected = TRUE)
+	GROUP BY r.room_id, r.user_id1, r.user_id2, r.created_at
+	GROUP BY last_activity DESC;
 	`
+
 	rows, err := db.Query(query, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
