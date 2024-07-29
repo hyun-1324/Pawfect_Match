@@ -681,8 +681,8 @@ func (app *App) broadcastToRoom(messageInfo *models.Message) {
 
 	r := room.(*Room)
 
-	r.clients.Range(func(_, client interface{}) bool {
-		client, ok := client.(*Client)
+	r.clients.Range(func(_, clientValue interface{}) bool {
+		client, ok := clientValue.(*Client)
 		select {
 		case client.send <- response:
 		default:
