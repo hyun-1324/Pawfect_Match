@@ -683,10 +683,12 @@ func (app *App) broadcastToRoom(messageInfo *models.Message) {
 
 	r.clients.Range(func(_, clientValue interface{}) bool {
 		client, ok := clientValue.(*Client)
-		select {
-		case client.send <- response:
-		default:
-			app.unregisterClient(client)
+		if ok {
+			select {
+			case client.send <- response:
+			default:
+				app.unregisterClient(client)
+			}
 		}
 		return true
 	})
