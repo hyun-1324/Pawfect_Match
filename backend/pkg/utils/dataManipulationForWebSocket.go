@@ -446,7 +446,7 @@ func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 		EXISTS (
 			SELECT 1
 			FROM messages sub
-			WHERE sub.room_id = r.room_id AND sub.read = FALSE AND sub.to_id = $1
+			WHERE sub.room_id = r.id AND sub.read = FALSE AND sub.to_id = $1
 		) AS has_unread,
 		CASE
 			WHEN r.user_id1 = $1 THEN r.user_id2
