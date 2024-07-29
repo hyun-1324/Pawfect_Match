@@ -448,14 +448,13 @@ func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 		CASE
 			WHEN r.user_id1 = $1 THEN r.user_id2
 			WHEN r.user_id2 = $1 THEN r.user_id1
-		END AS user_id,
-		COALESCE(MAX(m.sent_at), r.created_at) AS last_activity
+		END AS user_id
 	FROM rooms r
 	LEFT JOIN messages m ON r.room_id = m.room_id
 	WHERE (r.user_id1 = $1 AND r.user1_connected = TRUE)
      OR (r.user_id2 = $1 AND r.user2_connected = TRUE)
 	GROUP BY r.room_id, r.user_id1, r.user_id2, r.created_at
-	GROUP BY last_activity DESC;
+	ORDER COALESCE(MAX(m.sent_at), r.created_at) DESC;
 	`
 
 	rows, err := db.Query(query, userId)
