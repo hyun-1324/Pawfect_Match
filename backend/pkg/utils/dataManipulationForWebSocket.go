@@ -102,7 +102,8 @@ func GetNewConnections(db *sql.DB, userId string) (models.IdList, error) {
 	UNION 
 	SELECT 
 		user_id1 FROM connections 
-	WHERE user_id2 = $1 AND id2_check = FALSE`
+	WHERE user_id2 = $1 AND id2_check = FALSE
+	`
 
 	rows, err := db.Query(query, userId)
 	if err != nil {
