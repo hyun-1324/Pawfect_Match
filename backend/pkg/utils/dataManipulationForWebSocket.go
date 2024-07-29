@@ -453,10 +453,10 @@ func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 			WHEN r.user_id2 = $1 THEN r.user_id1
 		END AS user_id
 	FROM rooms r
-	LEFT JOIN messages m ON r.room_id = m.room_id
+	LEFT JOIN messages m ON r.id = m.room_id
 	WHERE (r.user_id1 = $1 AND r.user1_connected = TRUE)
      OR (r.user_id2 = $1 AND r.user2_connected = TRUE)
-	GROUP BY r.room_id, r.user_id1, r.user_id2, r.created_at
+	GROUP BY r.id, r.user_id1, r.user_id2, r.created_at
 	ORDER BY COALESCE(MAX(m.sent_at), r.created_at) DESC;
 	`
 
