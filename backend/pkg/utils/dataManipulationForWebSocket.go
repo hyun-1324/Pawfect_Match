@@ -268,7 +268,8 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 			WHEN user1_id = $2 AND user2_id = $1 THEN FALSE
 			ELSE user2_connected
 	END
-	WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)`
+	WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
+	`
 	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
 		return fmt.Errorf("failed to delete data: %v", err)
