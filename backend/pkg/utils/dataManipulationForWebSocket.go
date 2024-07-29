@@ -358,7 +358,8 @@ func CreateRoom(db *sql.DB, fromId, toId string) (string, error) {
 		INSERT INTO rooms (user_id1, user_id2) VALUES ($1, $2) 
 		ON CONFLICT (user_id1, user_id2) 
 		DO NOTHING 
-		RETURNING id`
+		RETURNING id
+		`
 	err = db.QueryRow(query, smallId, largeId).Scan(&roomId)
 
 	if err != nil {
