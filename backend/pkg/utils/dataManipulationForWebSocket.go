@@ -231,7 +231,6 @@ func SaveAcceptance(db *sql.DB, fromId, toId string) error {
 }
 
 func SaveDecline(db *sql.DB, fromId, toId string) error {
-
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
 		return fmt.Errorf("failed to change string to int: %v", err)
@@ -244,7 +243,7 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 
 	smallId, largeId := OrderPair(numToId, numFromId)
 
-	_, err = db.Exec("UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2", fromId, toId)
+	_, err = db.Exec("UPDATE requests SET processed = TRUE accepted = FALSE WHERE from_id = $1 AND to_id = $2", fromId, toId)
 	if err != nil {
 		return fmt.Errorf("failed to update data: %v", err)
 	}
