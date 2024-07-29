@@ -73,12 +73,21 @@ export const AuthProvider = ({ children }) => {
         } else {
           sendJsonMessage({ event: "check_new_connection", data: { id: String(lastJsonMessage.data.id) } });
         }
+      } else if (lastJsonMessage.event === "get_chat_list") {
+        const chatList = lastJsonMessage.data;
+        if (!chatList) {
+          setUnreadMessages(false);
+          return;
+        }
+        // if chatlist has unread messages, set unreadMessages to true
+        const hasUnreadMessages = chatList.some((room) => room.unReadMessage);
+        setUnreadMessages(hasUnreadMessages);
 
       } else if (lastJsonMessage.event === "error") {
         console.log("WS ERROR!" + lastJsonMessage.data);
       }
     }
-  }, [lastJsonMessage]);
+  }, [lastJsonMessage, sendJsonMessage]);
  
   // Show modal when there are new connections
   useEffect(() => {

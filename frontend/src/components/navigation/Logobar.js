@@ -1,7 +1,6 @@
 import handleLogout from "../../tools/handleLogout";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../../tools/AuthContext';
-import { useEffect } from "react";
 
 const Logobar = () => {
     const navigate = useNavigate();

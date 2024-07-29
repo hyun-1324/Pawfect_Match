@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import { useEffect, useState } from "react";
 import Logobar from "./components/navigation/Logobar";
 import Navbar from "./components/navigation/Navbar";
 import NotFound from "./components/navigation/NotFound";
@@ -12,7 +11,6 @@ import EditProfile from "./components/content/EditProfile";
 import ChatList from "./components/content/ChatList";
 import Chat from "./components/content/Chat";
 import Connections from "./components/content/Connections";
-import useWebSocket from "react-use-websocket";
 import { AuthProvider } from './tools/AuthContext';
 
 

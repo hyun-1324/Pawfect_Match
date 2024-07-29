@@ -16,11 +16,46 @@ const Connections = () => {
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
-        if (triggerFetch || lastJsonMessage?.event === "new_connection" || connectionsList.length === 0) {
             fetchFromEndpoint("/connections", { signal })
             .then(({ data, error }) => {
                 if (error) {
+                    if (error.status === 401) {
+                        navigate("/login");
+                    } else {
+                        setErrorMessage(error.message);
+                    }
+                }
+                if (data.ids) {
+                    setConnectionsList(data.ids);
+                } else {
+                    setConnectionsList([]);
+                }
+            })
+            .catch((error) => {
+                if (error.name === "AbortError") {
+                } else {
                     setErrorMessage(error.message);
+                }
+            })
+            .finally(() => {
+                setTriggerFetch(false);
+            });
+        return () => abortController.abort();
+    }, []);
+
+
+    useEffect(() => {
+        const abortController = new AbortController(); 
+        const signal = abortController.signal; 
+        if (triggerFetch || lastJsonMessage?.event === "new_connection") {
+            fetchFromEndpoint("/connections", { signal })
+            .then(({ data, error }) => {
+                if (error) {
+                    if (error.status === 401) {
+                        navigate("/login");
+                    } else {
+                        setErrorMessage(error.message);
+                    }
                 }
                 if (data.ids) {
                     setConnectionsList(data.ids);
@@ -40,14 +75,14 @@ const Connections = () => {
         }
     
         return () => abortController.abort();
-    }, [lastJsonMessage, triggerFetch]);
+    }, [lastJsonMessage, triggerFetch, navigate]);
 
     // Connect websocket if not already connected
     useEffect(() => {
         if (!loggedIn) {
             login();
         }
-    }, [loggedIn]);
+    }, [loggedIn, login]);
 
     // Get other information needed for connections
     useEffect(() => {
@@ -60,7 +95,11 @@ const Connections = () => {
                 fetchFromEndpoint(`/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
-                            setErrorMessage(error.message);
+                            if (error.status === 401) {
+                                navigate("/login");
+                            } else {
+                                setErrorMessage(error.message);
+                            }
                         } else {
                             setConnections((prevList) => [...prevList, data]);
                         }
@@ -76,7 +115,7 @@ const Connections = () => {
             setConnections([]);
         }
         return () => abortController.abort(); 
-    }, [connectionsList]);
+    }, [connectionsList, errorMessage, navigate]);
 
     // Get other information needed for requests
     useEffect(() => {
@@ -88,7 +127,11 @@ const Connections = () => {
                 fetchFromEndpoint(`/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
+                            if (error.status === 401) {
+                                navigate("/login");
+                            } else {
                             setErrorMessage(error.message);
+                            }
                         } else {
                             setRequests((prevList) => [...prevList, data]);
                         }
@@ -105,7 +148,7 @@ const Connections = () => {
         }
 
         return () => abortController.abort(); 
-    }, [friendRequests]);
+    }, [friendRequests, errorMessage, navigate]);
 
     // Functions to handle removing connections and accepting/dismissing requests
     const handleRemoveConnection = useCallback((userId) => {
@@ -118,14 +161,14 @@ const Connections = () => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
         clearFriendNotification(userId);
-    }, [sendJsonMessage]);
+    }, [sendJsonMessage, clearFriendNotification]);
 
     const handleAcceptRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "accept_request", data: dataObject });
         clearFriendNotification(userId);
         
-    }, [sendJsonMessage, clearFriendNotification, requests]);
+    }, [sendJsonMessage, clearFriendNotification]);
 
     // Function to generate connection cards
     const makeConnectionCards = (connections) => {
