@@ -27,7 +27,6 @@ export const AuthProvider = ({ children }) => {
     onClose: () => console.log("WebSocket Disconnected"),
     // Will attempt to reconnect on all close events, such as server shutting down
     shouldReconnect: (closeEvent) => true,
-    reconnectAttempts: 10,
   }, 
     loggedIn
   );

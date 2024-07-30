@@ -99,6 +99,7 @@ const Recommendations = () => {
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
+        const recommendationsMap = new Map();
         if (recommendations && recommendations.length > 0 && isRecommendationsLoaded) { 
             setRecommendationsList([]);
             // for each id in recommendations, fetch the data
@@ -112,7 +113,7 @@ const Recommendations = () => {
                                 setErrorMessage(error.message);
                             }
                         } else {
-                            setRecommendationsList((prevList) => [...prevList, data]);
+                            recommendationsMap.set(Number(data.id), data);
                         }
                     })
                     .catch((error) => {
@@ -122,6 +123,10 @@ const Recommendations = () => {
                         }
                     })
                     )).finally(() => {
+                        // Sort the recommendationsList based on the order of recommendations
+                        const sortedRecommendationsList = recommendations.map((id) => recommendationsMap.get(id)).filter(Boolean);
+                        setRecommendationsList(sortedRecommendationsList);
+                        console.log(sortedRecommendationsList);
                         setIsLoading(false);
             });
         } else if ((!recommendations || recommendations.length === 0) && isRecommendationsLoaded && isLoading) {

@@ -39,6 +39,7 @@ const ChatList = () => {
     useEffect(() => {
         const controller = new AbortController();
         const signal = controller.signal;
+        const roomInfoMap = new Map();
         if (chatList.length > 0 && !errorMessage) {
             setRoomInfo([]);
             Promise.allSettled(chatList.map((room) => {
@@ -61,7 +62,7 @@ const ChatList = () => {
                             picture: data.picture,
                             dog_name: data.dog_name
                         };
-                        setRoomInfo((prev) => [...prev, roomInfo]);
+                        roomInfoMap.set(room.id, roomInfo);
                     }
                 }).catch((error) => {
                     if (error.name === "AbortError") {
@@ -69,7 +70,11 @@ const ChatList = () => {
                         setErrorMessage(error.message);
                     }
                 });
-            }));
+            })).then(() => {
+                // Sort roomInfo based on the order of chatList
+                const sortedRoomInfo = chatList.map(room => roomInfoMap.get(room.id)).filter(Boolean);
+                setRoomInfo(sortedRoomInfo);
+            });
         } else {
             setRoomInfo([]);
         }

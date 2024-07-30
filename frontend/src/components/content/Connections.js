@@ -89,6 +89,7 @@ const Connections = () => {
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
+        const connectionsMap = new Map();
         if (connectionsList.length > 0 && !errorMessage) {
             setConnections([]);
             Promise.allSettled(connectionsList.map((id) => 
@@ -101,7 +102,7 @@ const Connections = () => {
                                 setErrorMessage(error.message);
                             }
                         } else {
-                            setConnections((prevList) => [...prevList, data]);
+                            connectionsMap.set(Number(id), data);
                         }
                     })
                     .catch((error) => {
@@ -110,7 +111,12 @@ const Connections = () => {
                             setErrorMessage(error.message);
                         }
                     })
-                ));
+                )).then(() => {
+                    //Sort connectionsMap by the order of connectionsList
+                    const sortedConnections = connectionsList.map((id) => connectionsMap.get(id)).filter(Boolean);
+                    setConnections(sortedConnections);
+                });
+                   
         } else if (connectionsList.length === 0) {
             setConnections([]);
         }
