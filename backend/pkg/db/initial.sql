@@ -166,6 +166,7 @@ CREATE TABLE rooms (
   user_id2 INTEGER NOT NULL,
   user1_connected BOOLEAN DEFAULT TRUE,
   user2_connected BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   FOREIGN KEY (user_id1) REFERENCES users (id) ON DELETE CASCADE,
   FOREIGN KEY (user_id2) REFERENCES users (id) ON DELETE CASCADE,
   UNIQUE (user_id1, user_id2),

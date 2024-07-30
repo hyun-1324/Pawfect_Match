@@ -102,7 +102,8 @@ func GetNewConnections(db *sql.DB, userId string) (models.IdList, error) {
 	UNION 
 	SELECT 
 		user_id1 FROM connections 
-	WHERE user_id2 = $1 AND id2_check = FALSE`
+	WHERE user_id2 = $1 AND id2_check = FALSE
+	`
 
 	rows, err := db.Query(query, userId)
 	if err != nil {
@@ -231,7 +232,6 @@ func SaveAcceptance(db *sql.DB, fromId, toId string) error {
 }
 
 func SaveDecline(db *sql.DB, fromId, toId string) error {
-
 	numToId, err := strconv.Atoi(toId)
 	if err != nil {
 		return fmt.Errorf("failed to change string to int: %v", err)
@@ -262,14 +262,15 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 	query := `
 	UPDATE rooms 
 	SET user1_connected = CASE
-			WHERE user1_id = $1 AND user2_id = $2 THEN FALSE
+			WHEN user1_id = $1 AND user2_id = $2 THEN FALSE
 			ELSE user1_connected
 	END,
 	user2_connected = CASE
 			WHEN user1_id = $2 AND user2_id = $1 THEN FALSE
 			ELSE user2_connected
 	END
-	WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)`
+	WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
+	`
 	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
 		return fmt.Errorf("failed to delete data: %v", err)
@@ -358,7 +359,8 @@ func CreateRoom(db *sql.DB, fromId, toId string) (string, error) {
 		INSERT INTO rooms (user_id1, user_id2) VALUES ($1, $2) 
 		ON CONFLICT (user_id1, user_id2) 
 		DO NOTHING 
-		RETURNING id`
+		RETURNING id
+		`
 	err = db.QueryRow(query, smallId, largeId).Scan(&roomId)
 
 	if err != nil {
@@ -439,26 +441,25 @@ func SaveMessage(db *sql.DB, messageInfo *models.Message) (int, error) {
 
 func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 	query := `
-	SELECT 
-  	m.room_id,
-  	EXISTS (
-    	SELECT 1
-    	FROM messages sub
-    	WHERE sub.room_id = m.room_id AND sub.read = FALSE AND sub.to_id = $1
-  	) AS has_unread,
+	SELECT
+		r.id AS room_id,
+		EXISTS (
+			SELECT 1
+			FROM messages sub
+			WHERE sub.room_id = r.id AND sub.read = FALSE AND sub.to_id = $1
+		) AS has_unread,
 		CASE
-			WHEN m.from_id = $1 THEN m.to_id
-			WHEN m.to_id = $1 THEN m.from_id
+			WHEN r.user_id1 = $1 THEN r.user_id2
+			WHEN r.user_id2 = $1 THEN r.user_id1
 		END AS user_id
-	FROM messages m
-	WHERE ((m.from_id = $1 AND m.from_id_connected = TRUE) OR (m.to_id = $1 AND m.to_id_connected = TRUE))
-	GROUP BY room_id,
-		CASE
-			WHEN m.from_id = $1 THEN m.to_id
-			WHEN m.to_id = $1 THEN m.from_id
-		END
-	ORDER BY MAX(m.sent_at) DESC;
+	FROM rooms r
+	LEFT JOIN messages m ON r.id = m.room_id
+	WHERE (r.user_id1 = $1 AND r.user1_connected = TRUE)
+     OR (r.user_id2 = $1 AND r.user2_connected = TRUE)
+	GROUP BY r.id, r.user_id1, r.user_id2, r.created_at
+	ORDER BY COALESCE(MAX(m.sent_at), r.created_at) DESC;
 	`
+
 	rows, err := db.Query(query, userId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %v", err)
