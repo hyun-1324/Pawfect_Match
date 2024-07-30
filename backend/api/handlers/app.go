@@ -7,8 +7,8 @@ import (
 	"html/template"
 	"net/http"
 
-	"matchMe/pkg/middleware"
-	"matchMe/pkg/models"
+	"matchMe/internal/middleware"
+	"matchMe/internal/models"
 	"matchMe/pkg/utils"
 )
 

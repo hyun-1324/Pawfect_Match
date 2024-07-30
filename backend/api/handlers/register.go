@@ -5,7 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"matchMe/pkg/models"
+	"matchMe/internal/models"
+	"matchMe/internal/services"
 	"matchMe/pkg/utils"
 	"net/http"
 	"path/filepath"
@@ -106,7 +107,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = utils.CalculateRecommendationScore(app.DB, req.Id)
+	err = services.CalculateRecommendationScore(app.DB, req.Id)
 	if err != nil {
 		utils.HandleError(w, "failed to register user", http.StatusInternalServerError, fmt.Errorf("failed to calculate recommendation score: %v", err))
 		return

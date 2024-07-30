@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"matchMe/pkg/middleware"
+	"matchMe/internal/middleware"
 	"matchMe/pkg/utils"
 	"net/http"
 )

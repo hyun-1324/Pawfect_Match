@@ -3,8 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"matchMe/pkg/middleware"
-	"matchMe/pkg/models"
+	"matchMe/internal/middleware"
+	"matchMe/internal/models"
+	"matchMe/internal/services"
 	"matchMe/pkg/utils"
 	"net/http"
 	"strconv"
@@ -104,7 +105,7 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = utils.CalculateRecommendationScore(app.DB, numId)
+	err = services.CalculateRecommendationScore(app.DB, numId)
 	if err != nil {
 		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to calculate recommendation score for updating profile: %v", err))
 		return

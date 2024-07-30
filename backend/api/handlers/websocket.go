@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"matchMe/pkg/middleware"
-	"matchMe/pkg/models"
+	"matchMe/internal/middleware"
+	"matchMe/internal/models"
+	"matchMe/internal/services"
 	"matchMe/pkg/utils"
 	"net/http"
 	"strconv"
@@ -247,7 +248,7 @@ func (app *App) broadcastStatusChange(userId string, status bool) {
 		return
 	}
 
-	getConnectedUsers, err := utils.GetConnectedUsers(app.DB, userId)
+	getConnectedUsers, err := services.GetConnectedUsers(app.DB, userId)
 	if err != nil {
 		log.Printf("error fetching connected users for user %s: %v", userId, err)
 		return
@@ -306,7 +307,7 @@ func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
 }
 
 func (app *App) sendInitialData(client *Client) {
-	friendRequests, err := utils.GetRequests(app.DB, client.userId)
+	friendRequests, err := services.GetRequests(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch friend requests"}`)
 		log.Printf("error fetching friend requests for user %s: %v\n", client.userId, err)
@@ -315,7 +316,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- response
 	}
 
-	hasUnreadMessages, err := utils.HasUnreadMessages(app.DB, client.userId)
+	hasUnreadMessages, err := services.HasUnreadMessages(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch unread messages"}`)
 		log.Printf("error fetching unread messages for user %s: %v\n", client.userId, err)
@@ -324,7 +325,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- response
 	}
 
-	newConnections, err := utils.GetNewConnections(app.DB, client.userId)
+	newConnections, err := services.GetNewConnections(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch new connections"}`)
 		log.Printf("error fetching new connections for user %s: %v\n", client.userId, err)
@@ -333,7 +334,7 @@ func (app *App) sendInitialData(client *Client) {
 		client.send <- response
 	}
 
-	rooms, err := utils.GetUserRooms(app.DB, client.userId)
+	rooms, err := services.GetUserRooms(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch user rooms"}`)
 		log.Printf("error fetching user rooms for user %s: %v\n", client.userId, err)
@@ -373,7 +374,7 @@ func (app *App) handleGetStatus(client *Client, userId string) {
 }
 
 func (app *App) handleSendRequest(client *Client, toId string) {
-	previousRequest, processed, err := utils.SaveRequest(app.DB, client.userId, toId)
+	previousRequest, processed, err := services.SaveRequest(app.DB, client.userId, toId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the send request"}`)
 		fmt.Printf("error saving friend request from %s to %s: %v\n", client.userId, toId, err)
@@ -465,7 +466,7 @@ func (app *App) handleSendRequest(client *Client, toId string) {
 }
 
 func (app *App) handleAcceptRequest(client *Client, fromId string) {
-	err := utils.SaveAcceptance(app.DB, fromId, client.userId)
+	err := services.SaveAcceptance(app.DB, fromId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the acceptance request"}`)
 		fmt.Printf("error saving acceptance from %s to %s: %v\n", fromId, client.userId, err)
@@ -535,7 +536,7 @@ func (app *App) handleAcceptRequest(client *Client, fromId string) {
 }
 
 func (app *App) handleDeclineRequest(client *Client, fromId string) {
-	err := utils.SaveDecline(app.DB, fromId, client.userId)
+	err := services.SaveDecline(app.DB, fromId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the decline request"}`)
 		fmt.Printf("error saving decline from %s to %s: %v\n", fromId, client.userId, err)
@@ -544,7 +545,7 @@ func (app *App) handleDeclineRequest(client *Client, fromId string) {
 }
 
 func (app *App) handleCheckNewConnection(client *Client, fromId string) {
-	err := utils.SaveCheckedNewConnection(app.DB, client.userId, fromId)
+	err := services.SaveCheckedNewConnection(app.DB, client.userId, fromId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the check new connection request"}`)
 		fmt.Printf("error saving checked new connection from %s to %s: %v\n", fromId, client.userId, err)
@@ -553,7 +554,7 @@ func (app *App) handleCheckNewConnection(client *Client, fromId string) {
 }
 
 func (app *App) handleRejectRecommendation(client *Client, fromId string) {
-	err := utils.SaveRejection(app.DB, fromId, client.userId)
+	err := services.SaveRejection(app.DB, fromId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to process the rejection request"}`)
 		fmt.Printf("error saving rejection from %s to %s: %v\n", fromId, client.userId, err)
@@ -577,7 +578,7 @@ func (app *App) handleRejectRecommendation(client *Client, fromId string) {
 }
 
 func (app *App) handleCreateRoom(client *Client, toId string) {
-	roomId, err := utils.CreateRoom(app.DB, client.userId, toId)
+	roomId, err := services.CreateRoom(app.DB, client.userId, toId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to create room"}`)
 		fmt.Printf("error creating room between %s and %s: %v\n", client.userId, toId, err)
@@ -595,7 +596,7 @@ func (app *App) handleCreateRoom(client *Client, toId string) {
 }
 
 func (app *App) handleLeaveRoom(client *Client, roomId string) {
-	utils.SaveLeaveRoom(app.DB, client.userId, roomId)
+	services.SaveLeaveRoom(app.DB, client.userId, roomId)
 	room, ok := app.rooms.Load(roomId)
 	if !ok {
 		log.Printf("Room %s not found", roomId)
@@ -616,7 +617,7 @@ func (app *App) handleLeaveRoom(client *Client, roomId string) {
 }
 
 func (app *App) handleSendMessage(client *Client, messageInfo *models.Message) {
-	canGetMessages, err := utils.CanGetMessagesUsingIds(app.DB, client.userId, messageInfo.ToId)
+	canGetMessages, err := services.CanGetMessagesUsingIds(app.DB, client.userId, messageInfo.ToId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
 		fmt.Printf("error checking if user %s can get messages from %s: %v\n", client.userId, messageInfo.ToId, err)
@@ -626,7 +627,7 @@ func (app *App) handleSendMessage(client *Client, messageInfo *models.Message) {
 	messageInfo.FromId = client.userId
 	messageInfo.CanGetMessages = canGetMessages
 
-	messageId, err := utils.SaveMessage(app.DB, messageInfo)
+	messageId, err := services.SaveMessage(app.DB, messageInfo)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to send message"}`)
 		fmt.Printf("error saving message from %s to %s: %v\n", client.userId, messageInfo.ToId, err)
@@ -639,7 +640,7 @@ func (app *App) handleSendMessage(client *Client, messageInfo *models.Message) {
 		if toClient, ok := app.clients.Load(messageInfo.ToId); ok {
 			toClient, ok := toClient.(*Client)
 			if ok {
-				chatList, err := utils.GetChatList(app.DB, messageInfo.ToId)
+				chatList, err := services.GetChatList(app.DB, messageInfo.ToId)
 				if err != nil {
 					client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 					fmt.Printf("error fetching chat list for user %s: %v\n", messageInfo.ToId, err)
@@ -695,7 +696,7 @@ func (app *App) broadcastToRoom(messageInfo *models.Message) {
 }
 
 func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages) {
-	canGetMessages, err := utils.CanGetMessagesUsingRoomId(app.DB, messageInfo.RoomId, client.userId)
+	canGetMessages, err := services.CanGetMessagesUsingRoomId(app.DB, messageInfo.RoomId, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to get message"}`)
 		fmt.Printf("error checking if user %s can get messages: %v\n", client.userId, err)
@@ -703,21 +704,21 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 	}
 
 	if canGetMessages {
-		messages, err := utils.GetMessagesForRoom(app.DB, messageInfo.RoomId, client.userId, messageInfo.LastMessageId)
+		messages, err := services.GetMessagesForRoom(app.DB, messageInfo.RoomId, client.userId, messageInfo.LastMessageId)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to get messages"}`)
 			fmt.Printf("error fetching messages for room %s: %v\n", messageInfo.RoomId, err)
 			return
 		}
 
-		err = utils.MarkMessagesAsRead(app.DB, client.userId, messageInfo.RoomId)
+		err = services.MarkMessagesAsRead(app.DB, client.userId, messageInfo.RoomId)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
 			fmt.Printf("error marking messages as read for room %s: %v\n", messageInfo.RoomId, err)
 			return
 		}
 
-		chatList, err := utils.GetChatList(app.DB, client.userId)
+		chatList, err := services.GetChatList(app.DB, client.userId)
 		if err != nil {
 			client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 			fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
@@ -758,14 +759,14 @@ func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages
 }
 
 func (app *App) handleCheckUnreadMessages(client *Client, checkUnreadMessage models.CheckUnreadMessage) {
-	err := utils.MarkMessagesAsRead(app.DB, client.userId, checkUnreadMessage.RoomId)
+	err := services.MarkMessagesAsRead(app.DB, client.userId, checkUnreadMessage.RoomId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to mark messages as read"}`)
 		fmt.Printf("error marking messages as read for room %s: %v\n", checkUnreadMessage.RoomId, err)
 		return
 	}
 
-	chatList, err := utils.GetChatList(app.DB, client.userId)
+	chatList, err := services.GetChatList(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
@@ -789,7 +790,7 @@ func (app *App) handleCheckUnreadMessages(client *Client, checkUnreadMessage mod
 }
 
 func (app *App) handleGetChatList(client *Client) {
-	chatList, err := utils.GetChatList(app.DB, client.userId)
+	chatList, err := services.GetChatList(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to get chat list"}`)
 		fmt.Printf("error fetching chat list for user %s: %v\n", client.userId, err)
