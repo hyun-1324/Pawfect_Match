@@ -159,7 +159,7 @@ const Connections = () => {
         const roomId = { room_id: String(room.id) };
         sendJsonMessage({ event: "leave_room", data: roomId });
         setTriggerFetch(true);
-    }, [sendJsonMessage]);
+    }, [sendJsonMessage, chatList]);
 
     const handleRemoveRequest = useCallback((userId) => {
         const dataObject = { id: userId };

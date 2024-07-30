@@ -10,6 +10,7 @@ const Chat = () => {
     const [chatMessages, setChatMessages] = useState([]); // {can_get_message, id, message, room_id, from_id, to_id, sent_at}
     const [messagesFetched, setMessagesFetched] = useState(false);
     const [lastMessageId, setLastMessageId] = useState(2147483647);
+    const [initialLoad, setInitialLoad] = useState(true);
 
     const [newChatMessage, setNewChatMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState(null);
@@ -18,6 +19,7 @@ const Chat = () => {
     const messagesContainerRef = useRef(null);
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
+    const scrollHeightRef = useRef(0);
 
     const Navigate = useNavigate();
     // get userId from url parameter
@@ -28,6 +30,7 @@ const Chat = () => {
             login();
         }
     }, [loggedIn, login]);
+
 
     useEffect(() => {
         // fetch userData
@@ -124,7 +127,6 @@ const Chat = () => {
 
     // If user scrolls up, load more chat messages
     const loadMoreMessages = useCallback(() => {
-        // Function to load more messages
         console.log("Loading more messages...");
         const room_id = String(roomInfo.id);
         sendJsonMessage({ event: "get_messages", data: { room_id: room_id, last_message_id: lastMessageId } });
@@ -133,10 +135,24 @@ const Chat = () => {
 
     const handleScroll = useCallback(() => {
         if (messagesContainerRef.current.scrollTop === 0) {
-            console.log("Scrolled to top, loading more messages...");
+            scrollHeightRef.current = messagesContainerRef.current.scrollHeight;
             loadMoreMessages();
         }
     }, [loadMoreMessages]);
+
+    useEffect(() => {
+        console.log("chatMessages: ", chatMessages);
+        console.log("initialLoad: ", initialLoad);
+        if (initialLoad && chatMessages.length <= 10 && chatMessages.length > 0) {
+            scrollToBottom();
+            setInitialLoad(false);
+        } else if (lastJsonMessage && lastJsonMessage.event === 'new_message') {
+            scrollToBottom();
+        } else if (!initialLoad) {
+            // Restore scroll position after loading more messages
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight - scrollHeightRef.current;
+        }
+    }, [chatMessages, lastJsonMessage, initialLoad]);
 
     useEffect(() => {
         const container = messagesContainerRef.current;
@@ -151,9 +167,6 @@ const Chat = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [chatMessages]);
 
     // Send typing chat message to server
     const handleTyping = useCallback((e) => {
@@ -182,11 +195,11 @@ const Chat = () => {
     const prettifyDate = useCallback((date) => {
         // format date to show date and time. 2024-07-29T07:57:14.251Z => 29/07/2024 07:57
         const dateObj = new Date(date);
-        const day = dateObj.getDate();
-        const month = dateObj.getMonth() + 1;
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const year = dateObj.getFullYear();
-        const hours = dateObj.getHours();
-        const minutes = dateObj.getMinutes();
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     }, []);
 
