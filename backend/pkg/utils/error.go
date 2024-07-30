@@ -3,7 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"matchMe/pkg/models"
+	"matchMe/internal/models"
 	"net/http"
 )
 

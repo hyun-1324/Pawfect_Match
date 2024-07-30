@@ -1,9 +1,10 @@
-package utils
+package services
 
 import (
 	"database/sql"
 	"fmt"
-	"matchMe/pkg/models"
+	"matchMe/internal/models"
+	"matchMe/pkg/utils"
 	"strconv"
 )
 
@@ -183,7 +184,7 @@ func SaveRequest(db *sql.DB, fromId, toId string) (bool, bool, error) {
 			return true, false, fmt.Errorf("failed to change string to int: %v", err)
 		}
 
-		smallId, largeId := OrderPair(numToId, numFromId)
+		smallId, largeId := utils.OrderPair(numToId, numFromId)
 
 		_, err = db.Exec("INSERT INTO connections (user_id1, user_id2) VALUES ($1, $2) ON CONFLICT (user_id1, user_id2) DO NOTHING", smallId, largeId)
 		if err != nil {
@@ -216,7 +217,7 @@ func SaveAcceptance(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := OrderPair(numToId, numFromId)
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
 
 	_, err = db.Exec("INSERT INTO connections (user_id1, user_id2) VALUES ($1, $2) ON CONFLICT (user_id1, user_id2) DO NOTHING", smallId, largeId)
 	if err != nil {
@@ -242,7 +243,7 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := OrderPair(numToId, numFromId)
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
 
 	_, err = db.Exec("UPDATE requests SET processed = TRUE, accepted = FALSE WHERE from_id = $1 AND to_id = $2", fromId, toId)
 	if err != nil {
@@ -262,14 +263,14 @@ func SaveDecline(db *sql.DB, fromId, toId string) error {
 	query := `
 	UPDATE rooms 
 	SET user1_connected = CASE
-			WHEN user1_id = $1 AND user2_id = $2 THEN FALSE
+			WHEN user_id1 = $1 AND user_id2 = $2 THEN FALSE
 			ELSE user1_connected
 	END,
 	user2_connected = CASE
-			WHEN user1_id = $2 AND user2_id = $1 THEN FALSE
+			WHEN user_id1 = $2 AND user_id2 = $1 THEN FALSE
 			ELSE user2_connected
 	END
-	WHERE (user1_id = $1 AND user2_id = $2) OR (user1_id = $2 AND user2_id = $1)
+	WHERE (user_id1 = $1 AND user_id2 = $2) OR (user_id1 = $2 AND user_id2 = $1)
 	`
 	_, err = db.Exec(query, fromId, toId)
 	if err != nil {
@@ -291,7 +292,7 @@ func SaveRejection(db *sql.DB, fromId, toId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := OrderPair(numToId, numFromId)
+	smallId, largeId := utils.OrderPair(numToId, numFromId)
 
 	query := "UPDATE matches SET rejected = TRUE WHERE user_id1 = $1 AND user_id2 = $2"
 	_, err = db.Exec(query, smallId, largeId)
@@ -325,7 +326,7 @@ func SaveCheckedNewConnection(db *sql.DB, userId, checkedId string) error {
 		return fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := OrderPair(numUserId, numCheckedId)
+	smallId, largeId := utils.OrderPair(numUserId, numCheckedId)
 
 	if numUserId == smallId {
 		_, err = db.Exec("UPDATE connections SET id1_check = TRUE WHERE user_id1 = $1 AND user_id2 = $2", smallId, largeId)
@@ -352,7 +353,7 @@ func CreateRoom(db *sql.DB, fromId, toId string) (string, error) {
 		return "", fmt.Errorf("failed to change string to int: %v", err)
 	}
 
-	smallId, largeId := OrderPair(numFromId, numToId)
+	smallId, largeId := utils.OrderPair(numFromId, numToId)
 
 	var roomId string
 	query := `

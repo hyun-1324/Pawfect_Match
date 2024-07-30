@@ -1,8 +1,9 @@
-package utils
+package services
 
 import (
 	"database/sql"
-	"matchMe/pkg/models"
+	"matchMe/internal/models"
+	"matchMe/pkg/utils"
 	"strconv"
 )
 
@@ -62,7 +63,7 @@ func executeRecommendationAlgorithm(db *sql.DB, userId int, userBioData map[int]
 		if dataId == userId {
 			continue
 		}
-		smallId, largeId := OrderPair(userId, dataId)
+		smallId, largeId := utils.OrderPair(userId, dataId)
 
 		if (userBio.PreferredNeutered && !data.Neutered) || (!userBio.Neutered && data.PreferredNeutered) {
 			_, err := db.Exec("UPDATE matches SET compatible_neutered = $1 WHERE user_id1 = $2 AND user_id2 = $3", false, smallId, largeId)
@@ -148,7 +149,7 @@ func checkSizeCompatibility(size1, size2 float32) bool {
 	category2 := determineSizeCategory(size2, sizeThresholds)
 
 	// Check if the size difference is within one category
-	return Abs(category1-category2) <= 1
+	return utils.Abs(category1-category2) <= 1
 }
 
 func determineSizeCategory(size float32, thresholds []float32) int {
@@ -188,7 +189,7 @@ func calculateMatchScore(userBio1, userBio2 models.UserBioResponse) float64 {
 		score += 1
 	}
 
-	ageDiff := Abs(userBio1.Age - userBio2.Age)
+	ageDiff := utils.Abs(userBio1.Age - userBio2.Age)
 	switch {
 	case ageDiff <= 3:
 		score += 1

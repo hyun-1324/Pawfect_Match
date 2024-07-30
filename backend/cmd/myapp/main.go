@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"matchMe/pkg/db"
-	"matchMe/pkg/handlers"
-	"matchMe/pkg/middleware"
+	"matchMe/api/handlers"
+	"matchMe/internal/database"
+	"matchMe/internal/middleware"
 	"net/http"
 
 	"github.com/rs/cors"
@@ -21,7 +21,7 @@ func main() {
 	)
 
 	psqlInfo := fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%d sslmode=disable", dbname, user, password, host, port)
-	database, err := db.InitDb(psqlInfo)
+	database, err := database.InitDb(psqlInfo)
 	if err != nil {
 		log.Fatalf("Error initializing database: %v", err)
 	}
