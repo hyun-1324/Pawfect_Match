@@ -452,13 +452,14 @@ func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 		CASE
 			WHEN r.user_id1 = $1 THEN r.user_id2
 			WHEN r.user_id2 = $1 THEN r.user_id1
-		END AS user_id
+		END AS user_id,
+		COALESCE(MAX(m.sent_at), r.created_at) AS last_activity
 	FROM rooms r
 	LEFT JOIN messages m ON r.id = m.room_id
 	WHERE (r.user_id1 = $1 AND r.user1_connected = TRUE)
      OR (r.user_id2 = $1 AND r.user2_connected = TRUE)
 	GROUP BY r.id, r.user_id1, r.user_id2, r.created_at
-	ORDER BY COALESCE(MAX(m.sent_at), r.created_at) DESC;
+	ORDER BY last_activity DESC;
 	`
 
 	rows, err := db.Query(query, userId)
@@ -470,7 +471,7 @@ func GetChatList(db *sql.DB, userId string) ([]models.ChatList, error) {
 	var chatList []models.ChatList
 	for rows.Next() {
 		var msg models.ChatList
-		err := rows.Scan(&msg.RoomId, &msg.UnReadMessage, &msg.UserId)
+		err := rows.Scan(&msg.RoomId, &msg.UnReadMessage, &msg.UserId, &msg.LastActivity)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}

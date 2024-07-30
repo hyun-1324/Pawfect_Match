@@ -33,6 +33,7 @@ type ChatList struct {
 	RoomId        int    `json:"id"`
 	UnReadMessage bool   `json:"unReadMessage"`
 	UserId        string `json:"user_id"`
+	LastActivity  string `json:"last_activity"`
 }
 
 type LeaveRoom struct {
