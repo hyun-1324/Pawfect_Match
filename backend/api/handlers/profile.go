@@ -67,12 +67,10 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if latitude != 0 && longitude != 0 {
-		_, err = app.DB.Exec(`UPDATE locations set option=$1, latitude=$2, longitude=$3 WHERE user_id = $4`, req.PreferredLocation, latitude, longitude, req.Id)
-		if err != nil {
-			utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to update location data for updating profile: %v", err))
-			return
-		}
+	_, err = app.DB.Exec(`UPDATE locations set option=$1, latitude=$2, longitude=$3 WHERE user_id = $4`, req.PreferredLocation, latitude, longitude, req.Id)
+	if err != nil {
+		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to update location data for updating profile: %v", err))
+		return
 	}
 
 	if len(hashedPassword) > 0 {
