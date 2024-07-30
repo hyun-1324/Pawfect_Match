@@ -3,6 +3,7 @@ package models
 type Register struct {
 	Id                int     `json:"userId"`
 	Email             string  `json:"email"`
+	PreviousPassword  string  `json:"previous_password"`
 	Password          string  `json:"password"`
 	ConfirmPassword   string  `json:"confirm_password"`
 	AddPicture        bool    `json:"add_picture"`

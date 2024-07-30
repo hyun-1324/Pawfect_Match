@@ -35,7 +35,19 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 	hashedPassword := []byte{}
 
-	if !(req.Password == "" && req.ConfirmPassword == "") {
+	if !(req.PreviousPassword == "" && req.Password == "" && req.ConfirmPassword == "") {
+		var previousHashedPassword string
+
+		err = app.DB.QueryRow(`SELECT password FROM users WHERE id = $1`, numId).Scan(&previousHashedPassword)
+		if err != nil {
+			utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to get previous password: %v", err))
+			return
+		}
+
+		if err := bcrypt.CompareHashAndPassword([]byte(previousHashedPassword), []byte(req.PreviousPassword)); err != nil {
+			utils.HandleError(w, "previous password is not correct", http.StatusBadRequest, nil)
+			return
+		}
 
 		if req.Password == "" || len([]byte(req.Password)) > 60 {
 			utils.HandleError(w, "invalid password", http.StatusBadRequest, nil)
