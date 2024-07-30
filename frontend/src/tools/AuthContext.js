@@ -13,6 +13,8 @@ export const AuthProvider = ({ children }) => {
   const [friendRequests, setFriendRequests] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState(false);
   const [newConnections, setNewConnections] = useState([]);
+  const [chatList, setChatList] = useState([]);
+
   const [showModal, setShowModal] = useState(false);
   const [userDataForModal, setUserDataForModal] = useState({});
  
@@ -75,6 +77,7 @@ export const AuthProvider = ({ children }) => {
         }
       } else if (lastJsonMessage.event === "get_chat_list") {
         const chatList = lastJsonMessage.data;
+        setChatList(chatList);
         if (!chatList) {
           setUnreadMessages(false);
           return;
@@ -161,6 +164,7 @@ export const AuthProvider = ({ children }) => {
       lastJsonMessage, 
       friendRequests,
       unreadMessages,
+      chatList,
       clearFriendNotification,
       }}>
       {generateModalAlert()}

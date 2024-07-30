@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
 
 const Connections = () => {
-    const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification } = useAuth();
+    const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification, chatList } = useAuth();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState(null);
     const [connectionsList, setConnectionsList] = useState([]); /* []int */
@@ -14,6 +14,7 @@ const Connections = () => {
 
     // Fetch connections
     useEffect(() => {
+        sendJsonMessage({ event: "get_chat_list" });
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
             fetchFromEndpoint("/connections", { signal })
@@ -41,7 +42,7 @@ const Connections = () => {
                 setTriggerFetch(false);
             });
         return () => abortController.abort();
-    }, []);
+    }, [navigate, sendJsonMessage]);
 
 
     useEffect(() => {
@@ -90,7 +91,6 @@ const Connections = () => {
         const signal = abortController.signal; 
         if (connectionsList.length > 0 && !errorMessage) {
             setConnections([]);
-            // Trigger the second fetch here
             Promise.allSettled(connectionsList.map((id) => 
                 fetchFromEndpoint(`/users/${id}`, {signal})
                     .then(({ data, error }) => {
@@ -154,6 +154,10 @@ const Connections = () => {
     const handleRemoveConnection = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
+        // Find room that has the same user_id as the userId
+        const room = chatList.find((room) => room.user_id === userId);
+        const roomId = { room_id: String(room.id) };
+        sendJsonMessage({ event: "leave_room", data: roomId });
         setTriggerFetch(true);
     }, [sendJsonMessage]);
 
