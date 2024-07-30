@@ -58,7 +58,7 @@ const Login = () => {
             }
         };
         checkLoginStatus().then(() => setIsLoading(false));
-    }, []); 
+    }, [logout, navigate]); 
 
     const handleSubmit = async (event) => {
         

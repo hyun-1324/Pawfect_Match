@@ -13,6 +13,8 @@ export const AuthProvider = ({ children }) => {
   const [friendRequests, setFriendRequests] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState(false);
   const [newConnections, setNewConnections] = useState([]);
+  const [chatList, setChatList] = useState([]);
+
   const [showModal, setShowModal] = useState(false);
   const [userDataForModal, setUserDataForModal] = useState({});
  
@@ -25,7 +27,6 @@ export const AuthProvider = ({ children }) => {
     onClose: () => console.log("WebSocket Disconnected"),
     // Will attempt to reconnect on all close events, such as server shutting down
     shouldReconnect: (closeEvent) => true,
-    reconnectAttempts: 10,
   }, 
     loggedIn
   );
@@ -73,12 +74,22 @@ export const AuthProvider = ({ children }) => {
         } else {
           sendJsonMessage({ event: "check_new_connection", data: { id: String(lastJsonMessage.data.id) } });
         }
+      } else if (lastJsonMessage.event === "get_chat_list") {
+        const chatList = lastJsonMessage.data;
+        setChatList(chatList);
+        if (!chatList) {
+          setUnreadMessages(false);
+          return;
+        }
+        // if chatlist has unread messages, set unreadMessages to true
+        const hasUnreadMessages = chatList.some((room) => room.unReadMessage);
+        setUnreadMessages(hasUnreadMessages);
 
       } else if (lastJsonMessage.event === "error") {
         console.log("WS ERROR!" + lastJsonMessage.data);
       }
     }
-  }, [lastJsonMessage]);
+  }, [lastJsonMessage, sendJsonMessage]);
  
   // Show modal when there are new connections
   useEffect(() => {
@@ -152,6 +163,7 @@ export const AuthProvider = ({ children }) => {
       lastJsonMessage, 
       friendRequests,
       unreadMessages,
+      chatList,
       clearFriendNotification,
       }}>
       {generateModalAlert()}

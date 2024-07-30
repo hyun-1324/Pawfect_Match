@@ -29,7 +29,7 @@ const Register = () => {
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+
 
   const navigate = useNavigate();
 
@@ -76,7 +76,6 @@ const Register = () => {
   }, [controller]);
 
   useEffect(() => {
-    setIsLoading(true);
     const checkLoginStatus = async () => {
         const controller = new AbortController();
         setController(controller);
@@ -106,8 +105,8 @@ const Register = () => {
             }
         }
     };
-    checkLoginStatus().then(() => setIsLoading(false));
-}, []); 
+    checkLoginStatus();
+}, [navigate]); 
 
   const handleSubmit = async (event) => {
     event.preventDefault();

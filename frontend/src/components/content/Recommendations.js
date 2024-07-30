@@ -42,25 +42,30 @@ const Recommendations = () => {
             if (locationInfo === "Live") {
                 navigator.geolocation.getCurrentPosition((position) => {
                     const { latitude, longitude } = position.coords;
-                    sendLocation({ latitude, longitude }, { signal }).then((error)=> {
-                        if (error) {
-                            setErrorMessage(error.message);
-                        }
-                    
-                        setLocationUpdated(true);
-                    }).catch((error) => {
-                        if (error.name === "AbortError") {
-                        } else {
-                            setErrorMessage(error.message);
-                        }
-                    });
+                    sendLocation({ latitude, longitude }, { signal })
+                        .then((error)=> {
+                            if (error) {
+                                if (error.status === 401) {
+                                    navigate("/login");
+                                } else {
+                                    setErrorMessage(error.message);
+                                }
+                            }
+                        
+                            setLocationUpdated(true);
+                        }).catch((error) => {
+                            if (error.name === "AbortError") {
+                            } else {
+                                setErrorMessage(error.message);
+                            }
+                        });
                 });
             } else {
                 setLocationUpdated(true);
             }
         }
         return () => abortController.abort(); // Cleanup function to abort fetch on component unmount
-    }, [isPending, bioData, error, locationUpdated]); 
+    }, [isPending, bioData, error, locationUpdated, loggedIn, login, navigate]); 
     
     // Fetch recommendation-id's
     useEffect(() => {
@@ -68,9 +73,14 @@ const Recommendations = () => {
         const signal = abortController.signal; 
         // fetch recommendations
         if (locationUpdated && bioData && !recommendations && !isRecommendationsLoaded) {
-           fetchFromEndpoint("/recommendations", {signal}).then(({ data, error }) => {
+           fetchFromEndpoint("/recommendations", {signal})
+                .then(({ data, error }) => {
                 if (error) {
-                    setErrorMessage(error.message);
+                    if (error.status === 401) {
+                        navigate("/login");
+                    } else {
+                        setErrorMessage(error.message);
+                    }
                 } else {
                     setIsRecommendationsLoaded(true);
                     setRecommendations(data.ids);
@@ -83,21 +93,27 @@ const Recommendations = () => {
             });
         }
         return () => abortController.abort(); 
-    }, [locationUpdated, bioData, isRecommendationsLoaded, recommendations]); 
+    }, [locationUpdated, bioData, isRecommendationsLoaded, recommendations, navigate]); 
 
     // Fetch data for each recommendation id
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
+        const recommendationsMap = new Map();
         if (recommendations && recommendations.length > 0 && isRecommendationsLoaded) { 
+            setRecommendationsList([]);
             // for each id in recommendations, fetch the data
             Promise.allSettled(recommendations.map((id) => 
                 fetchFromEndpoint(`/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
-                            setErrorMessage(error.message);
+                            if (error.status === 401) {
+                                navigate("/login");
+                            } else {
+                                setErrorMessage(error.message);
+                            }
                         } else {
-                            setRecommendationsList((prevList) => [...prevList, data]);
+                            recommendationsMap.set(Number(data.id), data);
                         }
                     })
                     .catch((error) => {
@@ -106,14 +122,18 @@ const Recommendations = () => {
                             setErrorMessage(error.message);
                         }
                     })
-            )).finally(() => {
-                setIsLoading(false);
+                    )).finally(() => {
+                        // Sort the recommendationsList based on the order of recommendations
+                        const sortedRecommendationsList = recommendations.map((id) => recommendationsMap.get(id)).filter(Boolean);
+                        setRecommendationsList(sortedRecommendationsList);
+                        console.log(sortedRecommendationsList);
+                        setIsLoading(false);
             });
         } else if ((!recommendations || recommendations.length === 0) && isRecommendationsLoaded && isLoading) {
             setIsLoading(false);
         }
         return () => abortController.abort(); 
-    }, [recommendations, isRecommendationsLoaded]);
+    }, [recommendations, isRecommendationsLoaded, isLoading, navigate]);
 
     const sendLocation = async ({ latitude, longitude }, {signal}) => {
         const locationResponse = await fetch("/handle_live", {
@@ -195,7 +215,7 @@ return (
         {isLoading && !errorMessage &&
             <div className="card centered">
                 <h3>Updating your recommendations...</h3>
-                <img className="loadingScreenPicture" src={`${process.env.PUBLIC_URL}/images/loadingScreenDog.png`}></img>
+                <img className="loadingScreenPicture" src={`${process.env.PUBLIC_URL}/images/loadingScreenDog.png`} alt="Loading..."></img>
             </div>}
         <div className="twoColumnCard">
             {!isLoading && makeRecommendationCards(recommendationsList)}

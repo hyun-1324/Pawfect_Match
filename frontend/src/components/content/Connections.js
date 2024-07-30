@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
 
 const Connections = () => {
-    const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification } = useAuth();
+    const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification, chatList } = useAuth();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState(null);
     const [connectionsList, setConnectionsList] = useState([]); /* []int */
@@ -14,13 +14,49 @@ const Connections = () => {
 
     // Fetch connections
     useEffect(() => {
+        sendJsonMessage({ event: "get_chat_list" });
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
-        if (triggerFetch || lastJsonMessage?.event === "new_connection" || connectionsList.length === 0) {
             fetchFromEndpoint("/connections", { signal })
             .then(({ data, error }) => {
                 if (error) {
+                    if (error.status === 401) {
+                        navigate("/login");
+                    } else {
+                        setErrorMessage(error.message);
+                    }
+                }
+                if (data.ids) {
+                    setConnectionsList(data.ids);
+                } else {
+                    setConnectionsList([]);
+                }
+            })
+            .catch((error) => {
+                if (error.name === "AbortError") {
+                } else {
                     setErrorMessage(error.message);
+                }
+            })
+            .finally(() => {
+                setTriggerFetch(false);
+            });
+        return () => abortController.abort();
+    }, [navigate, sendJsonMessage]);
+
+
+    useEffect(() => {
+        const abortController = new AbortController(); 
+        const signal = abortController.signal; 
+        if (triggerFetch || lastJsonMessage?.event === "new_connection") {
+            fetchFromEndpoint("/connections", { signal })
+            .then(({ data, error }) => {
+                if (error) {
+                    if (error.status === 401) {
+                        navigate("/login");
+                    } else {
+                        setErrorMessage(error.message);
+                    }
                 }
                 if (data.ids) {
                     setConnectionsList(data.ids);
@@ -40,29 +76,33 @@ const Connections = () => {
         }
     
         return () => abortController.abort();
-    }, [lastJsonMessage, triggerFetch]);
+    }, [lastJsonMessage, triggerFetch, navigate]);
 
     // Connect websocket if not already connected
     useEffect(() => {
         if (!loggedIn) {
             login();
         }
-    }, [loggedIn]);
+    }, [loggedIn, login]);
 
     // Get other information needed for connections
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
+        const connectionsMap = new Map();
         if (connectionsList.length > 0 && !errorMessage) {
             setConnections([]);
-            // Trigger the second fetch here
             Promise.allSettled(connectionsList.map((id) => 
                 fetchFromEndpoint(`/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
-                            setErrorMessage(error.message);
+                            if (error.status === 401) {
+                                navigate("/login");
+                            } else {
+                                setErrorMessage(error.message);
+                            }
                         } else {
-                            setConnections((prevList) => [...prevList, data]);
+                            connectionsMap.set(Number(id), data);
                         }
                     })
                     .catch((error) => {
@@ -71,12 +111,17 @@ const Connections = () => {
                             setErrorMessage(error.message);
                         }
                     })
-                ));
+                )).then(() => {
+                    //Sort connectionsMap by the order of connectionsList
+                    const sortedConnections = connectionsList.map((id) => connectionsMap.get(id)).filter(Boolean);
+                    setConnections(sortedConnections);
+                });
+                   
         } else if (connectionsList.length === 0) {
             setConnections([]);
         }
         return () => abortController.abort(); 
-    }, [connectionsList]);
+    }, [connectionsList, errorMessage, navigate]);
 
     // Get other information needed for requests
     useEffect(() => {
@@ -88,7 +133,11 @@ const Connections = () => {
                 fetchFromEndpoint(`/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
+                            if (error.status === 401) {
+                                navigate("/login");
+                            } else {
                             setErrorMessage(error.message);
+                            }
                         } else {
                             setRequests((prevList) => [...prevList, data]);
                         }
@@ -105,27 +154,31 @@ const Connections = () => {
         }
 
         return () => abortController.abort(); 
-    }, [friendRequests]);
+    }, [friendRequests, errorMessage, navigate]);
 
     // Functions to handle removing connections and accepting/dismissing requests
     const handleRemoveConnection = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
+        // Find room that has the same user_id as the userId
+        const room = chatList.find((room) => room.user_id === userId);
+        const roomId = { room_id: String(room.id) };
+        sendJsonMessage({ event: "leave_room", data: roomId });
         setTriggerFetch(true);
-    }, [sendJsonMessage]);
+    }, [sendJsonMessage, chatList]);
 
     const handleRemoveRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "decline_request", data: dataObject });
         clearFriendNotification(userId);
-    }, [sendJsonMessage]);
+    }, [sendJsonMessage, clearFriendNotification]);
 
     const handleAcceptRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "accept_request", data: dataObject });
         clearFriendNotification(userId);
         
-    }, [sendJsonMessage, clearFriendNotification, requests]);
+    }, [sendJsonMessage, clearFriendNotification]);
 
     // Function to generate connection cards
     const makeConnectionCards = (connections) => {
