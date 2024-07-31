@@ -121,9 +121,5 @@ func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
-	if err != nil {
-		utils.HandleError(w, "failed to update profile", http.StatusInternalServerError, fmt.Errorf("failed to encode response for updating profile: %v", err))
-		return
-	}
+	w.WriteHeader(http.StatusOK)
 }

@@ -113,11 +113,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
-	if err != nil {
-		utils.HandleError(w, "failed to register", http.StatusInternalServerError, fmt.Errorf("failed to encode response for registration: %v", err))
-		return
-	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func validateEmailData(email string) error {

@@ -34,9 +34,5 @@ func (app *App) UpdateLivelocation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
-	if err != nil {
-		utils.HandleError(w, "failed to update live location", http.StatusInternalServerError, fmt.Errorf("failed to encode response for live location: %v", err))
-		return
-	}
+	w.WriteHeader(http.StatusOK)
 }

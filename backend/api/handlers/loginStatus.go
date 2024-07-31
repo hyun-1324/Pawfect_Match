@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"matchMe/internal/middleware"
 	"matchMe/pkg/utils"
@@ -36,10 +35,5 @@ func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
-	if err != nil {
-		utils.HandleError(w, "already logged in", http.StatusBadRequest, fmt.Errorf("failed to encode response when checking login status: %v", err))
-		return
-	}
-
+	w.WriteHeader(http.StatusOK)
 }
