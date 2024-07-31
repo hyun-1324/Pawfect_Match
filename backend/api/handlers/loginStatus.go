@@ -26,13 +26,13 @@ func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if blacklisted {
-		utils.HandleError(w, "", http.StatusOK, nil)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
 	_, _, err = middleware.ValidateJWT(app.DB, cookie.Value)
 	if err != nil {
-		utils.HandleError(w, "", http.StatusOK, nil)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
