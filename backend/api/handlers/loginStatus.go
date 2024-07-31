@@ -35,5 +35,5 @@ func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	utils.HandleError(w, "already logged in", http.StatusBadRequest, nil)
 }
