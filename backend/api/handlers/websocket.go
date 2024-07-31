@@ -67,7 +67,7 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	wg.Wait()
 
-	go app.sendInitialData(client)
+	go app.processInitialData(client)
 
 }
 
@@ -306,7 +306,7 @@ func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
 	}
 }
 
-func (app *App) sendInitialData(client *Client) {
+func (app *App) processInitialData(client *Client) {
 	friendRequests, err := services.GetRequests(app.DB, client.userId)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to fetch friend requests"}`)
@@ -344,6 +344,20 @@ func (app *App) sendInitialData(client *Client) {
 		app.createAndJoinRoom(client, roomId)
 	}
 
+	connectedOnlineUsers, err := app.getConnectedOnlineUsers(client.userId)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to fetch connected online users"}`)
+		log.Printf("error fetching connected online users for user %s: %v\n", client.userId, err)
+	}
+
+	response, err := changeToEvent("connected_online_users", connectedOnlineUsers)
+	if err != nil {
+		client.send <- []byte(`{"event":"error", "data":"unable to fetch connected online users"}`)
+		log.Printf("error marshaling connected online users: %v\n", err)
+	}
+
+	client.send <- response
+
 	app.broadcastStatusChange(client.userId, true)
 }
 
@@ -371,6 +385,26 @@ func (app *App) handleGetStatus(client *Client, userId string) {
 	}
 
 	client.send <- response
+}
+
+func (app *App) getConnectedOnlineUsers(userid string) ([]string, error) {
+	connectedUserList, err := services.GetConnectedUsers(app.DB, userid)
+	if err != nil {
+		return nil, err
+	}
+
+	var connectedOnlineUserList []string
+
+	for _, connectedUser := range connectedUserList {
+		if toClient, ok := app.userStatus.Load(connectedUser); ok {
+			_, ok := toClient.(bool)
+			if ok {
+				connectedOnlineUserList = append(connectedOnlineUserList, connectedUser)
+			}
+		}
+	}
+
+	return connectedOnlineUserList, nil
 }
 
 func (app *App) handleSendRequest(client *Client, toId string) {
