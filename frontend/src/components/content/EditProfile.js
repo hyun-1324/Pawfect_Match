@@ -30,14 +30,10 @@ const EditProfile = () => {
   const [error, setError] = useState(null);
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
- 
+
   const navigate = useNavigate();
 
-  const {
-    data: user,
-    isPending: isPending1,
-    error: error1,
-  } = useFetch("/me");
+  const { data: user, isPending: isPending1, error: error1 } = useFetch("/me");
 
   const {
     data: userProfile,
@@ -171,7 +167,7 @@ const EditProfile = () => {
       formData.append("json", JSON.stringify(form));
 
       let response = await fetch("/handle_profile", {
-        method: "POST",
+        method: "PATCH",
         body: formData,
         signal: controller.signal,
       });
@@ -190,10 +186,11 @@ const EditProfile = () => {
     }
   };
 
-  if (isPending1 || isPending2 || isPending3)
-    return <div>Loading...</div>;
+  if (isPending1 || isPending2 || isPending3) return <div>Loading...</div>;
   if (error1 || error2 || error3)
-    return <div>Error: {error1.message || error2.message || error3.message}</div>;
+    return (
+      <div>Error: {error1.message || error2.message || error3.message}</div>
+    );
 
   return (
     <div className="card padded">
@@ -201,7 +198,10 @@ const EditProfile = () => {
       <form className="twoColumnCard" onSubmit={handleSubmit}>
         <div className="oneColumnCardLeft">
           <h4>Change password</h4>
-          <p>Change password by filling in the current password and new password. If you wish not to change the password, leave these fields empty.</p>
+          <p>
+            Change password by filling in the current password and new password.
+            If you wish not to change the password, leave these fields empty.
+          </p>
           <label htmlFor="currentPassword">Current password: </label>
           <br />
           <input
@@ -274,9 +274,7 @@ const EditProfile = () => {
             placeholder="age in years"
             required
             value={form.age === -1 ? "" : form.age}
-            onChange={(e) =>
-              handleChange(e.target.name, e.target.value)
-            }
+            onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
           <label htmlFor="gender">Gender: *</label>
