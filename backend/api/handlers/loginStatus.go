@@ -19,9 +19,24 @@ func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	blacklisted, err := middleware.CheckBlacklist(app.DB, cookie.Value)
+	if err != nil {
+		utils.HandleError(w, "failed to check login status", http.StatusInternalServerError, fmt.Errorf("failed to check blacklist when checking login status: %v", err))
+		return
+	}
+
+	if blacklisted {
+		utils.HandleError(w, "", http.StatusOK, nil)
+		return
+	}
+
 	_, _, err = middleware.ValidateJWT(app.DB, cookie.Value)
 	if err != nil {
-		utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, fmt.Errorf("failed to validate JWT token when checking login status: %v", err))
+		if err.Error() == "token expired" {
+			utils.HandleError(w, "", http.StatusOK, nil)
+			return
+		}
+		utils.HandleError(w, "failed to check login status", http.StatusInternalServerError, fmt.Errorf("failed to validate JWT token when checking login status: %v", err))
 		return
 	}
 
