@@ -38,7 +38,7 @@ func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 
 	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	if err != nil {
-		utils.HandleError(w, "failed to check login status", http.StatusInternalServerError, fmt.Errorf("failed to encode response when checking login status: %v", err))
+		utils.HandleError(w, "already logged in", http.StatusBadRequest, fmt.Errorf("failed to encode response when checking login status: %v", err))
 		return
 	}
 
