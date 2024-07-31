@@ -236,6 +236,19 @@ func (app *App) unregisterClient(client *Client) {
 	app.broadcastStatusChange(client.userId, false)
 }
 
+func (app *App) unregisterClientFromLogout(userId string) {
+	app.clients.Delete(userId)
+	app.userStatus.Store(userId, false)
+	if client, ok := app.clients.Load(userId); ok {
+		client, ok := client.(*Client)
+		if ok {
+			close(client.send)
+		}
+	}
+
+	app.broadcastStatusChange(userId, false)
+}
+
 func (app *App) broadcastStatusChange(userId string, status bool) {
 	var userStatus = models.UserStatus{
 		Id:     userId,
