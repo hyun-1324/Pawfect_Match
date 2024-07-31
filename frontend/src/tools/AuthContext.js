@@ -14,6 +14,7 @@ export const AuthProvider = ({ children }) => {
   const [unreadMessages, setUnreadMessages] = useState(false);
   const [newConnections, setNewConnections] = useState([]);
   const [chatList, setChatList] = useState([]);
+  const [statuses, setStatuses] = useState([]);
 
   const [showModal, setShowModal] = useState(false);
   const [userDataForModal, setUserDataForModal] = useState({});

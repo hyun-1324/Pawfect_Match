@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../../tools/getCroppedImg";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from '../../tools/AuthContext';
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -30,7 +31,7 @@ const Register = () => {
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
 
-
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (name, value) => {
@@ -76,25 +77,34 @@ const Register = () => {
   }, [controller]);
 
   useEffect(() => {
+    if (logout && navigate) {
     const checkLoginStatus = async () => {
         const controller = new AbortController();
         setController(controller);
         try {
-            const response = await fetch('/login_status');
+            const response = await fetch('/login_status',{ signal: controller.signal });
             if (!response.ok) {
-                navigate('/'); // Adjust the path as needed
+                if (response.status === 400) {
+                    navigate('/'); 
+                } else if (response.status === 500) {
+                    setError('Server error, please try again later.');
+                }
+            } else {
+                logout();
             }
         } catch (error) {
             if (error.name === 'AbortError') {
                 // The request was aborted
             } else {
-                // Handle internal server errors
                 setError(error.message);
             }
+        } finally {
+            setController(null);
         }
     };
     checkLoginStatus();
-}, [navigate]); 
+  }
+}, [navigate, logout]); 
 
   const handleSubmit = async (event) => {
     event.preventDefault();

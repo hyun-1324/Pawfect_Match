@@ -137,7 +137,7 @@ const Recommendations = () => {
 
     const sendLocation = async ({ latitude, longitude }, {signal}) => {
         const locationResponse = await fetch("/handle_live", {
-            method: "POST",
+            method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ latitude, longitude }),
             signal: signal
