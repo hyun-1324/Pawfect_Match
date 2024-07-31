@@ -186,7 +186,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 func AddTokenToBlacklist(db *sql.DB, token string) error {
 	blacklisted, err := CheckBlacklist(db, token)
 	if err != nil {
-		return fmt.Errorf("failed to check blacklist when checking login status: %v", err)
+		return fmt.Errorf("failed to check blacklist: %v", err)
 	}
 
 	if blacklisted {
