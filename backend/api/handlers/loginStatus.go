@@ -32,11 +32,7 @@ func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 
 	_, _, err = middleware.ValidateJWT(app.DB, cookie.Value)
 	if err != nil {
-		if err.Error() == "token expired" {
-			utils.HandleError(w, "", http.StatusOK, nil)
-			return
-		}
-		utils.HandleError(w, "failed to check login status", http.StatusInternalServerError, fmt.Errorf("failed to validate JWT token when checking login status: %v", err))
+		utils.HandleError(w, "", http.StatusOK, nil)
 		return
 	}
 
