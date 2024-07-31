@@ -25,27 +25,36 @@ const Login = () => {
     }, [controller]);
 
     useEffect(() => {
-        setIsLoading(true);
-        const checkLoginStatus = async () => {
-            const controller = new AbortController();
-            setController(controller);
-            try {
-                const response = await fetch('/login_status');
-                if (!response.ok) {
-                    navigate('/'); 
-                } else {
-                    logout();
+        if (logout && navigate) {
+            setIsLoading(true);
+            const checkLoginStatus = async () => {
+                const controller = new AbortController();
+                setController(controller);
+                try {
+                    const response = await fetch('/login_status',{ signal: controller.signal });
+                    if (!response.ok) {
+                        if (response.status === 400) {
+                            navigate('/'); 
+                        } else if (response.status === 500) {
+                            setError('Server error, please try again later.');
+                        }
+                    } else {
+                        logout();
+                    }
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        // The request was aborted
+                        console.log('Fetch aborted');
+                    } else {
+                        setError(error.message);
+                    }
+                } finally {
+                    setIsLoading(false);
+                    setController(null);
                 }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    // The request was aborted
-                    console.log('Fetch aborted');
-                } else {
-                    setError(error.message);
-                }
-            }
-        };
-        checkLoginStatus().then(() => setIsLoading(false));
+            };
+            checkLoginStatus();
+        }
     }, [logout, navigate]); 
 
     const handleSubmit = async (event) => {
