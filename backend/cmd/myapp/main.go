@@ -50,7 +50,7 @@ func main() {
 	http.Handle("GET /recommendations", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetRecommendations)))
 	http.Handle("GET /connections", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetConnections)))
 	http.Handle("POST /handle_live", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateLivelocation)))
-	http.Handle("POST /handle_profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
+	http.Handle("PATCH /handle_profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UpdateProfile)))
 	http.Handle("GET /handle_logout", middleware.AuthMiddleware(database, http.HandlerFunc(app.Logout)))
 	http.Handle("GET /login_status", http.HandlerFunc(app.CheckLoginStatus))
 	http.Handle("POST /handle_login", http.HandlerFunc(app.Login))
