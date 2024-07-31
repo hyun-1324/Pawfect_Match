@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"matchMe/internal/middleware"
 	"matchMe/pkg/utils"
@@ -35,9 +34,5 @@ func (app *App) Logout(w http.ResponseWriter, r *http.Request) {
 		Path:   "/",
 	})
 
-	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
-	if err != nil {
-		utils.HandleError(w, "failed to logout", http.StatusInternalServerError, fmt.Errorf("failed to encode response when logging out: %v", err))
-		return
-	}
+	w.WriteHeader(http.StatusOK)
 }

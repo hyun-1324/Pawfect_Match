@@ -71,9 +71,5 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	err = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
-	if err != nil {
-		utils.HandleError(w, "failed to login", http.StatusInternalServerError, fmt.Errorf("failed to encode response for login: %v", err))
-		return
-	}
+	w.WriteHeader(http.StatusOK)
 }

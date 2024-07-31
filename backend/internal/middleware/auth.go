@@ -91,16 +91,20 @@ func getSecretKey() string {
 	return secretKey
 }
 
-func ValidateJWT(db *sql.DB, token string) (string, int64, error) {
+func CheckBlacklist(db *sql.DB, token string) (bool, error) {
 	var exists bool
 	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM jwt_blacklist WHERE token = $1)", token).Scan(&exists)
 	if err != nil {
-		return "", 0, fmt.Errorf("failed to read data: %v", err)
+		return false, fmt.Errorf("failed to read data: %v", err)
 	}
 	if exists {
-		return "", 0, fmt.Errorf("token is blacklisted")
+		return true, nil
+	} else {
+		return false, nil
 	}
+}
 
+func ValidateJWT(db *sql.DB, token string) (string, int64, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return "", 0, fmt.Errorf("invalid token")
@@ -148,7 +152,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 		cookie, err := r.Cookie("jwt_token")
 		if err != nil {
 			if err == http.ErrNoCookie {
-				utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, err)
+				utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, nil)
 				return
 			}
 			utils.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
@@ -156,6 +160,17 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 		}
 
 		token := cookie.Value
+
+		blacklisted, err := CheckBlacklist(db, cookie.Value)
+		if err != nil {
+			utils.HandleError(w, "failed to check login status", http.StatusInternalServerError, fmt.Errorf("failed to check blacklist when checking login status: %v", err))
+			return
+		}
+
+		if blacklisted {
+			utils.HandleError(w, "", http.StatusOK, nil)
+			return
+		}
 
 		userId, _, err := ValidateJWT(db, token)
 		if err != nil {
@@ -169,6 +184,15 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 }
 
 func AddTokenToBlacklist(db *sql.DB, token string) error {
+	blacklisted, err := CheckBlacklist(db, token)
+	if err != nil {
+		return fmt.Errorf("failed to check blacklist: %v", err)
+	}
+
+	if blacklisted {
+		return fmt.Errorf("token is already added to the blacklist: %v", err)
+	}
+
 	_, expirationTime, err := ValidateJWT(db, token)
 	if err != nil {
 		return err
