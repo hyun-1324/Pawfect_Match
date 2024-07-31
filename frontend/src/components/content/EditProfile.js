@@ -6,6 +6,7 @@ import getCroppedImg from "../../tools/getCroppedImg";
 
 const EditProfile = () => {
   const [form, setForm] = useState({
+    previous_password: "",
     password: "",
     confirm_password: "",
     add_picture: false,
@@ -36,19 +37,19 @@ const EditProfile = () => {
     data: user,
     isPending: isPending1,
     error: error1,
-  } = useFetch("http://localhost:3000/me");
+  } = useFetch("/me");
 
   const {
     data: userProfile,
     isPending: isPending2,
     error: error2,
-  } = useFetch("http://localhost:3000/me/profile");
+  } = useFetch("/me/profile");
 
   const {
     data: userBio,
     isPending: isPending3,
     error: error3,
-  } = useFetch("http://localhost:3000/me/bio");
+  } = useFetch("/me/bio");
 
   useEffect(() => {
     if (user && userProfile && userBio) {
@@ -119,11 +120,16 @@ const EditProfile = () => {
     try {
       const formData = new FormData();
       try {
-        if (form.password || form.confirm_password) {
+        if (form.password || form.confirm_password || form.previous_password) {
+          if (!form.previous_password) {
+            throw new Error("Current password is required!");
+          }
+          if (!form.password.trim() || !form.confirm_password.trim()) {
+            throw new Error("New password is required!");
+          }
           if (form.password !== form.confirm_password) {
             throw new Error("Passwords do not match!");
           }
-          formData.append("password", form.password);
         }
         if (imageSrc) {
           const croppedImageBlob = await getCroppedImg(
@@ -164,7 +170,7 @@ const EditProfile = () => {
 
       formData.append("json", JSON.stringify(form));
 
-      let response = await fetch("http://localhost:3000/handle_profile", {
+      let response = await fetch("/handle_profile", {
         method: "POST",
         body: formData,
         signal: controller.signal,
@@ -187,15 +193,26 @@ const EditProfile = () => {
   if (isPending1 || isPending2 || isPending3)
     return <div>Loading...</div>;
   if (error1 || error2 || error3)
-    return <div>Error: {error1 || error2 || error3}</div>;
+    return <div>Error: {error1.message || error2.message || error3.message}</div>;
 
   return (
     <div className="card padded">
       <h2>Edit Your Profile</h2>
       <form className="twoColumnCard" onSubmit={handleSubmit}>
         <div className="oneColumnCardLeft">
-          <h4>Owner info</h4>
-          <label htmlFor="password">Password: *</label>
+          <h4>Change password</h4>
+          <p>Change password by filling in the current password and new password. If you wish not to change the password, leave these fields empty.</p>
+          <label htmlFor="currentPassword">Current password: </label>
+          <br />
+          <input
+            type="password"
+            id="currentPassword"
+            name="previous_password"
+            maxLength={60}
+            value={form.previous_password}
+            onChange={(e) => handleChange(e.target.name, e.target.value)}
+          />
+          <label htmlFor="password">New password: </label>
           <br />
           <input
             type="password"
@@ -206,7 +223,7 @@ const EditProfile = () => {
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
-          <label htmlFor="confirmPassword">Repeat password: *</label>
+          <label htmlFor="confirmPassword">Repeat new password: </label>
           <br />
           <input
             type="password"
@@ -217,6 +234,7 @@ const EditProfile = () => {
             onChange={(e) => handleChange(e.target.name, e.target.value)}
           />
           <br />
+          <h4>Owner info</h4>
           <label htmlFor="prefLocation">My location: *</label>
           <br />
           <select

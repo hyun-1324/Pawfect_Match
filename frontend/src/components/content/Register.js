@@ -81,27 +81,15 @@ const Register = () => {
         setController(controller);
         try {
             const response = await fetch('/login_status');
-            if (response.ok) {
+            if (!response.ok) {
                 navigate('/'); // Adjust the path as needed
-            } else {
-                const errorResponse = await response.json();
-                const error = new Error();
-                error.status = response.status; // Include the status code
-                error.message = errorResponse.Message || "Unknown error"; // Include the error message; 
-                throw error;
             }
         } catch (error) {
             if (error.name === 'AbortError') {
                 // The request was aborted
-            } else if (error.status === 401) {
-                // User is not logged in, continue
-                return;
-            } else if (error.status !== 401 && error.message) {
+            } else {
                 // Handle internal server errors
                 setError(error.message);
-            } else {
-                // This is likely a network error
-                setError('Network error, please try again.');
             }
         }
     };

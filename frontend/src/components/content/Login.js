@@ -31,29 +31,17 @@ const Login = () => {
             setController(controller);
             try {
                 const response = await fetch('/login_status');
-                if (response.ok) {
+                if (!response.ok) {
                     navigate('/'); 
                 } else {
                     logout();
-                    const errorResponse = await response.json();
-                    const error = new Error();
-                    error.status = response.status; // Include the status code
-                    error.message = errorResponse.Message || "Unknown error"; // Include the error message; 
-                    throw error;
                 }
             } catch (error) {
                 if (error.name === 'AbortError') {
                     // The request was aborted
                     console.log('Fetch aborted');
-                } else if (error.status === 401) {
-                    // User is not logged in, continue
-                    return;
-                } else if (error.status !== 401 && error.message) {
-                    // Handle internal server errors
-                    setError(error.message);
                 } else {
-                    // This is likely a network error
-                    setError('Network error, please try again.');
+                    setError(error.message);
                 }
             }
         };
@@ -70,7 +58,7 @@ const Login = () => {
         setController(controller);
     
         try {
-            const response = await fetch('http://localhost:3000/handle_login', {
+            const response = await fetch('/handle_login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ email, password }),
