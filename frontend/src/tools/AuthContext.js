@@ -86,6 +86,13 @@ export const AuthProvider = ({ children }) => {
         const hasUnreadMessages = chatList.some((room) => room.unReadMessage);
         setUnreadMessages(hasUnreadMessages);
 
+      } else if (lastJsonMessage.event === "user_status") {
+        const newStatus = lastJsonMessage.data;
+        setStatuses((prev) => {
+          const updated = prev.filter((status) => status.user_id !== newStatus.user_id);
+          console.log("Updated statuses: ", [...updated, newStatus]);
+          return [...updated, newStatus];
+        });
       } else if (lastJsonMessage.event === "error") {
         console.log("WS ERROR!" + lastJsonMessage.data);
       }
@@ -152,7 +159,6 @@ export const AuthProvider = ({ children }) => {
   const clearFriendNotification = (idToRemove) => {
     idToRemove = Number(idToRemove);
     setFriendRequests((prevList) => prevList.filter((id) => id !== idToRemove));
-    console.log("Friend request notification cleared for id: ", idToRemove)
   };
 
   return (
@@ -165,6 +171,7 @@ export const AuthProvider = ({ children }) => {
       friendRequests,
       unreadMessages,
       chatList,
+      statuses,
       clearFriendNotification,
       }}>
       {generateModalAlert()}

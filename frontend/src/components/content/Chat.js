@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../../tools/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
+import OnlineMark from "../../tools/OnlineMark";
 
 const Chat = () => {
-    const { loggedIn, login, sendJsonMessage, lastJsonMessage } = useAuth();
+    const { loggedIn, statuses, login, sendJsonMessage, lastJsonMessage } = useAuth();
     const [roomInfo, setRoomInfo] = useState(null); // {id, user_id, unReadMessage}
     const [userInfo, setUserInfo] = useState(null); // {id, dog_name, picture}
     const [chatMessages, setChatMessages] = useState([]); // {can_get_message, id, message, room_id, from_id, to_id, sent_at}
@@ -228,7 +229,10 @@ const Chat = () => {
                         } 
                         alt="dog" />
                     <div className="userInfo">
-                        <p className="bold">{userInfo.dog_name}</p>
+                        <div className="nameAndOnlineMark">
+                            <p className="bold">{userInfo.dog_name}</p> 
+                            <div className="onlineMarkChat">{OnlineMark(userId, statuses)}</div>
+                        </div>
                         {typing && <p> writing...</p>}
                     </div>
                 </div>

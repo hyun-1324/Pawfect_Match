@@ -44,7 +44,6 @@ const Login = () => {
                 } catch (error) {
                     if (error.name === 'AbortError') {
                         // The request was aborted
-                        console.log('Fetch aborted');
                     } else {
                         setError(error.message);
                     }

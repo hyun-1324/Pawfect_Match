@@ -501,6 +501,45 @@ h3 {
   border: var(--content-font-color) solid 1px;
 }
 
+.nameAndOnlineMark {
+  display: flex;
+  align-items: center;
+}
+
+.onlineMark {
+  position: absolute;
+  border-radius: 50%;
+  top: 5px;
+  right: 5px;
+  width: 15px;
+  height: 15px;
+  border: var(--content-font-color) solid 2px;
+}
+
+.onlineMarkChat {
+  width: 20px;
+  height: 20px;
+  margin-left: 0.5rem;
+  display:flex;
+  justify-content: center;
+  align-items: center;
+  .onlineMark {
+    position: static;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    border: var(--content-font-color) solid 2px;
+  }
+}
+
+.online {
+  background-color: rgb(43, 199, 43);
+}
+
+.offline {
+  background-color: rgb(181, 180, 180);
+}
+
 /* Button styling */
 
 button {
