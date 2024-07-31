@@ -148,7 +148,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 		cookie, err := r.Cookie("jwt_token")
 		if err != nil {
 			if err == http.ErrNoCookie {
-				utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, err)
+				utils.HandleError(w, "unauthorized access", http.StatusUnauthorized, nil)
 				return
 			}
 			utils.HandleError(w, "failed to authenticate the user", http.StatusInternalServerError, err)
