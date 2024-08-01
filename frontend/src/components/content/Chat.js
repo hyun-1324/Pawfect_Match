@@ -21,6 +21,10 @@ const Chat = () => {
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
     const scrollHeightRef = useRef(0);
+    const wasAtBottomRef = useRef(false);
+
+    const newMessageRef = useRef(false);
+    const loadMoreMessagesRef = useRef(false);
 
     const Navigate = useNavigate();
     // get userId from url parameter
@@ -82,6 +86,7 @@ const Chat = () => {
     // Save chat messages to state
     useEffect(() => {
         if (lastJsonMessage?.event === "get_messages") {
+            loadMoreMessagesRef.current = true;
             const messages = lastJsonMessage.data;
             if (!messages) {
                 return;
@@ -100,6 +105,7 @@ const Chat = () => {
     
     useEffect(() => {
         if (lastJsonMessage?.event === "new_message" && messagesFetched) {
+            newMessageRef.current = true;
             // save new chat message to state
             const messageData = lastJsonMessage.data;
             setChatMessages((prev) => [...prev, messageData]);
@@ -134,29 +140,32 @@ const Chat = () => {
 
     const handleScroll = useCallback(() => {
         scrollHeightRef.current = messagesContainerRef.current.scrollHeight;
-        const scrollTop = messagesContainerRef.current.scrollTop;
-        console.log('scrollHeight: ', scrollHeightRef.current);
-        console.log('scrollTop: ', scrollTop);
         if (messagesContainerRef.current.scrollTop === 0) {
             console.log('Loading more messages');
             loadMoreMessages();
         }
+        wasAtBottomRef.current = messagesContainerRef.current.scrollTop + messagesContainerRef.current.clientHeight >= messagesContainerRef.current.scrollHeight - 100;
+
     }, [loadMoreMessages]);
 
     useEffect(() => {
-        console.log('Initial load: ', initialLoad);
-        console.log('Last message: ', lastJsonMessage);
-        console.log('Chat messages: ', chatMessages);
-        console.log(' ');
         if (initialLoad && chatMessages.length <= 10 && chatMessages.length > 0) {
             scrollToBottom();
             setInitialLoad(false);
-        } else if (!initialLoad) {
-            
-            console.log('Restoring scroll position');
+        } else if (!initialLoad && newMessageRef.current) {
+            // New message received, scroll to bottom if user was at the bottom of the chat window
+            if (wasAtBottomRef.current) {
+                scrollToBottom();
+                console.log('New message received: Scrolling to bottom');
+            } else {
+                console.log('New message received: Not scrolling to bottom');
+            }
+            newMessageRef.current = false;
+        } else if (!initialLoad && loadMoreMessagesRef.current) {
             // Restore scroll position after loading more messages
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight - scrollHeightRef.current;
-            
+            console.log('More messages loaded: Restoring scroll position');
+            loadMoreMessagesRef.current = false;
         }
     }, [initialLoad, chatMessages]);
 
@@ -170,7 +179,10 @@ const Chat = () => {
     
     // Scroll to bottom of chat window 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesContainerRef.current.scrollTo({
+            top: messagesContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+        });
     };
 
 
