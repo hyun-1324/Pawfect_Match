@@ -380,7 +380,12 @@ func (app *App) handleGetStatus(client *Client, userId string) {
 		status = false
 	}
 
-	response, err := changeToEvent("user_status", status)
+	var userStatus = models.UserStatus{
+		Id:     userId,
+		Status: status.(bool),
+	}
+
+	response, err := changeToEvent("user_status", userStatus)
 	if err != nil {
 		client.send <- []byte(`{"event":"error", "data":"unable to get user status"}`)
 		return
