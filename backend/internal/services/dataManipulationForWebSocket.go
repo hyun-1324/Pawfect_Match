@@ -432,7 +432,7 @@ func SaveMessage(db *sql.DB, messageInfo *models.Message) (int, error) {
 	}
 
 	var messageId int
-	err = db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, sent_at, to_id_connected) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id", messageInfo.RoomId, messageInfo.FromId, messageInfo.ToId, messageInfo.Message, messageInfo.SentAt, messageInfo.CanGetMessages).Scan(&messageId)
+	err = db.QueryRow("INSERT INTO messages (room_id, from_id, to_id, message, to_id_connected) VALUES ($1, $2, $3, $4, $5) RETURNING id", messageInfo.RoomId, messageInfo.FromId, messageInfo.ToId, messageInfo.Message, messageInfo.CanGetMessages).Scan(&messageId)
 	if err != nil {
 		return 0, fmt.Errorf("failed to save message: %v", err)
 	}
