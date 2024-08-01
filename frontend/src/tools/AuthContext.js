@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   // Save incoming websocket messages to state
   useEffect(() => {
     if (lastJsonMessage) {
-      //console.log("Coming from server: ", lastJsonMessage);
+      console.log("Coming from server: ", lastJsonMessage);
       // Save fried requests to state
       if (lastJsonMessage.event === "friend_requests") {
         if (lastJsonMessage && lastJsonMessage.data.ids !== null) {
@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
           sendJsonMessage({ event: "check_new_connection", data: { id: String(lastJsonMessage.data.id) } });
         }
         // Get the online status of the new connection
-        sendJsonMessage({ event: "get_status", data: { id: lastJsonMessage.data.id } });
+        sendJsonMessage({ event: "get_status", data: { id: String(lastJsonMessage.data.id) } });
 
       // Save chat list to state
       } else if (lastJsonMessage.event === "get_chat_list") {
@@ -107,7 +107,6 @@ export const AuthProvider = ({ children }) => {
         const newStatus = lastJsonMessage.data;
         setStatuses((prev) => {
           const updated = prev.filter((status) => status.user_id !== newStatus.user_id);
-          console.log("Updated statuses: ", [...updated, newStatus]);
           return [...updated, newStatus];
         });
         // Log error messages
