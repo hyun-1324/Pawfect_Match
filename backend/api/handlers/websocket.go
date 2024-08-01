@@ -399,9 +399,11 @@ func (app *App) getConnectedOnlineUsers(userid string) ([]string, error) {
 
 	for _, connectedUser := range connectedUserList {
 		if toClient, ok := app.userStatus.Load(connectedUser); ok {
-			_, ok := toClient.(bool)
+			toClient, ok := toClient.(bool)
 			if ok {
-				connectedOnlineUserList = append(connectedOnlineUserList, connectedUser)
+				if toClient {
+					connectedOnlineUserList = append(connectedOnlineUserList, connectedUser)
+				}
 			}
 		}
 	}
