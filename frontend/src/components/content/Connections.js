@@ -1,6 +1,6 @@
 import { useAuth } from "../../tools/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback} from "react";
 import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
 import OnlineMark from "../../tools/OnlineMark";
 
@@ -13,78 +13,48 @@ const Connections = () => {
     const [requests, setRequests] = useState([]);
     const [triggerFetch, setTriggerFetch] = useState(false);
 
-    // Fetch connections
-    useEffect(() => {
-        sendJsonMessage({ event: "get_chat_list" });
-        const abortController = new AbortController(); 
-        const signal = abortController.signal; 
-            fetchFromEndpoint("/connections", { signal })
-            .then(({ data, error }) => {
-                if (error) {
-                    if (error.status === 401) {
-                        navigate("/login");
-                    } else {
-                        setErrorMessage(error.message);
-                    }
-                }
-                if (data.ids) {
-                    setConnectionsList(data.ids);
-                } else {
-                    setConnectionsList([]);
-                }
-            })
-            .catch((error) => {
-                if (error.name === "AbortError") {
-                } else {
-                    setErrorMessage(error.message);
-                }
-            })
-            .finally(() => {
-                setTriggerFetch(false);
-            });
-        return () => abortController.abort();
-    }, [navigate, sendJsonMessage]);
-
-
-    useEffect(() => {
-        const abortController = new AbortController(); 
-        const signal = abortController.signal; 
-        if (triggerFetch || lastJsonMessage?.event === "new_connection") {
-            fetchFromEndpoint("/connections", { signal })
-            .then(({ data, error }) => {
-                if (error) {
-                    if (error.status === 401) {
-                        navigate("/login");
-                    } else {
-                        setErrorMessage(error.message);
-                    }
-                }
-                if (data.ids) {
-                    setConnectionsList(data.ids);
-                } else {
-                    setConnectionsList([]);
-                }
-            })
-            .catch((error) => {
-                if (error.name === "AbortError") {
-                } else {
-                    setErrorMessage(error.message);
-                }
-            })
-            .finally(() => {
-                setTriggerFetch(false);
-            });
-        }
-    
-        return () => abortController.abort();
-    }, [lastJsonMessage, triggerFetch, navigate]);
-
     // Connect websocket if not already connected
     useEffect(() => {
         if (!loggedIn) {
             login();
         }
     }, [loggedIn, login]);
+
+    // Fetch connections
+    useEffect(() => {
+        const abortController = new AbortController(); 
+        const signal = abortController.signal; 
+            fetchFromEndpoint("/connections", { signal })
+            .then(({ data, error }) => {
+                if (error) {
+                    if (error.status === 401) {
+                        navigate("/login");
+                    } else {
+                        setErrorMessage(error.message);
+                    }
+                }
+                if (data.ids) {
+                    setConnectionsList(data.ids);
+                } else {
+                    setConnectionsList([]);
+                }
+            })
+            .catch((error) => {
+                if (error.name === "AbortError") {
+                } else {
+                    setErrorMessage(error.message);
+                }
+            })
+
+        return () => abortController.abort();
+    }, [navigate, triggerFetch]);
+
+
+    useEffect(() => {
+        if (lastJsonMessage?.event === "new_connection") {
+            setTriggerFetch(prev => !prev);
+        }
+    }, [lastJsonMessage]);
 
     // Get other information needed for connections
     useEffect(() => {
@@ -165,7 +135,7 @@ const Connections = () => {
         const room = chatList.find((room) => room.user_id === userId);
         const roomId = { room_id: String(room.id) };
         sendJsonMessage({ event: "leave_room", data: roomId });
-        setTriggerFetch(true);
+        setTriggerFetch(prev => !prev);
     }, [sendJsonMessage, chatList]);
 
     const handleRemoveRequest = useCallback((userId) => {
@@ -180,7 +150,6 @@ const Connections = () => {
         clearFriendNotification(userId);
         
     }, [sendJsonMessage, clearFriendNotification]);
-
 
     // Function to generate connection cards
     const makeConnectionCards = (connections, OnlineMark) => {
