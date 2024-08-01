@@ -19,10 +19,6 @@ func (app *App) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userId := middleware.GetUserId(r)
-
-	app.unregisterClientFromLogout(userId)
-
 	// Add the JWT token to the blacklist
 	err = middleware.AddTokenToBlacklist(app.DB, cookie.Value)
 	if err != nil {
