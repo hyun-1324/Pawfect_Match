@@ -11,8 +11,8 @@ import EditProfile from "./components/content/EditProfile";
 import ChatList from "./components/content/ChatList";
 import Chat from "./components/content/Chat";
 import Connections from "./components/content/Connections";
-import { AuthProvider } from './tools/AuthContext';
-
+import ProfileForConnections from "./components/content/ProfileForConnections";
+import { AuthProvider } from "./tools/AuthContext";
 
 function App() {
   return (
@@ -27,6 +27,10 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
               <Route path="/profile/:id" element={<Profile />} />
+              <Route
+                path="/profileforconnections/:id"
+                element={<ProfileForConnections />}
+              />
               <Route path="/myprofile" element={<MyProfile />} />
               <Route path="/edit/profile" element={<EditProfile />} />
               <Route exact path="/chat" element={<ChatList />} />
