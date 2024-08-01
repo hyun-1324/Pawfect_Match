@@ -5,7 +5,7 @@ import { useAuth } from '../../tools/AuthContext';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const { logout, friendRequests, unreadMessages } = useAuth(); 
+    const { logout, friendRequests, unreadMessages, sendJsonMessage } = useAuth(); 
     const [newFriendRequests, setNewFriendRequests] = useState(false);
     const [newMessages, setNewMessages] = useState(false);
     useEffect(() => {
@@ -68,7 +68,7 @@ const Navbar = () => {
                 <Link to="/myprofile"><img className="button navButton" src={`${process.env.PUBLIC_URL}/images/profile.png`} alt="Profile"></img><span className="navText">Profile</span></Link>
             </div>
             <div className="navLinkLogout">
-                <img onClick={() => handleLogout(navigate, { logout })} className="button navButton logoutNav" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
+                <img onClick={() => handleLogout(navigate, logout, sendJsonMessage)} className="button navButton logoutNav" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
                 <span className= "navText">Logout</span>
             </div>
         

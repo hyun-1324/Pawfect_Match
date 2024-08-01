@@ -11,10 +11,14 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [controller, setController] = useState(null); 
     
-    const { login, logout } = useAuth(); 
+    const { login, logout, readyState } = useAuth(); 
     
     const navigate = useNavigate();
-    // Redirect to recommendations page if user is already logged in
+    
+
+    useEffect(() => {
+        console.log(readyState);
+    }, [readyState]);
 
     useEffect(() => {
         return () => {
@@ -24,6 +28,7 @@ const Login = () => {
         };
     }, [controller]);
 
+    // Redirect to recommendations page if user is already logged in
     useEffect(() => {
         if (logout && navigate) {
             setIsLoading(true);
@@ -44,7 +49,6 @@ const Login = () => {
                 } catch (error) {
                     if (error.name === 'AbortError') {
                         // The request was aborted
-                        console.log('Fetch aborted');
                     } else {
                         setError(error.message);
                     }
@@ -91,7 +95,6 @@ const Login = () => {
             setIsPending(false);
             if (err.name === 'AbortError') {
                 // The request was aborted
-                console.log('Fetch aborted');
             } else if (err.response && err.response.Message) {
                 // This is an HTTP error that was thrown manually in the try block
                 setError(err.response.Message);

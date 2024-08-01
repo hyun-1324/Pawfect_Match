@@ -2,9 +2,10 @@ import { useAuth } from "../../tools/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
+import OnlineMark from "../../tools/OnlineMark";
 
 const Connections = () => {
-    const { loggedIn, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification, chatList } = useAuth();
+    const { loggedIn, statuses, friendRequests, sendJsonMessage, lastJsonMessage, login, clearFriendNotification, chatList } = useAuth();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState(null);
     const [connectionsList, setConnectionsList] = useState([]); /* []int */
@@ -180,8 +181,9 @@ const Connections = () => {
         
     }, [sendJsonMessage, clearFriendNotification]);
 
+
     // Function to generate connection cards
-    const makeConnectionCards = (connections) => {
+    const makeConnectionCards = (connections, OnlineMark) => {
         if (!connections || connections.length === 0) {
             return (
                 <div className="card centered">
@@ -192,23 +194,21 @@ const Connections = () => {
 
         return connections.map((dogData) => (
             <div key={dogData.id} className="card userCard">
-                <img className="cardPicture" 
-                    src={
-                        dogData.picture
-                        ? dogData.picture
-                        : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
-                    } 
-                    alt="dog" 
-                    onClick={() => navigate(`/profile/${dogData.id}`)} />
+                <div className="notificationImageContainer">
+                    <img className="cardPicture" 
+                        src={
+                            dogData.picture
+                            ? dogData.picture
+                            : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
+                        } 
+                        alt="dog" 
+                        onClick={() => navigate(`/profile/${dogData.id}`)} />
+                    {OnlineMark(dogData.id, statuses)}
+                </div>
                 <div className="nameAndButtons">
                     <p>{dogData.dog_name}</p>
+                        
                     <div className="buttonContainer">
-                        <button className="button userCardButton" 
-                            onClick={() => navigate(`/chat/${dogData.id}`)}>
-                            <img 
-                                src={`${process.env.PUBLIC_URL}/images/chat.png`} 
-                                alt="Open chat with this connection" />
-                        </button>
                         <button className="button userCardButton" 
                             onClick={() => handleRemoveConnection(dogData.id)}>
                             <img 
@@ -271,7 +271,7 @@ const Connections = () => {
         </div>
         <h3>My connections:</h3>
         <div className="twoColumnCard">
-            {makeConnectionCards(connections)}
+            {makeConnectionCards(connections, OnlineMark)}
         </div>
         
     </div>

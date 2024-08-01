@@ -4,7 +4,7 @@ import { useAuth } from '../../tools/AuthContext';
 
 const Logobar = () => {
     const navigate = useNavigate();
-    const { logout } = useAuth(); 
+    const { logout, sendJsonMessage } = useAuth(); 
 
 
     // If path is login or register, show only logo
@@ -19,7 +19,7 @@ const Logobar = () => {
     return (
         <div className="logobar">
             <img className="logo" src={`${process.env.PUBLIC_URL}/images/logo.png`} alt="logo" />
-            <img onClick={() => handleLogout(navigate, { logout })} className="button logoutLogo" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
+            <img onClick={() => handleLogout(navigate,  logout , sendJsonMessage)} className="button logoutLogo" src={`${process.env.PUBLIC_URL}/images/logout.png`} alt="logout" />
         </div>
     );
     }

@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../tools/AuthContext";
 import { useNavigate } from "react-router-dom";
 import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
+import OnlineMark from "../../tools/OnlineMark";
 
 const ChatList = () => {
     const [ chatList, setChatList ] = useState([]); // []{id, user_id, unReadMessage}
     const [ errorMessage, setErrorMessage ] = useState(null);
     const [ roomInfo, setRoomInfo ] = useState(null); // {id, user_id, unReadMessage, picture, dog_name}
 
-    const { loggedIn, login, sendJsonMessage, lastJsonMessage } = useAuth();
+    const { loggedIn, statuses, login, sendJsonMessage, lastJsonMessage } = useAuth();
     const Navigate = useNavigate();
 
     // ask for chat list from server
@@ -86,10 +87,14 @@ const ChatList = () => {
         if (roomInfo && chatList.length > 0) {
             return roomInfo.map((room) => (
                 <div key={room.id} className="card userCard">
-                    <img src={room.picture ? room.picture : `${process.env.PUBLIC_URL}/images/defaultProfile.png`} 
-                        className="cardPicture"
-                        alt="Profile picture, click to see profile" 
-                        onClick={() => Navigate(`/profile/${room.user_id}`)} /> 
+                    <div className="notificationImageContainer">
+                        <img src={room.picture ? room.picture : `${process.env.PUBLIC_URL}/images/defaultProfile.png`} 
+                            className="cardPicture"
+                            alt="Profile picture, click to see profile" 
+                            onClick={() => Navigate(`/profile/${room.user_id}`)} /> 
+                        {OnlineMark(room.user_id, statuses)}
+                    </div>
+                    
                     <div className="nameAndButtons">
                         <p>{room.dog_name}</p>
                         <div className="buttonContainer notificationImageContainer">
