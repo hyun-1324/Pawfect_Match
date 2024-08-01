@@ -1,6 +1,6 @@
 import { useAuth } from "../../tools/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback} from "react";
 import fetchFromEndpoint from "../../tools/fetchFromEndpoint";
 import OnlineMark from "../../tools/OnlineMark";
 
@@ -52,7 +52,7 @@ const Connections = () => {
 
     useEffect(() => {
         if (lastJsonMessage?.event === "new_connection") {
-            setTriggerFetch(!triggerFetch);
+            setTriggerFetch(prev => !prev);
         }
     }, [lastJsonMessage]);
 
@@ -135,7 +135,7 @@ const Connections = () => {
         const room = chatList.find((room) => room.user_id === userId);
         const roomId = { room_id: String(room.id) };
         sendJsonMessage({ event: "leave_room", data: roomId });
-        setTriggerFetch(!triggerFetch);
+        setTriggerFetch(prev => !prev);
     }, [sendJsonMessage, chatList]);
 
     const handleRemoveRequest = useCallback((userId) => {
