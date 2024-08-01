@@ -76,7 +76,6 @@ const Chat = () => {
             const room_id = String(roomInfo.id);
             sendJsonMessage({ event: "get_messages", data: { room_id: room_id, last_message_id: lastMessageId } });
             setMessagesFetched(true);
-            console.log("Required messages: ", roomInfo.id, lastMessageId);
         }
     }, [roomInfo, chatMessages.length, messagesFetched, sendJsonMessage, lastMessageId]);
     
@@ -128,32 +127,38 @@ const Chat = () => {
 
     // If user scrolls up, load more chat messages
     const loadMoreMessages = useCallback(() => {
-        console.log("Loading more messages...");
         const room_id = String(roomInfo.id);
         sendJsonMessage({ event: "get_messages", data: { room_id: room_id, last_message_id: lastMessageId } });
     }, [roomInfo, lastMessageId, sendJsonMessage]);
  
 
     const handleScroll = useCallback(() => {
+        scrollHeightRef.current = messagesContainerRef.current.scrollHeight;
+        const scrollTop = messagesContainerRef.current.scrollTop;
+        console.log('scrollHeight: ', scrollHeightRef.current);
+        console.log('scrollTop: ', scrollTop);
         if (messagesContainerRef.current.scrollTop === 0) {
-            scrollHeightRef.current = messagesContainerRef.current.scrollHeight;
+            console.log('Loading more messages');
             loadMoreMessages();
         }
     }, [loadMoreMessages]);
 
     useEffect(() => {
-        console.log("chatMessages: ", chatMessages);
-        console.log("initialLoad: ", initialLoad);
+        console.log('Initial load: ', initialLoad);
+        console.log('Last message: ', lastJsonMessage);
+        console.log('Chat messages: ', chatMessages);
+        console.log(' ');
         if (initialLoad && chatMessages.length <= 10 && chatMessages.length > 0) {
             scrollToBottom();
             setInitialLoad(false);
-        } else if (lastJsonMessage && lastJsonMessage.event === 'new_message') {
-            scrollToBottom();
         } else if (!initialLoad) {
+            
+            console.log('Restoring scroll position');
             // Restore scroll position after loading more messages
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight - scrollHeightRef.current;
+            
         }
-    }, [chatMessages, lastJsonMessage, initialLoad]);
+    }, [initialLoad, chatMessages]);
 
     useEffect(() => {
         const container = messagesContainerRef.current;
@@ -163,7 +168,7 @@ const Chat = () => {
         };
     }, [messagesContainerRef, handleScroll]);
     
-    // Scroll to bottom of chat window when new messages are recieved
+    // Scroll to bottom of chat window 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -188,7 +193,6 @@ const Chat = () => {
             message: newChatMessage,
             sent_at: new Date().toISOString(), 
         };
-        console.log("data sent", dataObject);
         sendJsonMessage({ event: "send_message", data: dataObject });
         setNewChatMessage("");
     }, [userId, newChatMessage, sendJsonMessage]);
@@ -242,7 +246,13 @@ const Chat = () => {
                 </div>}
                 {errorMessage && <p>{errorMessage}</p>}
                 <form onSubmit={ (event) => handleSubmit(event)}>
-                    <input type="text" placeholder="Write your message here..." value={newChatMessage} required maxLength={255} onChange={(e) => handleTyping(e)} />
+                    <input 
+                        type="text" 
+                        placeholder="Write your message here..." 
+                        value={newChatMessage} 
+                        required 
+                        maxLength={255} 
+                        onChange={(e) => handleTyping(e)} />
                     <button type="submit" className="button"><img src={`${process.env.PUBLIC_URL}/images/send.png`} alt="Send message"></img></button>
                 </form>
             </div>}

@@ -31,8 +31,12 @@ const Register = () => {
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
 
-  const { logout } = useAuth();
+  const { logout, readyState } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log(readyState);
+}, [readyState]);
 
   const handleChange = (name, value) => {
     setForm({
@@ -146,7 +150,7 @@ const Register = () => {
       
       formData.append("json", JSON.stringify(form));
 
-      let response = await fetch("http://localhost:3000/handle_register", {
+      let response = await fetch("/handle_register", {
         method: "POST",
         body: formData,
         signal: controller.signal,
@@ -166,7 +170,6 @@ const Register = () => {
       setIsPending(false);
       if (err.name === "AbortError") {
         // The request was aborted
-        console.log("Fetch aborted");
       } else if (err.response && err.response.Message) {
         // This is an HTTP error that was thrown manually in the try block
         setError(err.response.Message);

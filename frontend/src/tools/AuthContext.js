@@ -10,18 +10,19 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
 
   const [loggedIn, setLoggedIn] = useState(false);
-  const [friendRequests, setFriendRequests] = useState([]);
+  const [friendRequests, setFriendRequests] = useState([]); // []id: number
   const [unreadMessages, setUnreadMessages] = useState(false);
-  const [newConnections, setNewConnections] = useState([]);
-  const [chatList, setChatList] = useState([]);
-  const [statuses, setStatuses] = useState([]);
+  const [newConnections, setNewConnections] = useState([]); // []id: number
+  const [chatList, setChatList] = useState([]); // []{id, user_id, unReadMessage}
+  const [statuses, setStatuses] = useState([]); // []{id: string, status: true/false}
 
   const [showModal, setShowModal] = useState(false);
   const [userDataForModal, setUserDataForModal] = useState({});
  
   const { 
     sendJsonMessage,
-    lastJsonMessage, 
+    lastJsonMessage,
+    readyState,
    } = useWebSocket("ws://localhost:8080/ws", {
     share: true,
     onOpen: () => console.log("WebSocket Connected"),
@@ -35,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   // Save incoming websocket messages to state
   useEffect(() => {
     if (lastJsonMessage) {
-      console.log("Coming from server: ", lastJsonMessage);
+      //console.log("Coming from server: ", lastJsonMessage);
       // Save fried requests to state
       if (lastJsonMessage.event === "friend_requests") {
         if (lastJsonMessage && lastJsonMessage.data.ids !== null) {
@@ -43,11 +44,13 @@ export const AuthProvider = ({ children }) => {
         } else {
           setFriendRequests([]);
         }
+
       // Add new value to friendRequests state
       } else if (lastJsonMessage.event === "friend_request") {
         // Make sure the id is a number type
         const id = parseInt(lastJsonMessage.data);
         setFriendRequests((prev) => [...prev, id]);
+
       // Save unread messages to state
       } else if (lastJsonMessage.event === "unread_messages") {
         if (lastJsonMessage.data === true) {
@@ -55,6 +58,7 @@ export const AuthProvider = ({ children }) => {
         } else {
           setUnreadMessages(false);
         }
+
       // Save new connections to state
       } else if (lastJsonMessage.event === "new_connections") {
         if (lastJsonMessage.data.ids !== null) {
@@ -62,6 +66,7 @@ export const AuthProvider = ({ children }) => {
         } else {
           setNewConnections([]);
         }
+
       // Add new value to newConnections state
       } else if (lastJsonMessage.event === "new_connection") {
         // If new connection exists in friendRequests, remove it
@@ -75,6 +80,10 @@ export const AuthProvider = ({ children }) => {
         } else {
           sendJsonMessage({ event: "check_new_connection", data: { id: String(lastJsonMessage.data.id) } });
         }
+        // Get the online status of the new connection
+        sendJsonMessage({ event: "get_status", data: { id: lastJsonMessage.data.id } });
+
+      // Save chat list to state
       } else if (lastJsonMessage.event === "get_chat_list") {
         const chatList = lastJsonMessage.data;
         setChatList(chatList);
@@ -86,6 +95,14 @@ export const AuthProvider = ({ children }) => {
         const hasUnreadMessages = chatList.some((room) => room.unReadMessage);
         setUnreadMessages(hasUnreadMessages);
 
+      // Save connected users that are online to state
+      } else if (lastJsonMessage.event === "connected_online_users") {
+        if (lastJsonMessage.data !== null) {
+          const onlineUsers = lastJsonMessage.data.map((userId) => {
+            return { id: userId, status: true };
+          })
+          setStatuses(onlineUsers);
+        }
       } else if (lastJsonMessage.event === "user_status") {
         const newStatus = lastJsonMessage.data;
         setStatuses((prev) => {
@@ -93,6 +110,7 @@ export const AuthProvider = ({ children }) => {
           console.log("Updated statuses: ", [...updated, newStatus]);
           return [...updated, newStatus];
         });
+        // Log error messages
       } else if (lastJsonMessage.event === "error") {
         console.log("WS ERROR!" + lastJsonMessage.data);
       }
@@ -155,7 +173,7 @@ export const AuthProvider = ({ children }) => {
     setLoggedIn(false);
   }
 
-  // Functions to clear notifications
+  // Functions to clear friend request notification
   const clearFriendNotification = (idToRemove) => {
     idToRemove = Number(idToRemove);
     setFriendRequests((prevList) => prevList.filter((id) => id !== idToRemove));
@@ -163,7 +181,8 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      loggedIn, 
+      loggedIn,
+      readyState, 
       login, 
       logout, 
       sendJsonMessage,

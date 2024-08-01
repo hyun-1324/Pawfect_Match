@@ -14,11 +14,13 @@ const Recommendations = () => {
     const [recommendations, setRecommendations] = useState(null);
     const [recommendationsList, setRecommendationsList] = useState([]);// []{id, dog_name, picture}
     
-    const { sendJsonMessage } = useAuth(); 
-    const { loggedIn } = useAuth();
-    const { login } = useAuth();
+    const { sendJsonMessage, readyState, loggedIn, login } = useAuth(); 
     // Use custom hook to fetch bio data
     const { data: bioData, isPending, error } = useFetch("/me/bio");
+
+    useEffect(() => {
+        console.log(readyState);
+    }, [readyState]);
 
     useEffect(() => {
         if (error) {
@@ -126,7 +128,6 @@ const Recommendations = () => {
                         // Sort the recommendationsList based on the order of recommendations
                         const sortedRecommendationsList = recommendations.map((id) => recommendationsMap.get(id)).filter(Boolean);
                         setRecommendationsList(sortedRecommendationsList);
-                        console.log(sortedRecommendationsList);
                         setIsLoading(false);
             });
         } else if ((!recommendations || recommendations.length === 0) && isRecommendationsLoaded && isLoading) {
