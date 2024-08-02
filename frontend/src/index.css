@@ -4,7 +4,7 @@
   --content-font-color: #332d2a;
   --yellow: #fceece;
   --green: #e6edb7;
-  --pink: #F9DBD2;
+  --pink: #f9dbd2;
 }
 
 @font-face {
@@ -108,7 +108,7 @@ h3 {
   overflow-y: scroll;
   box-sizing: border-box;
   width: 100%;
-  
+
   .card {
     border-radius: 3px;
     background-color: white;
@@ -215,7 +215,7 @@ h3 {
   .chatImage {
     max-width: 90%;
     max-height: 100%;
-    margin-left:auto;
+    margin-left: auto;
   }
   .chatList {
     display: grid;
@@ -225,7 +225,6 @@ h3 {
     border-radius: 3px;
     padding: 0.5rem;
     overflow-y: scroll;
-    
   }
   .chatWindow {
     display: grid;
@@ -236,14 +235,14 @@ h3 {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    
+
     .button {
       margin: 0rem;
       width: max(10vh, 50px);
       width: max(10vh, 50px);
       img {
-        height: 100%; 
-        width: auto; 
+        height: 100%;
+        width: auto;
       }
     }
     .chatHeader {
@@ -255,7 +254,7 @@ h3 {
         max-height: 100%;
         border-radius: 3px;
       }
-      
+
       .userInfo {
         margin: 0.2rem;
         height: 100%;
@@ -283,7 +282,7 @@ h3 {
       overflow-y: scroll;
       background-color: white;
       border-radius: 3px;
-      
+
       .fromMe {
         display: flex;
         flex-direction: column;
@@ -313,7 +312,6 @@ h3 {
         color: var(--content-font-color);
         margin: 0.2rem;
         align-self: flex-end;
-      
       }
     }
     form {
@@ -357,6 +355,12 @@ h3 {
   position: absolute;
   top: -20px;
   right: 3px;
+}
+
+.chat-button {
+  position: absolute;
+  top: -20px;
+  right: 20px;
 }
 
 /* Media queries to adjust grid in different sized screens*/
@@ -527,7 +531,7 @@ h3 {
   width: 20px;
   height: 20px;
   margin-left: 0.5rem;
-  display:flex;
+  display: flex;
   justify-content: center;
   align-items: center;
   .onlineMark {
