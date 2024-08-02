@@ -208,7 +208,7 @@ func processProfilePictureData(r *http.Request, app *App, userId int, addFile bo
 
 	profilePicture, fileHeader, err := r.FormFile("profilePicture")
 	if err != nil {
-		if err == http.ErrMissingFile && !addFile {
+		if err == http.ErrMissingFile && addFile {
 			query := `DELETE FROM profile_pictures WHERE user_id = $1`
 			_, err = app.DB.Exec(query, userId)
 			if err != nil {
