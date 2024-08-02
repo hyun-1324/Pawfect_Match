@@ -60,15 +60,13 @@ const Chat = () => {
             } else {
                 setErrorMessage(error.message);
             }
-        }).finally(() => {
-            sendJsonMessage({event: "get_chat_list"});
-        })
+        }).finally(() => sendJsonMessage({ event: "get_chat_list" }));
         return () => controller.abort();
     }, [Navigate, userId, sendJsonMessage]);
 
     // Save room info to state
     useEffect(() => {
-        if (lastJsonMessage?.event === "get_chat_list" && userInfo && !roomInfo) {
+        if (lastJsonMessage?.event === "get_chat_list" && !roomInfo && userInfo) {
             const room = lastJsonMessage.data?.find((room) => room.user_id === userId);
             setRoomInfo(room);
         }
@@ -76,13 +74,13 @@ const Chat = () => {
     
     // Ask for chat messages from server
     useEffect(() => {
-        if (roomInfo && chatMessages.length === 0 && !messagesFetched) {
+        if (roomInfo && chatMessages?.length === 0 && !messagesFetched) {
             setChatMessages([]);
             const room_id = String(roomInfo.id);
             sendJsonMessage({ event: "get_messages", data: { room_id: room_id, last_message_id: lastMessageId } });
             setMessagesFetched(true);
         }
-    }, [roomInfo, chatMessages.length, messagesFetched, sendJsonMessage, lastMessageId]);
+    }, [roomInfo, chatMessages, messagesFetched, sendJsonMessage, lastMessageId]);
     
     // Handle loaded chat messages
     useEffect(() => {
@@ -109,20 +107,22 @@ const Chat = () => {
     // Handle received new chat messages
     useEffect(() => {
         if (lastJsonMessage?.event === "new_message" && messagesFetched) {
-            newMessageRef.current = true;
-            // Save new chat message to state
-            const messageData = lastJsonMessage.data;
-            setChatMessages((prev) => [...prev, messageData]);
-            // Send json message to server to clear the new message status
-            const room_id = String(messageData.room_id);
-            sendJsonMessage({ event: "check_unread_messages", data: { room_id: room_id, user_id: messageData.to_id } });
-            setTyping(false);
+            if (lastJsonMessage.data.room_id === String(roomInfo?.id)) {
+                newMessageRef.current = true;
+                // Save new chat message to state
+                const messageData = lastJsonMessage.data;
+                setChatMessages((prev) => [...prev, messageData]);
+                // Send json message to server to clear the new message status
+                const room_id = String(messageData.room_id);
+                sendJsonMessage({ event: "check_unread_messages", data: { room_id: room_id, user_id: messageData.to_id } });
+                setTyping(false);
+            }
         }
-    }, [lastJsonMessage, sendJsonMessage, messagesFetched]);
+    }, [lastJsonMessage, sendJsonMessage, messagesFetched, roomInfo]);
     
     // Show typing message
     useEffect(() => {
-        if (lastJsonMessage?.event === "typing") {
+        if (lastJsonMessage?.event === "typing" && lastJsonMessage?.data === String(roomInfo?.id)) {
             // Clear the previous timeout if it exists
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
@@ -134,7 +134,7 @@ const Chat = () => {
                 setTyping(false);
             }, 3000);
         }
-    }, [lastJsonMessage]);
+    }, [lastJsonMessage, roomInfo]);
 
     // Handle scrolling in chat window
     // Load more messages if user scrolls up
@@ -152,15 +152,6 @@ const Chat = () => {
         wasAtBottomRef.current = messagesContainerRef.current.scrollTop + messagesContainerRef.current.clientHeight >= messagesContainerRef.current.scrollHeight - 100;
 
     }, [loadMoreMessages]);
-
-    // Add event listener to message-conatiner for scrolling
-    useEffect(() => {
-        const container = messagesContainerRef.current;
-        container?.addEventListener('scroll', handleScroll);
-        return () => {
-            container?.removeEventListener('scroll', handleScroll);
-        };
-    }, [messagesContainerRef, handleScroll]);
  
     // When new messages are loaded or new message is received, scroll to proper position or stay at the current position
     useEffect(() => {
@@ -174,27 +165,34 @@ const Chat = () => {
                 scrollToBottom();
             }
             newMessageRef.current = false;
-        } else if (!initialLoad && loadMoreMessagesRef.current) {
+        } else if (!initialLoad && messagesContainerRef.current) {
             // More messages loaded: restore scroll position to the previous position
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight - scrollHeightRef.current;
             loadMoreMessagesRef.current = false;
         }
+        
     }, [initialLoad, chatMessages]);
+
+    // Add event listener to message-conatiner for scrolling
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        container?.addEventListener('scroll', handleScroll);
+        return () => {
+            container?.removeEventListener('scroll', handleScroll);
+        };
+    }, [messagesContainerRef, handleScroll]);
 
     // Function to scroll to bottom of chat window 
     const scrollToBottom = () => {
-        messagesContainerRef.current.scrollTo({
-            top: messagesContainerRef.current.scrollHeight,
-            behavior: 'smooth'
-        });
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
     // Send typing chat message to server
     const handleTyping = useCallback((e) => {
         setNewChatMessage(e.target.value);
-        const dataObject = { to_id: userId };
+        const dataObject = { to_id: userId, room_id: String(roomInfo.id) };
         sendJsonMessage({ event: "typing", data: dataObject });
-    }, [userId, sendJsonMessage, setNewChatMessage]);
+    }, [userId, sendJsonMessage, setNewChatMessage, roomInfo]);
 
     // Send chat message to server
     const handleSubmit = useCallback((event) => {

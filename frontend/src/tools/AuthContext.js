@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }) => {
   // Save incoming websocket messages to state
   useEffect(() => {
     if (lastJsonMessage) {
+      console.log("Incoming message: ", lastJsonMessage);
       // Save fried requests to state
       if (lastJsonMessage.event === "friend_requests") {
         if (lastJsonMessage && lastJsonMessage.data.ids !== null) {
@@ -102,11 +103,19 @@ export const AuthProvider = ({ children }) => {
           })
           setStatuses(onlineUsers);
         }
+        else {
+          setStatuses([]);
+        }
       } else if (lastJsonMessage.event === "user_status") {
         const newStatus = lastJsonMessage.data;
+        console.log("New status: ", newStatus);
         setStatuses((prev) => {
-          const updated = prev.filter((status) => status.user_id !== newStatus.user_id);
-          return [...updated, newStatus];
+          console.log("Previous status: ", prev);
+          const updated = prev.filter((status) => status.id !== newStatus.id);
+          console.log("Status without user that is new: ", updated);
+          const statusUpdated = [...updated, newStatus];
+          console.log("Updated status with all users: ", statusUpdated);
+          return statusUpdated;
         });
         // Log error messages
       } else if (lastJsonMessage.event === "error") {

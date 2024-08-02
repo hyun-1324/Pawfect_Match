@@ -153,7 +153,7 @@ const Connections = () => {
     }, [sendJsonMessage, clearFriendNotification]);
 
     // Function to generate connection cards
-    const makeConnectionCards = (connections, OnlineMark) => {
+    const makeConnectionCards = (connections, OnlineMark, statuses) => {
         if (!connections || connections.length === 0) {
             return (
                 <div className="card centered">
@@ -241,7 +241,7 @@ const Connections = () => {
         </div>
         <h3>My connections:</h3>
         <div className="twoColumnCard">
-            {makeConnectionCards(connections, OnlineMark)}
+            {makeConnectionCards(connections, OnlineMark, statuses)}
         </div>
         
     </div>
