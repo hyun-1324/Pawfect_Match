@@ -1,1 +1,42 @@
 services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: always
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./backup2:/docker-entrypoint-initdb.d
+    env_file:
+      - ./env/postgres.env
+    ports:
+      - "5432:5432"
+    networks:
+      - mynetwork
+
+  backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./env/backend.env
+    depends_on:
+      - postgres
+    networks:
+      - mynetwork
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+    depends_on:
+      - backend
+    networks:
+      - mynetwork
+
+volumes:
+  data:
+
+networks:
+  mynetwork:
