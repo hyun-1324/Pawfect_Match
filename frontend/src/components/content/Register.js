@@ -31,12 +31,8 @@ const Register = () => {
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
 
-  const { logout, readyState } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log(readyState);
-}, [readyState]);
 
   const handleChange = (name, value) => {
     setForm({
@@ -71,8 +67,8 @@ const Register = () => {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 
+  // Cleanup function to abort the fetch if necessary
   useEffect(() => {
-    // Cleanup function to abort the fetch if necessary
     return () => {
       if (controller) {
         controller.abort();

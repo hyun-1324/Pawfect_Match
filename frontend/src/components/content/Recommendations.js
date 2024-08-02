@@ -14,13 +14,10 @@ const Recommendations = () => {
     const [recommendations, setRecommendations] = useState(null);
     const [recommendationsList, setRecommendationsList] = useState([]);// []{id, dog_name, picture}
     
-    const { sendJsonMessage, readyState, loggedIn, login } = useAuth(); 
+    const { sendJsonMessage, loggedIn, login } = useAuth(); 
     // Use custom hook to fetch bio data
     const { data: bioData, isPending, error } = useFetch("/me/bio");
 
-    useEffect(() => {
-        console.log(readyState);
-    }, [readyState]);
 
     useEffect(() => {
         if (error) {
@@ -38,7 +35,6 @@ const Recommendations = () => {
         const signal = abortController.signal; // Get the signal to pass to fetch
         // Check if the first fetch is completed and was successful
         if (!isPending && bioData && !error && !locationUpdated) {
-            // Trigger the second fetch here
             setLocationUpdated(false);
             const locationInfo = bioData?.preferred_location;
             if (locationInfo === "Live") {
@@ -66,14 +62,13 @@ const Recommendations = () => {
                 setLocationUpdated(true);
             }
         }
-        return () => abortController.abort(); // Cleanup function to abort fetch on component unmount
+        return () => abortController.abort(); 
     }, [isPending, bioData, error, locationUpdated, loggedIn, login, navigate]); 
     
     // Fetch recommendation-id's
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
-        // fetch recommendations
         if (locationUpdated && bioData && !recommendations && !isRecommendationsLoaded) {
            fetchFromEndpoint("/recommendations", {signal})
                 .then(({ data, error }) => {
@@ -104,7 +99,6 @@ const Recommendations = () => {
         const recommendationsMap = new Map();
         if (recommendations && recommendations.length > 0 && isRecommendationsLoaded) { 
             setRecommendationsList([]);
-            // for each id in recommendations, fetch the data
             Promise.allSettled(recommendations.map((id) => 
                 fetchFromEndpoint(`/users/${id}`, {signal})
                     .then(({ data, error }) => {
@@ -153,21 +147,24 @@ const Recommendations = () => {
         return null;
     };
 
+    // Send connection request to user with userId
     const handleSendRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "send_request", data: dataObject });
-        // remove the usercard with key userId from recommendations
+        // Update recommendationsList by removing the recommendation with userId
         setRecommendationsList((prevList) => prevList.filter((user) => user.id !== userId));
         
     }, [sendJsonMessage]);
 
+    // Reject recommendation for user with userId
     const handleRejectRequest = useCallback((userId) => {
         const dataObject = { id: userId };
         sendJsonMessage({ event: "reject_recommendation", data: dataObject });
-        // remove the usercard with key userId from recommendations
+        // Update recommendationsList by removing the recommendation with userId
         setRecommendationsList((prevList) => prevList.filter((user) => user.id !== userId));
     }, [sendJsonMessage]);
     
+    // Create recommendation cards
     const makeRecommendationCards = (recommendationsList) => {
         if (!recommendationsList || recommendationsList.length === 0) {
             return (
@@ -216,6 +213,7 @@ return (
         {isLoading && !errorMessage &&
             <div className="card centered">
                 <h3>Updating your recommendations...</h3>
+                <p>This might take few seconds if you are using live location.</p>
                 <img className="loadingScreenPicture" src={`${process.env.PUBLIC_URL}/images/loadingScreenDog.png`} alt="Loading..."></img>
             </div>}
         <div className="twoColumnCard">

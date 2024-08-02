@@ -15,7 +15,16 @@ const useFetch = (url) => {
         const response = await fetch(url, { signal: abortCont.signal });
         if (!response.ok) {
           // Handle HTTP errors
-          const errorResponse = await response.json();
+          let errorResponse;
+                try {
+                    errorResponse = await response.json();
+                } catch (jsonError) {
+                    if (jsonError instanceof SyntaxError) {
+                        throw new Error("Failed to parse error response");
+                    } else {
+                        throw jsonError;
+                    }
+                }
           const error = new Error();
           error.status = response.status; // Include the status code
           error.message = errorResponse.Message || "Unknown error"; // Include the error message; 
@@ -29,11 +38,10 @@ const useFetch = (url) => {
           setIsPending(false);
           if (err.name === 'AbortError') {
               // The request was aborted
-          } else if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
-            // Network error or CORS issue
-            setError({ message: "Network error: Unable to reach the server", status: 'NETWORK_ERROR' });
+          } else if (err.message === "Failed to parse error response") {
+              setError({ message: 'Can not reach server', status: 500 });
           } else {
-          setError({ message: err.message, status: err.status });
+              setError({ message: err.message, status: err.status });
         }
       }
     };

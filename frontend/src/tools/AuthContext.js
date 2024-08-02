@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }) => {
   // Save incoming websocket messages to state
   useEffect(() => {
     if (lastJsonMessage) {
-      console.log("Coming from server: ", lastJsonMessage);
       // Save fried requests to state
       if (lastJsonMessage.event === "friend_requests") {
         if (lastJsonMessage && lastJsonMessage.data.ids !== null) {
@@ -131,7 +130,6 @@ export const AuthProvider = ({ children }) => {
         }
       }).catch((error) => {
         if (error.name === "AbortError") {
-          console.log("Fetch aborted");
         }
       });
       return () => controller.abort();

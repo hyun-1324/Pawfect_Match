@@ -189,7 +189,7 @@ const EditProfile = () => {
   if (isPending1 || isPending2 || isPending3) return <div>Loading...</div>;
   if (error1 || error2 || error3)
     return (
-      <div>Error: {error1.message || error2.message || error3.message}</div>
+      <div>Error: {error1?.message || error2?.message || error3?.message}</div>
     );
 
   return (
