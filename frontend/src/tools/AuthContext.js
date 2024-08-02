@@ -102,11 +102,15 @@ export const AuthProvider = ({ children }) => {
           })
           setStatuses(onlineUsers);
         }
+        else {
+          setStatuses([]);
+        }
       } else if (lastJsonMessage.event === "user_status") {
         const newStatus = lastJsonMessage.data;
         setStatuses((prev) => {
-          const updated = prev.filter((status) => status.user_id !== newStatus.user_id);
-          return [...updated, newStatus];
+          const updated = prev.filter((status) => status.id !== newStatus.id);
+          const statusUpdated = [...updated, newStatus];
+          return statusUpdated;
         });
         // Log error messages
       } else if (lastJsonMessage.event === "error") {

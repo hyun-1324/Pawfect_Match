@@ -9,7 +9,7 @@ const ChatList = () => {
     const [ errorMessage, setErrorMessage ] = useState(null);
     const [ roomInfo, setRoomInfo ] = useState(null); // {id, user_id, unReadMessage, picture, dog_name}
 
-    const { loggedIn, statuses, login, sendJsonMessage, lastJsonMessage, readyState } = useAuth();
+    const { loggedIn, statuses, login, sendJsonMessage, lastJsonMessage } = useAuth();
     const Navigate = useNavigate();
 
     // Connect to websocket if not already connected
@@ -19,14 +19,6 @@ const ChatList = () => {
         }
         
     }, [loggedIn, login]);
-
-    useEffect(() => {
-        if (readyState !== 1 && readyState !== 0) {
-            Navigate("/login");
-        } 
-    }, [readyState]);
-
-
 
     // Ask for chat list from server
     useEffect(() => {
