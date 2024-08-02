@@ -76,6 +76,7 @@ const Register = () => {
     };
   }, [controller]);
 
+  // Redirect to recommendations page if user is already logged in
   useEffect(() => {
     if (logout && navigate) {
     const checkLoginStatus = async () => {
@@ -87,7 +88,7 @@ const Register = () => {
                 if (response.status === 400) {
                     navigate('/'); 
                 } else if (response.status === 500) {
-                    setError('Server error, please try again later.');
+                    setError('Can not reach server');
                 }
             } else {
                 logout();
