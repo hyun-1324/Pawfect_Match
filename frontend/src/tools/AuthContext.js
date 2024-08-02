@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import useWebSocket from 'react-use-websocket';
 import AlertModal from '../components/navigation/Modal';
-import fetchUserData from './fetchUserInfo';
+import fetchFromEndpoint from './fetchFromEndpoint';
 
 const AuthContext = createContext();
 
@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }) => {
   // Save incoming websocket messages to state
   useEffect(() => {
     if (lastJsonMessage) {
-      console.log("Coming from server: ", lastJsonMessage);
       // Save fried requests to state
       if (lastJsonMessage.event === "friend_requests") {
         if (lastJsonMessage && lastJsonMessage.data.ids !== null) {
@@ -122,16 +121,15 @@ export const AuthProvider = ({ children }) => {
       const userId = newConnections[0];
       const controller = new AbortController();
       const signal = controller.signal;
-      fetchUserData(userId, {signal}).then(({ userData, error }) => {
+      fetchFromEndpoint(`/users/${userId}`, {signal}).then(({ data, error }) => {
         if (!error) {
-          setUserDataForModal(userData); // Update state with fetched user data
+          setUserDataForModal(data); // Update state with fetched user data
           setShowModal(true); // Show the modal
         } else {
           console.log(error.message);
         }
       }).catch((error) => {
         if (error.name === "AbortError") {
-          console.log("Fetch aborted");
         }
       });
       return () => controller.abort();

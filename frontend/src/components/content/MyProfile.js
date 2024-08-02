@@ -23,7 +23,7 @@ const MyProfile = () => {
   }
 
   if (error1 || error2 || error3) {
-    return <div className="errorBox">Error: {error1.message || error2.message || error3.message}</div>;
+    return <div className="errorBox">Error: {error1?.message || error2?.message || error3?.message}</div>;
   }
 
   if (!user || !userProfile || !userBio) {

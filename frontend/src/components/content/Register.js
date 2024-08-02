@@ -31,12 +31,8 @@ const Register = () => {
   const [isPending, setIsPending] = useState(false);
   const [controller, setController] = useState(null);
 
-  const { logout, readyState } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log(readyState);
-}, [readyState]);
 
   const handleChange = (name, value) => {
     setForm({
@@ -71,8 +67,8 @@ const Register = () => {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 
+  // Cleanup function to abort the fetch if necessary
   useEffect(() => {
-    // Cleanup function to abort the fetch if necessary
     return () => {
       if (controller) {
         controller.abort();
@@ -80,6 +76,7 @@ const Register = () => {
     };
   }, [controller]);
 
+  // Redirect to recommendations page if user is already logged in
   useEffect(() => {
     if (logout && navigate) {
     const checkLoginStatus = async () => {
@@ -91,7 +88,7 @@ const Register = () => {
                 if (response.status === 400) {
                     navigate('/'); 
                 } else if (response.status === 500) {
-                    setError('Server error, please try again later.');
+                    setError('Can not reach server');
                 }
             } else {
                 logout();

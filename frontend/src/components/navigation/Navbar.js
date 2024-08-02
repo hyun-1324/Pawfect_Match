@@ -8,6 +8,7 @@ const Navbar = () => {
     const { logout, friendRequests, unreadMessages, sendJsonMessage } = useAuth(); 
     const [newFriendRequests, setNewFriendRequests] = useState(false);
     const [newMessages, setNewMessages] = useState(false);
+
     useEffect(() => {
         if (friendRequests?.length > 0) {
             setNewFriendRequests(true);
@@ -15,6 +16,7 @@ const Navbar = () => {
             setNewFriendRequests(false);
         }
     }, [friendRequests]);
+    
     useEffect(() => {
         if (unreadMessages) {
             setNewMessages(true);

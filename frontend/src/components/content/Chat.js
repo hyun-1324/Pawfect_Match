@@ -27,18 +27,19 @@ const Chat = () => {
     const loadMoreMessagesRef = useRef(false);
 
     const Navigate = useNavigate();
-    // get userId from url parameter
+
+    // Get userId from url parameter
     const { id: userId } = useParams();
 
+    // Connect websocket if not already connected
     useEffect(() => {
         if (!loggedIn) {
             login();
         }
     }, [loggedIn, login]);
 
-
+    // Fetch userData for chat window
     useEffect(() => {
-        // fetch userData
         const controller = new AbortController();
         const signal = controller.signal;
         fetchFromEndpoint(`/users/${userId}`, {signal})
@@ -65,16 +66,16 @@ const Chat = () => {
         return () => controller.abort();
     }, [Navigate, userId, sendJsonMessage]);
 
+    // Save room info to state
     useEffect(() => {
-        // Save room info to state
         if (lastJsonMessage?.event === "get_chat_list" && userInfo && !roomInfo) {
             const room = lastJsonMessage.data?.find((room) => room.user_id === userId);
             setRoomInfo(room);
         }
     }, [lastJsonMessage, userInfo, userId, roomInfo]);
     
+    // Ask for chat messages from server
     useEffect(() => {
-        // Fetch chat messages
         if (roomInfo && chatMessages.length === 0 && !messagesFetched) {
             setChatMessages([]);
             const room_id = String(roomInfo.id);
@@ -83,7 +84,7 @@ const Chat = () => {
         }
     }, [roomInfo, chatMessages.length, messagesFetched, sendJsonMessage, lastMessageId]);
     
-    // Save chat messages to state
+    // Handle loaded chat messages
     useEffect(() => {
         if (lastJsonMessage?.event === "get_messages") {
             loadMoreMessagesRef.current = true;
@@ -93,29 +94,33 @@ const Chat = () => {
             }
             // Revert the order of messages
             messages.reverse();
+            // Save chat messages to state
             setChatMessages((prev) => {
                 const newMessages = messages.filter(msg => !prev.some(existingMsg => existingMsg.id === msg.id));
                 return [...newMessages, ...prev];
             });
             setLastMessageId(messages[0].id);
+            // Send json message to server to clear the new message status
             const room_id = String(roomInfo.id);
             sendJsonMessage({ event: "check_unread_messages", data: { room_id: room_id, user_id: userId } });
         }
     }, [lastJsonMessage, sendJsonMessage, roomInfo, userId]);
     
+    // Handle received new chat messages
     useEffect(() => {
         if (lastJsonMessage?.event === "new_message" && messagesFetched) {
             newMessageRef.current = true;
-            // save new chat message to state
+            // Save new chat message to state
             const messageData = lastJsonMessage.data;
             setChatMessages((prev) => [...prev, messageData]);
-            // send json message to server to clear the new message status
+            // Send json message to server to clear the new message status
             const room_id = String(messageData.room_id);
             sendJsonMessage({ event: "check_unread_messages", data: { room_id: room_id, user_id: messageData.to_id } });
             setTyping(false);
         }
     }, [lastJsonMessage, sendJsonMessage, messagesFetched]);
     
+    // Show typing message
     useEffect(() => {
         if (lastJsonMessage?.event === "typing") {
             // Clear the previous timeout if it exists
@@ -131,44 +136,24 @@ const Chat = () => {
         }
     }, [lastJsonMessage]);
 
-    // If user scrolls up, load more chat messages
+    // Handle scrolling in chat window
+    // Load more messages if user scrolls up
     const loadMoreMessages = useCallback(() => {
         const room_id = String(roomInfo.id);
         sendJsonMessage({ event: "get_messages", data: { room_id: room_id, last_message_id: lastMessageId } });
     }, [roomInfo, lastMessageId, sendJsonMessage]);
- 
 
+    // Handle scrolling: Save position and load more messages if user scrolls up
     const handleScroll = useCallback(() => {
         scrollHeightRef.current = messagesContainerRef.current.scrollHeight;
         if (messagesContainerRef.current.scrollTop === 0) {
-            console.log('Loading more messages');
             loadMoreMessages();
         }
         wasAtBottomRef.current = messagesContainerRef.current.scrollTop + messagesContainerRef.current.clientHeight >= messagesContainerRef.current.scrollHeight - 100;
 
     }, [loadMoreMessages]);
 
-    useEffect(() => {
-        if (initialLoad && chatMessages.length <= 10 && chatMessages.length > 0) {
-            scrollToBottom();
-            setInitialLoad(false);
-        } else if (!initialLoad && newMessageRef.current) {
-            // New message received, scroll to bottom if user was at the bottom of the chat window
-            if (wasAtBottomRef.current) {
-                scrollToBottom();
-                console.log('New message received: Scrolling to bottom');
-            } else {
-                console.log('New message received: Not scrolling to bottom');
-            }
-            newMessageRef.current = false;
-        } else if (!initialLoad && loadMoreMessagesRef.current) {
-            // Restore scroll position after loading more messages
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight - scrollHeightRef.current;
-            console.log('More messages loaded: Restoring scroll position');
-            loadMoreMessagesRef.current = false;
-        }
-    }, [initialLoad, chatMessages]);
-
+    // Add event listener to message-conatiner for scrolling
     useEffect(() => {
         const container = messagesContainerRef.current;
         container?.addEventListener('scroll', handleScroll);
@@ -176,15 +161,33 @@ const Chat = () => {
             container?.removeEventListener('scroll', handleScroll);
         };
     }, [messagesContainerRef, handleScroll]);
-    
-    // Scroll to bottom of chat window 
+ 
+    // When new messages are loaded or new message is received, scroll to proper position or stay at the current position
+    useEffect(() => {
+        if (initialLoad && chatMessages.length <= 10 && chatMessages.length > 0) {
+            // Initial load, scroll to bottom
+            scrollToBottom();
+            setInitialLoad(false);
+        } else if (!initialLoad && newMessageRef.current) {
+            // New message received: scroll to bottom if user was at the bottom of the chat window
+            if (wasAtBottomRef.current) {
+                scrollToBottom();
+            }
+            newMessageRef.current = false;
+        } else if (!initialLoad && loadMoreMessagesRef.current) {
+            // More messages loaded: restore scroll position to the previous position
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight - scrollHeightRef.current;
+            loadMoreMessagesRef.current = false;
+        }
+    }, [initialLoad, chatMessages]);
+
+    // Function to scroll to bottom of chat window 
     const scrollToBottom = () => {
         messagesContainerRef.current.scrollTo({
             top: messagesContainerRef.current.scrollHeight,
             behavior: 'smooth'
         });
     };
-
 
     // Send typing chat message to server
     const handleTyping = useCallback((e) => {
@@ -209,8 +212,8 @@ const Chat = () => {
         setNewChatMessage("");
     }, [userId, newChatMessage, sendJsonMessage]);
 
+    // Function to format date to show date and time. 2024-07-29T07:57:14.251Z => 29/07/2024 07:57
     const prettifyDate = useCallback((date) => {
-        // format date to show date and time. 2024-07-29T07:57:14.251Z => 29/07/2024 07:57
         const dateObj = new Date(date);
         const day = String(dateObj.getDate()).padStart(2, '0');
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -220,8 +223,8 @@ const Chat = () => {
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     }, []);
 
+    // Function to generate chat messages from chatMessages states
     const generateMessages = useCallback(() => {
-        // render chat messages
         return chatMessages.map((message) => (
                 <div key={message.id} className={message.to_id === userInfo.id ? "fromMe" : "fromOther"}>
                     <p>{message.message}</p>
@@ -230,10 +233,10 @@ const Chat = () => {
             )
         );
     }, [chatMessages, userInfo, prettifyDate]);
-        
 
     return (
-        <>
+        <>  
+            {errorMessage && <div className="errorBox">Error: {errorMessage}</div>}
             {userInfo &&
             <div className="chatWindow">
                 <div className="chatHeader">
@@ -256,7 +259,7 @@ const Chat = () => {
                     {chatMessages && generateMessages()}
                     <div ref={messagesEndRef} />
                 </div>}
-                {errorMessage && <p>{errorMessage}</p>}
+                
                 <form onSubmit={ (event) => handleSubmit(event)}>
                     <input 
                         type="text" 

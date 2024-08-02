@@ -11,15 +11,11 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [controller, setController] = useState(null); 
     
-    const { login, logout, readyState } = useAuth(); 
+    const { login, logout } = useAuth(); 
     
     const navigate = useNavigate();
-    
 
-    useEffect(() => {
-        console.log(readyState);
-    }, [readyState]);
-
+    // Cleanup function (abort controller) for the fetch request
     useEffect(() => {
         return () => {
             if (controller) {
@@ -41,14 +37,14 @@ const Login = () => {
                         if (response.status === 400) {
                             navigate('/'); 
                         } else if (response.status === 500) {
-                            setError('Server error, please try again later.');
+                            setError('Can not reach server');
                         }
                     } else {
                         logout();
                     }
                 } catch (error) {
                     if (error.name === 'AbortError') {
-                        // The request was aborted
+                       
                     } else {
                         setError(error.message);
                     }
@@ -101,7 +97,6 @@ const Login = () => {
             } else {
                 // This is likely a network error
                 setError('Network error, please try again.');
-                console.log(err);
             }
         }
     };

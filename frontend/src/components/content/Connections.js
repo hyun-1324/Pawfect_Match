@@ -20,7 +20,7 @@ const Connections = () => {
         }
     }, [loggedIn, login]);
 
-    // Fetch connections
+    // Fetch connectionsList at the beginning and when triggerFetch changes
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
@@ -33,7 +33,7 @@ const Connections = () => {
                         setErrorMessage(error.message);
                     }
                 }
-                if (data.ids) {
+                if (data?.ids) {
                     setConnectionsList(data.ids);
                 } else {
                     setConnectionsList([]);
@@ -42,6 +42,7 @@ const Connections = () => {
             .catch((error) => {
                 if (error.name === "AbortError") {
                 } else {
+                    console.error(error);
                     setErrorMessage(error.message);
                 }
             })
@@ -49,7 +50,7 @@ const Connections = () => {
         return () => abortController.abort();
     }, [navigate, triggerFetch]);
 
-
+    // Trigger connections fetch when receiving new connection event
     useEffect(() => {
         if (lastJsonMessage?.event === "new_connection") {
             setTriggerFetch(prev => !prev);
@@ -94,7 +95,7 @@ const Connections = () => {
         return () => abortController.abort(); 
     }, [connectionsList, errorMessage, navigate]);
 
-    // Get other information needed for requests
+    // Get user information needed for requests
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 

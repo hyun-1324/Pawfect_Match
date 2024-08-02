@@ -9,12 +9,11 @@ const ChatList = () => {
     const [ errorMessage, setErrorMessage ] = useState(null);
     const [ roomInfo, setRoomInfo ] = useState(null); // {id, user_id, unReadMessage, picture, dog_name}
 
-    const { loggedIn, statuses, login, sendJsonMessage, lastJsonMessage } = useAuth();
+    const { loggedIn, statuses, login, sendJsonMessage, lastJsonMessage, readyState } = useAuth();
     const Navigate = useNavigate();
 
-    // ask for chat list from server
+    // Connect to websocket if not already connected
     useEffect(() => {
-        // connect to websocket if not already connected
         if  (!loggedIn) {
             login();
         }
@@ -22,10 +21,19 @@ const ChatList = () => {
     }, [loggedIn, login]);
 
     useEffect(() => {
+        if (readyState !== 1 && readyState !== 0) {
+            Navigate("/login");
+        } 
+    }, [readyState]);
+
+
+
+    // Ask for chat list from server
+    useEffect(() => {
         sendJsonMessage({event: "get_chat_list"});
     }, [sendJsonMessage]);
 
-    // save chat list to state
+    // Save chat list to state
     useEffect(() => {
         if (lastJsonMessage && lastJsonMessage.event === "get_chat_list") {
             if (lastJsonMessage.data !== null) {
@@ -55,7 +63,6 @@ const ChatList = () => {
                             setErrorMessage(error.message);
                         }
                     } else {
-                        // add dog_name and picture to roomInfo
                         const roomInfo = {
                             id: room.id,
                             user_id: room.user_id,
@@ -81,8 +88,8 @@ const ChatList = () => {
         }
         return () => controller.abort();
     }, [chatList, errorMessage, Navigate]);
-    // render chat list
-
+    
+    // Make chat list from roomInfo
     const makeChatlist = () => {
         if (roomInfo && chatList.length > 0) {
             return roomInfo.map((room) => (
@@ -114,7 +121,7 @@ const ChatList = () => {
         }
         return (
             <div className="card centered">
-                <h3>You have no chat history. Start one from connections or user's profile page!</h3>
+                <h3>You have no chats.</h3>
             </div>
         );
     };
@@ -122,15 +129,15 @@ const ChatList = () => {
     return (
         <div>
             <h2>Chats</h2>
-            {errorMessage && <div className="errorBox">{errorMessage}</div>}
-            <div className="twoColumnCard">
+            {errorMessage && <div className="errorBox">Error: {errorMessage}</div>}
+            {!errorMessage && <div className="twoColumnCard">
                 <div className="chatList">
                     {makeChatlist()}
                 </div>
                 <div className="oneColumnCardLeft">
                     <img className="chatImage" src={`${process.env.PUBLIC_URL}/images/chatListDog.png`} alt="dog with paper airplane" />
                 </div>
-            </div>
+            </div>}
 
         </div>
     )
