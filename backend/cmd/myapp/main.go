@@ -13,14 +13,14 @@ import (
 
 func main() {
 	const (
-		dbname   = "matchMe"
-		user     = "donghyun"
-		password = ""
-		host     = "localhost"
+		host     = "postgres"
 		port     = 5432
+		dbname   = "postgres"
+		user     = "postgres"
+		password = "matchMe"
 	)
 
-	psqlInfo := fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%d sslmode=disable", dbname, user, password, host, port)
+	psqlInfo := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable", user, password, host, port, dbname)
 	database, err := database.InitDb(psqlInfo)
 	if err != nil {
 		log.Fatalf("Error initializing database: %v", err)
