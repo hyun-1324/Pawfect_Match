@@ -89,12 +89,30 @@ const EditProfile = () => {
     URL.revokeObjectURL(imageSrc);
   };
 
+  const handleRemoveExistingPicture = () => {
+    setForm((prevForm) => ({
+      ...prevForm,
+      picture: null,
+      add_picture: true,
+    }));
+    setImageSrc(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+  };
+
   const handleClick = () => {
     document.getElementById("file-input").click();
   };
 
   const handleCropComplete = (_, croppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
+    if (!imageSrc && form.picture) {
+      setForm((prevForm) => ({
+        ...prevForm,
+        croppedAreaPixels: croppedAreaPixels,
+      }));
+    }
   };
 
   useEffect(() => {
@@ -133,6 +151,20 @@ const EditProfile = () => {
             croppedAreaPixels
           );
           // Check image size
+          if (croppedImageBlob.size > 2000000) {
+            throw new Error("Image size must be less than 2 MB!");
+          }
+          formData.append(
+            "profilePicture",
+            croppedImageBlob,
+            "profilePicture.png"
+          );
+        } else if (form.picture && form.croppedAreaPixels) {
+          const croppedImageBlob = await getCroppedImg(
+            form.picture,
+            form.croppedAreaPixels
+          );
+
           if (croppedImageBlob.size > 2000000) {
             throw new Error("Image size must be less than 2 MB!");
           }
@@ -381,6 +413,18 @@ const EditProfile = () => {
                   src={`${process.env.PUBLIC_URL}/images/remove.png`}
                   alt="remove"
                 ></img>
+              </button>
+            )}
+            {!imageSrc && form.picture && (
+              <button
+                type="button"
+                className="button"
+                onClick={handleRemoveExistingPicture}
+              >
+                <img
+                  src={`${process.env.PUBLIC_URL}/images/remove.png`}
+                  alt="remove existing"
+                />
               </button>
             )}
           </div>
