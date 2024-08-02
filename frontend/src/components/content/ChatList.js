@@ -91,7 +91,7 @@ const ChatList = () => {
                         <img src={room.picture ? room.picture : `${process.env.PUBLIC_URL}/images/defaultProfile.png`} 
                             className="cardPicture"
                             alt="Profile picture, click to see profile" 
-                            onClick={() => Navigate(`/profile/${room.user_id}`)} /> 
+                            onClick={() => Navigate(`/profileforconnections/${room.user_id}`)} /> 
                         {OnlineMark(room.user_id, statuses)}
                     </div>
                     
