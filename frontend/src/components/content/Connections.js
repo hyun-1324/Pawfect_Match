@@ -171,7 +171,7 @@ const Connections = () => {
                             : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
                         } 
                         alt="dog" 
-                        onClick={() => navigate(`/profile/${dogData.id}`)} />
+                        onClick={() => navigate(`/profileforconnections/${dogData.id}`)} />
                     {OnlineMark(dogData.id, statuses)}
                 </div>
                 <div className="nameAndButtons">
