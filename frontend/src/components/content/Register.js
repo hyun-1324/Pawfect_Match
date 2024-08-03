@@ -83,7 +83,7 @@ const Register = () => {
         const controller = new AbortController();
         setController(controller);
         try {
-            const response = await fetch('/login_status',{ signal: controller.signal });
+            const response = await fetch('http://localhost:8080/login_status',{ signal: controller.signal });
             if (!response.ok) {
                 if (response.status === 400) {
                     navigate('/'); 
@@ -147,7 +147,7 @@ const Register = () => {
       
       formData.append("json", JSON.stringify(form));
 
-      let response = await fetch("/handle_register", {
+      let response = await fetch("http://localhost:8080/handle_register", {
         method: "POST",
         body: formData,
         signal: controller.signal,

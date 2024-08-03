@@ -70,7 +70,7 @@ const Recommendations = () => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
         if (locationUpdated && bioData && !recommendations && !isRecommendationsLoaded) {
-           fetchFromEndpoint("/recommendations", {signal})
+           fetchFromEndpoint("http://localhost:8080/recommendations", {signal})
                 .then(({ data, error }) => {
                 if (error) {
                     if (error.status === 401) {
@@ -100,7 +100,7 @@ const Recommendations = () => {
         if (recommendations && recommendations.length > 0 && isRecommendationsLoaded) { 
             setRecommendationsList([]);
             Promise.allSettled(recommendations.map((id) => 
-                fetchFromEndpoint(`/users/${id}`, {signal})
+                fetchFromEndpoint(`http://localhost:8080/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
                             if (error.status === 401) {
@@ -131,7 +131,7 @@ const Recommendations = () => {
     }, [recommendations, isRecommendationsLoaded, isLoading, navigate]);
 
     const sendLocation = async ({ latitude, longitude }, {signal}) => {
-        const locationResponse = await fetch("/handle_live", {
+        const locationResponse = await fetch("http://localhost:8080/handle_live", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ latitude, longitude }),

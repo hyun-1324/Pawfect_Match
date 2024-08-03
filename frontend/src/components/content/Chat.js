@@ -42,7 +42,7 @@ const Chat = () => {
     useEffect(() => {
         const controller = new AbortController();
         const signal = controller.signal;
-        fetchFromEndpoint(`/users/${userId}`, {signal})
+        fetchFromEndpoint(`http://localhost:8080/users/${userId}`, {signal})
         .then(({data, error}) => {
             if (error) {
                 if (error.status === 401) {
