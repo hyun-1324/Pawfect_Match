@@ -4,7 +4,7 @@ services:
     restart: always
     volumes:
       - data:/var/lib/postgresql/data
-      - ./backup2:/docker-entrypoint-initdb.d
+      - ./backup1:/docker-entrypoint-initdb.d
     env_file:
       - ./ENV/postgres.env
     ports:
@@ -25,7 +25,9 @@ services:
       - mynetwork
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     stdin_open: true
