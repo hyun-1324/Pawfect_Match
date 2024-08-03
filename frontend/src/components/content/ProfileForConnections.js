@@ -1,27 +1,37 @@
 import { useParams } from "react-router-dom";
 import useFetch from "../../tools/useFetch";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../tools/AuthContext";
+import OnlineMark from "../../tools/OnlineMark";
+import { useEffect } from "react";
 
 const ProfileForConnections = () => {
   const { id } = useParams();
 
   const Navigate = useNavigate();
+  const { statuses, login, isLoggedIn } = useAuth();
 
   const {
     data: user,
     isPending: isPending1,
     error: error1,
-  } = useFetch(`http://localhost:3000/users/${id}`);
+  } = useFetch(`http://localhost:8080/users/${id}`);
   const {
     data: userProfile,
     isPending: isPending2,
     error: error2,
-  } = useFetch(`http://localhost:3000/users/${id}/profile`);
+  } = useFetch(`http://localhost:8080/users/${id}/profile`);
   const {
     data: userBio,
     isPending: isPending3,
     error: error3,
-  } = useFetch(`http://localhost:3000/users/${id}/bio`);
+  } = useFetch(`http://localhost:8080/users/${id}/bio`);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      login();
+    }
+  }, [isLoggedIn, login]);
 
   if (isPending1 || isPending2 || isPending3) {
     return <div>Loading...</div>;
@@ -44,14 +54,18 @@ const ProfileForConnections = () => {
       <div className="profile-header">
         <h2>{user.dog_name}</h2>
       </div>
-      <img
-        src={
-          user.picture
-            ? user.picture
-            : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
-        }
-        alt="Dog"
-      />
+      <div className="notificationImageContainer">
+        <img
+          src={
+            user.picture
+              ? user.picture
+              : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
+          }
+          alt="Dog"
+        />
+        {OnlineMark(id, statuses)}
+      </div>
+
       <h3>About me and my owner</h3>
       <p>{userProfile.about_me}</p>
       <h3>Bio</h3>

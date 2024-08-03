@@ -4,7 +4,7 @@ const handleLogout = async (navigate, logout, sendJsonMessage) => {
     
     try {
         sendJsonMessage({ event: "logout" });
-        const response = await fetch('/handle_logout', {
+        const response = await fetch('http://localhost:8080/handle_logout', {
             method: 'GET',
             headers: {'Content-Type': 'application/json'}
         });

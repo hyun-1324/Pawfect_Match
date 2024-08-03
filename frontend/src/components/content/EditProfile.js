@@ -33,19 +33,19 @@ const EditProfile = () => {
 
   const navigate = useNavigate();
 
-  const { data: user, isPending: isPending1, error: error1 } = useFetch("/me");
+  const { data: user, isPending: isPending1, error: error1 } = useFetch("http://localhost:8080/me");
 
   const {
     data: userProfile,
     isPending: isPending2,
     error: error2,
-  } = useFetch("/me/profile");
+  } = useFetch("http://localhost:8080/me/profile");
 
   const {
     data: userBio,
     isPending: isPending3,
     error: error3,
-  } = useFetch("/me/bio");
+  } = useFetch("http://localhost:8080/me/bio");
 
   useEffect(() => {
     if (user && userProfile && userBio) {
@@ -198,7 +198,7 @@ const EditProfile = () => {
 
       formData.append("json", JSON.stringify(form));
 
-      let response = await fetch("/handle_profile", {
+      let response = await fetch("http://localhost:8080/handle_profile", {
         method: "PATCH",
         body: formData,
         signal: controller.signal,
