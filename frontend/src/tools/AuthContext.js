@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }) => {
       const userId = newConnections[0];
       const controller = new AbortController();
       const signal = controller.signal;
-      fetchFromEndpoint(`/users/${userId}`, {signal}).then(({ data, error }) => {
+      fetchFromEndpoint(`http://localhost:8080/users/${userId}`, {signal}).then(({ data, error }) => {
         if (!error) {
           setUserDataForModal(data); // Update state with fetched user data
           setShowModal(true); // Show the modal

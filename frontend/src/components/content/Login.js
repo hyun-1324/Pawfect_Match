@@ -32,7 +32,7 @@ const Login = () => {
                 const controller = new AbortController();
                 setController(controller);
                 try {
-                    const response = await fetch('/login_status',{ signal: controller.signal });
+                    const response = await fetch('http://localhost:8080/login_status',{ signal: controller.signal });
                     if (!response.ok) {
                         if (response.status === 400) {
                             navigate('/'); 
@@ -67,7 +67,7 @@ const Login = () => {
         setController(controller);
     
         try {
-            const response = await fetch('/handle_login', {
+            const response = await fetch('http://localhost:8080/handle_login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ email, password }),

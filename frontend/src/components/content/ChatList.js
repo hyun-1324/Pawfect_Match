@@ -44,7 +44,7 @@ const ChatList = () => {
         if (chatList.length > 0 && !errorMessage) {
             setRoomInfo([]);
             Promise.allSettled(chatList.map((room) => {
-                return fetchFromEndpoint(`/users/${room.user_id}`, {signal})
+                return fetchFromEndpoint(`http://localhost:8080/users/${room.user_id}`, {signal})
                 .then(({data, error}) => {
                     if (error) {
                         if (error.status === 401) {

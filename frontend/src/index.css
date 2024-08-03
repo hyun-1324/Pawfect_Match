@@ -344,8 +344,7 @@ h3 {
   overflow-wrap: break-word;
   position: relative;
   img {
-    margin-left: 50px;
-    max-width: 80%;
+    max-width: 100%;
     max-height: 200px;
     border-radius: 3px;
   }
@@ -359,8 +358,12 @@ h3 {
 
 .chat-button {
   position: absolute;
+  max-width: 24vw;
+  max-height: 20vh;
+  margin: 5px 0px;
   top: -20px;
-  right: 20px;
+  right: 0px;
+  padding: 0px;
 }
 
 /* Media queries to adjust grid in different sized screens*/

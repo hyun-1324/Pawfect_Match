@@ -8,17 +8,17 @@ const Profile = () => {
     data: user,
     isPending: isPending1,
     error: error1,
-  } = useFetch(`http://localhost:3000/users/${id}`);
+  } = useFetch(`http://localhost:8080/users/${id}`);
   const {
     data: userProfile,
     isPending: isPending2,
     error: error2,
-  } = useFetch(`http://localhost:3000/users/${id}/profile`);
+  } = useFetch(`http://localhost:8080/users/${id}/profile`);
   const {
     data: userBio,
     isPending: isPending3,
     error: error3,
-  } = useFetch(`http://localhost:3000/users/${id}/bio`);
+  } = useFetch(`http://localhost:8080/users/${id}/bio`);
 
   if (isPending1 || isPending2 || isPending3) {
     return <div>Loading...</div>;
