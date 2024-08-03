@@ -13,7 +13,7 @@ services:
       - mynetwork
 
   backend:
-    build: ./backend
+    build: .
     restart: always
     ports:
       - "8080:8080"
@@ -21,19 +21,6 @@ services:
       - ./ENV/backend.env
     depends_on:
       - postgres
-    networks:
-      - mynetwork
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    stdin_open: true
-    tty: true
-    depends_on:
-      - backend
     networks:
       - mynetwork
 
