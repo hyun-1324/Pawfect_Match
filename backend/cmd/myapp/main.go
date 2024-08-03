@@ -7,20 +7,18 @@ import (
 	"matchMe/internal/database"
 	"matchMe/internal/middleware"
 	"net/http"
-
-	"github.com/rs/cors"
 )
 
 func main() {
 	const (
-		dbname   = "matchMe"
-		user     = "donghyun"
-		password = ""
-		host     = "localhost"
+		host     = "postgres"
 		port     = 5432
+		dbname   = "postgres"
+		user     = "postgres"
+		password = "matchMe"
 	)
 
-	psqlInfo := fmt.Sprintf("dbname=%s user=%s password=%s host=%s port=%d sslmode=disable", dbname, user, password, host, port)
+	psqlInfo := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable", user, password, host, port, dbname)
 	database, err := database.InitDb(psqlInfo)
 	if err != nil {
 		log.Fatalf("Error initializing database: %v", err)
@@ -31,14 +29,9 @@ func main() {
 		DB: database,
 	}
 
-	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
-	})
-
 	http.Handle("/ws", middleware.AuthMiddleware(database, http.HandlerFunc(app.HandleConnections)))
+	// Serve the built React app
+	http.Handle("/", http.FileServer(http.Dir("frontend/build")))
 
 	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
 	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
@@ -56,10 +49,8 @@ func main() {
 	http.Handle("POST /handle_login", http.HandlerFunc(app.Login))
 	http.Handle("POST /handle_register", http.HandlerFunc(app.Register))
 
-	handler := corsMiddleware.Handler(http.DefaultServeMux)
-
 	log.Println("Staring server on port 8080...")
-	if err := http.ListenAndServe(":8080", handler); err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
 }
