@@ -33,19 +33,23 @@ const EditProfile = () => {
 
   const navigate = useNavigate();
 
-  const { data: user, isPending: isPending1, error: error1 } = useFetch("http://localhost:8080/me");
+  const {
+    data: user,
+    isPending: isPending1,
+    error: error1,
+  } = useFetch("http://localhost:3000/me");
 
   const {
     data: userProfile,
     isPending: isPending2,
     error: error2,
-  } = useFetch("http://localhost:8080/me/profile");
+  } = useFetch("http://localhost:3000/me/profile");
 
   const {
     data: userBio,
     isPending: isPending3,
     error: error3,
-  } = useFetch("http://localhost:8080/me/bio");
+  } = useFetch("http://localhost:3000/me/bio");
 
   useEffect(() => {
     if (user && userProfile && userBio) {
@@ -198,7 +202,7 @@ const EditProfile = () => {
 
       formData.append("json", JSON.stringify(form));
 
-      let response = await fetch("http://localhost:8080/handle_profile", {
+      let response = await fetch("http://localhost:3000/handle_profile", {
         method: "PATCH",
         body: formData,
         signal: controller.signal,
@@ -221,7 +225,9 @@ const EditProfile = () => {
   if (isPending1 || isPending2 || isPending3) return <div>Loading...</div>;
   if (error1 || error2 || error3)
     return (
-      <div className="errorBox">Error: {error1?.message || error2?.message || error3?.message}</div>
+      <div className="errorBox">
+        Error: {error1?.message || error2?.message || error3?.message}
+      </div>
     );
 
   return (

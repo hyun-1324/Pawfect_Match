@@ -6,24 +6,28 @@ const MyProfile = () => {
     data: user,
     isPending: isPending1,
     error: error1,
-  } = useFetch("http://localhost:8080/me");
+  } = useFetch("http://localhost:3000/me");
   const {
     data: userProfile,
     isPending: isPending2,
     error: error2,
-  } = useFetch("http://localhost:8080/me/profile");
+  } = useFetch("http://localhost:3000/me/profile");
   const {
     data: userBio,
     isPending: isPending3,
     error: error3,
-  } = useFetch("http://localhost:8080/me/bio");
+  } = useFetch("http://localhost:3000/me/bio");
 
   if (isPending1 || isPending2 || isPending3) {
     return <div>Loading...</div>;
   }
 
   if (error1 || error2 || error3) {
-    return <div className="errorBox">Error: {error1?.message || error2?.message || error3?.message}</div>;
+    return (
+      <div className="errorBox">
+        Error: {error1?.message || error2?.message || error3?.message}
+      </div>
+    );
   }
 
   if (!user || !userProfile || !userBio) {
