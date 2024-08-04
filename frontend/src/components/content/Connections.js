@@ -24,7 +24,7 @@ const Connections = () => {
     useEffect(() => {
         const abortController = new AbortController(); 
         const signal = abortController.signal; 
-            fetchFromEndpoint("http://localhost:8080/connections", { signal })
+            fetchFromEndpoint("http://localhost:3000/connections", { signal })
             .then(({ data, error }) => {
                 if (error) {
                     if (error.status === 401) {
@@ -65,7 +65,7 @@ const Connections = () => {
         if (connectionsList.length > 0 && !errorMessage) {
             setConnections([]);
             Promise.allSettled(connectionsList.map((id) => 
-                fetchFromEndpoint(`http://localhost:8080/users/${id}`, {signal})
+                fetchFromEndpoint(`http://localhost:3000/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
                             if (error.status === 401) {
@@ -102,7 +102,7 @@ const Connections = () => {
         if ( friendRequests.length > 0 && !errorMessage) {
             setRequests([]);
             Promise.allSettled(friendRequests.map((id) => 
-                fetchFromEndpoint(`http://localhost:8080/users/${id}`, {signal})
+                fetchFromEndpoint(`http://localhost:3000/users/${id}`, {signal})
                     .then(({ data, error }) => {
                         if (error) {
                             if (error.status === 401) {
