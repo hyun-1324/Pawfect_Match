@@ -21,7 +21,7 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		allowedOrigin := "http://localhost:8080"
+		allowedOrigin := "http://localhost:3000"
 		origin := r.Header.Get("Origin")
 		return allowedOrigin == origin
 	},

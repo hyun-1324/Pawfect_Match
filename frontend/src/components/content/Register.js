@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import getCroppedImg from "../../tools/getCroppedImg";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from '../../tools/AuthContext';
+import { useAuth } from "../../tools/AuthContext";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -79,33 +79,35 @@ const Register = () => {
   // Redirect to recommendations page if user is already logged in
   useEffect(() => {
     if (logout && navigate) {
-    const checkLoginStatus = async () => {
+      const checkLoginStatus = async () => {
         const controller = new AbortController();
         setController(controller);
         try {
-            const response = await fetch('http://localhost:8080/login_status',{ signal: controller.signal });
-            if (!response.ok) {
-                if (response.status === 400) {
-                    navigate('/'); 
-                } else if (response.status === 500) {
-                    setError('Can not reach server');
-                }
-            } else {
-                logout();
+          const response = await fetch("http://localhost:3000/login_status", {
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            if (response.status === 400) {
+              navigate("/");
+            } else if (response.status === 500) {
+              setError("Can not reach server");
             }
+          } else {
+            logout();
+          }
         } catch (error) {
-            if (error.name === 'AbortError') {
-                // The request was aborted
-            } else {
-                setError(error.message);
-            }
+          if (error.name === "AbortError") {
+            // The request was aborted
+          } else {
+            setError(error.message);
+          }
         } finally {
-            setController(null);
+          setController(null);
         }
-    };
-    checkLoginStatus();
-  }
-}, [navigate, logout]); 
+      };
+      checkLoginStatus();
+    }
+  }, [navigate, logout]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -129,12 +131,14 @@ const Register = () => {
           );
           // Check image size
           if (croppedImageBlob.size > 2000000) {
-              throw new Error("Image size must be less than 2 MB!");
+            throw new Error("Image size must be less than 2 MB!");
           }
           formData.append(
-            "profilePicture", croppedImageBlob, "profilePicture.png"
+            "profilePicture",
+            croppedImageBlob,
+            "profilePicture.png"
           );
-        };
+        }
       } catch (err) {
         setIsPending(false);
         setError(err.message);
@@ -144,10 +148,10 @@ const Register = () => {
       form.age = Number(form.age);
       form.size = Number(form.size);
       form.preferred_distance = Number(form.preferred_distance);
-      
+
       formData.append("json", JSON.stringify(form));
 
-      let response = await fetch("http://localhost:8080/handle_register", {
+      let response = await fetch("http://localhost:3000/handle_register", {
         method: "POST",
         body: formData,
         signal: controller.signal,

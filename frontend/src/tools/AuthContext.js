@@ -1,14 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import useWebSocket from 'react-use-websocket';
-import AlertModal from '../components/navigation/Modal';
-import fetchFromEndpoint from './fetchFromEndpoint';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import useWebSocket from "react-use-websocket";
+import AlertModal from "../components/navigation/Modal";
+import fetchFromEndpoint from "./fetchFromEndpoint";
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-
   const [loggedIn, setLoggedIn] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]); // []id: number
   const [unreadMessages, setUnreadMessages] = useState(false);
@@ -18,18 +17,16 @@ export const AuthProvider = ({ children }) => {
 
   const [showModal, setShowModal] = useState(false);
   const [userDataForModal, setUserDataForModal] = useState({});
- 
-  const { 
-    sendJsonMessage,
-    lastJsonMessage,
-    readyState,
-   } = useWebSocket("ws://localhost:8080/ws", {
-    share: true,
-    onOpen: () => console.log("WebSocket Connected"),
-    onClose: () => console.log("WebSocket Disconnected"),
-    // Will attempt to reconnect on all close events, such as server shutting down
-    shouldReconnect: (closeEvent) => true,
-  }, 
+
+  const { sendJsonMessage, lastJsonMessage, readyState } = useWebSocket(
+    "ws://localhost:3000/ws",
+    {
+      share: true,
+      onOpen: () => console.log("WebSocket Connected"),
+      onClose: () => console.log("WebSocket Disconnected"),
+      // Will attempt to reconnect on all close events, such as server shutting down
+      shouldReconnect: (closeEvent) => true,
+    },
     loggedIn
   );
 
@@ -44,13 +41,13 @@ export const AuthProvider = ({ children }) => {
           setFriendRequests([]);
         }
 
-      // Add new value to friendRequests state
+        // Add new value to friendRequests state
       } else if (lastJsonMessage.event === "friend_request") {
         // Make sure the id is a number type
         const id = parseInt(lastJsonMessage.data);
         setFriendRequests((prev) => [...prev, id]);
 
-      // Save unread messages to state
+        // Save unread messages to state
       } else if (lastJsonMessage.event === "unread_messages") {
         if (lastJsonMessage.data === true) {
           setUnreadMessages(true);
@@ -58,7 +55,7 @@ export const AuthProvider = ({ children }) => {
           setUnreadMessages(false);
         }
 
-      // Save new connections to state
+        // Save new connections to state
       } else if (lastJsonMessage.event === "new_connections") {
         if (lastJsonMessage.data.ids !== null) {
           setNewConnections(lastJsonMessage.data.ids);
@@ -66,23 +63,31 @@ export const AuthProvider = ({ children }) => {
           setNewConnections([]);
         }
 
-      // Add new value to newConnections state
+        // Add new value to newConnections state
       } else if (lastJsonMessage.event === "new_connection") {
         // If new connection exists in friendRequests, remove it
         const id = parseInt(lastJsonMessage.data.id);
-        setFriendRequests((prev) => prev.filter((requestId) => requestId !== id));
+        setFriendRequests((prev) =>
+          prev.filter((requestId) => requestId !== id)
+        );
         // Add to newConnections if reciever is the original request sender
         if (lastJsonMessage.data.is_sender === true) {
           // Make sure the id is a number type
           const id = parseInt(lastJsonMessage.data.id);
           setNewConnections((prev) => [...prev, id]);
         } else {
-          sendJsonMessage({ event: "check_new_connection", data: { id: String(lastJsonMessage.data.id) } });
+          sendJsonMessage({
+            event: "check_new_connection",
+            data: { id: String(lastJsonMessage.data.id) },
+          });
         }
         // Get the online status of the new connection
-        sendJsonMessage({ event: "get_status", data: { id: String(lastJsonMessage.data.id) } });
+        sendJsonMessage({
+          event: "get_status",
+          data: { id: String(lastJsonMessage.data.id) },
+        });
 
-      // Save chat list to state
+        // Save chat list to state
       } else if (lastJsonMessage.event === "get_chat_list") {
         const chatList = lastJsonMessage.data;
         setChatList(chatList);
@@ -94,15 +99,14 @@ export const AuthProvider = ({ children }) => {
         const hasUnreadMessages = chatList.some((room) => room.unReadMessage);
         setUnreadMessages(hasUnreadMessages);
 
-      // Save connected users that are online to state
+        // Save connected users that are online to state
       } else if (lastJsonMessage.event === "connected_online_users") {
         if (lastJsonMessage.data !== null) {
           const onlineUsers = lastJsonMessage.data.map((userId) => {
             return { id: userId, status: true };
-          })
+          });
           setStatuses(onlineUsers);
-        }
-        else {
+        } else {
           setStatuses([]);
         }
       } else if (lastJsonMessage.event === "user_status") {
@@ -118,27 +122,28 @@ export const AuthProvider = ({ children }) => {
       }
     }
   }, [lastJsonMessage, sendJsonMessage]);
- 
+
   // Show modal when there are new connections
   useEffect(() => {
     if (newConnections.length > 0) {
       const userId = newConnections[0];
       const controller = new AbortController();
       const signal = controller.signal;
-      fetchFromEndpoint(`http://localhost:8080/users/${userId}`, {signal}).then(({ data, error }) => {
-        if (!error) {
-          setUserDataForModal(data); // Update state with fetched user data
-          setShowModal(true); // Show the modal
-        } else {
-          console.log(error.message);
-        }
-      }).catch((error) => {
-        if (error.name === "AbortError") {
-        }
-      });
+      fetchFromEndpoint(`http://localhost:3000/users/${userId}`, { signal })
+        .then(({ data, error }) => {
+          if (!error) {
+            setUserDataForModal(data); // Update state with fetched user data
+            setShowModal(true); // Show the modal
+          } else {
+            console.log(error.message);
+          }
+        })
+        .catch((error) => {
+          if (error.name === "AbortError") {
+          }
+        });
       return () => controller.abort();
     }
-
   }, [newConnections]);
 
   const closePopup = (userId) => {
@@ -157,22 +162,32 @@ export const AuthProvider = ({ children }) => {
   const generateModalAlert = () => {
     if (showModal && userDataForModal) {
       return (
-        <AlertModal open={showModal} onClose={() => closePopup(userDataForModal.id)}>
-          <img src={userDataForModal.picture ? userDataForModal.picture : `${process.env.PUBLIC_URL}/images/defaultProfile.png`} alt="dog" />
+        <AlertModal
+          open={showModal}
+          onClose={() => closePopup(userDataForModal.id)}
+        >
+          <img
+            src={
+              userDataForModal.picture
+                ? userDataForModal.picture
+                : `${process.env.PUBLIC_URL}/images/defaultProfile.png`
+            }
+            alt="dog"
+          />
           <p>{userDataForModal.dog_name} is your new connection!</p>
         </AlertModal>
       );
     }
     return null;
   };
-  
+
   // Functions to handle socket connection
   const login = () => {
     setLoggedIn(true);
   };
   const logout = () => {
     setLoggedIn(false);
-  }
+  };
 
   // Functions to clear friend request notification
   const clearFriendNotification = (idToRemove) => {
@@ -181,19 +196,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      loggedIn,
-      readyState, 
-      login, 
-      logout, 
-      sendJsonMessage,
-      lastJsonMessage, 
-      friendRequests,
-      unreadMessages,
-      chatList,
-      statuses,
-      clearFriendNotification,
-      }}>
+    <AuthContext.Provider
+      value={{
+        loggedIn,
+        readyState,
+        login,
+        logout,
+        sendJsonMessage,
+        lastJsonMessage,
+        friendRequests,
+        unreadMessages,
+        chatList,
+        statuses,
+        clearFriendNotification,
+      }}
+    >
       {generateModalAlert()}
       {children}
     </AuthContext.Provider>
