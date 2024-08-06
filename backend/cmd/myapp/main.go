@@ -20,6 +20,7 @@ func main() {
 		password = "matchMe"
 	)
 
+	// Connect to the database
 	psqlInfo := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable", user, password, host, port, dbname)
 	database, err := database.InitDb(psqlInfo)
 	if err != nil {
@@ -31,6 +32,7 @@ func main() {
 		DB: database,
 	}
 
+	// Create a new CORS middleware
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "http://frontend:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PATCH"},
@@ -38,6 +40,7 @@ func main() {
 		AllowCredentials: true,
 	})
 
+	// Handle the routes
 	http.Handle("/ws", middleware.AuthMiddleware(database, http.HandlerFunc(app.HandleConnections)))
 
 	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetUser)))

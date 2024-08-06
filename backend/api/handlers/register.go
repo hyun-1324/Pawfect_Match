@@ -16,6 +16,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// registers a new user
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
 
@@ -136,7 +137,6 @@ func validateUserStringData(value string, maxlength int) error {
 }
 
 func checkUserDataValidation(req models.Register) error {
-
 	err := validateUserStringData(req.DogName, 30)
 	if err != nil {
 		return fmt.Errorf("invalid dog name")

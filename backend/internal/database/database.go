@@ -8,6 +8,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// initializes the database connection
 func InitDb(dataSourceName string) (*sql.DB, error) {
 	db, err := sql.Open("postgres", dataSourceName)
 	if err != nil {

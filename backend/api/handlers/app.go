@@ -12,6 +12,7 @@ import (
 	"matchMe/pkg/utils"
 )
 
+// fetches user data from the database
 func (app *App) GetUser(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
 	userId := middleware.GetUserId(r)
@@ -45,6 +46,7 @@ func (app *App) GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// fetches user profile picture from the database
 func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	userId := middleware.GetUserId(r)
 
@@ -76,6 +78,7 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
+// fetches user bio from the database
 func (app *App) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	var profile models.UserProfileResponse
 	userId := middleware.GetUserId(r)
@@ -103,6 +106,7 @@ func (app *App) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// fetches user bio from the database
 func (app *App) GetUserBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
 	userId := middleware.GetUserId(r)
@@ -137,8 +141,8 @@ func (app *App) GetUserBio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// checks if the user has a recommendation or connection with the target user
 func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId string) error {
-
 	query := `SELECT 
 	EXISTS(
 	SELECT 1
@@ -184,6 +188,7 @@ func checkRecommendationAndConnectionStatus(db *sql.DB, userId, targetId string)
 	}
 }
 
+// fetches the current user's data from the database
 func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
 	userId := middleware.GetUserId(r)
@@ -207,6 +212,7 @@ func (app *App) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// fetches the current user's profile from the database
 func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
 	var profile models.UserProfileResponse
 	userId := middleware.GetUserId(r)
@@ -225,6 +231,7 @@ func (app *App) GetMeProfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// fetches the current user's bio from the database
 func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
 	userId := middleware.GetUserId(r)
@@ -248,6 +255,7 @@ func (app *App) GetMeBio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// fetches recommendations for the current user from the database
 func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	userId := middleware.GetUserId(r)
 
@@ -293,6 +301,7 @@ func (app *App) GetRecommendations(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// fetches connections for the current user from the database
 func (app *App) GetConnections(w http.ResponseWriter, r *http.Request) {
 	userId := middleware.GetUserId(r)
 	query := `

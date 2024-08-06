@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// handles the logout request
 func (app *App) Logout(w http.ResponseWriter, r *http.Request) {
 	// Get the JWT token from the request
 	cookie, err := r.Cookie("jwt_token")
