@@ -12,7 +12,7 @@ import (
 	"matchMe/pkg/utils"
 )
 
-func (app *App) User(w http.ResponseWriter, r *http.Request) {
+func (app *App) GetUser(w http.ResponseWriter, r *http.Request) {
 	var user models.UserResponse
 	userId := middleware.GetUserId(r)
 	user.Id = r.PathValue("id")
@@ -76,7 +76,7 @@ func (app *App) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 }
 
-func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
+func (app *App) GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	var profile models.UserProfileResponse
 	userId := middleware.GetUserId(r)
 	profile.Id = r.PathValue("id")
@@ -103,7 +103,7 @@ func (app *App) UserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *App) UserBio(w http.ResponseWriter, r *http.Request) {
+func (app *App) GetUserBio(w http.ResponseWriter, r *http.Request) {
 	var bio models.UserBioResponse
 	userId := middleware.GetUserId(r)
 	bio.Id = r.PathValue("id")

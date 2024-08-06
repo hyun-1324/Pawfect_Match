@@ -33,16 +33,16 @@ func main() {
 
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:3000", "http://frontend:3000"},
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PATCH"},
+		AllowedHeaders:   []string{"Origin, X-Requested-With, Content-Type, Accept"},
 		AllowCredentials: true,
 	})
 
 	http.Handle("/ws", middleware.AuthMiddleware(database, http.HandlerFunc(app.HandleConnections)))
 
-	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.User)))
-	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserProfile)))
-	http.Handle("GET /users/{id}/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.UserBio)))
+	http.Handle("GET /users/{id}", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetUser)))
+	http.Handle("GET /users/{id}/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetUserProfile)))
+	http.Handle("GET /users/{id}/bio", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetUserBio)))
 	http.Handle("GET /profile_pictures/{fileName}", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetProfilePicture)))
 	http.Handle("GET /me", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMe)))
 	http.Handle("GET /me/profile", middleware.AuthMiddleware(database, http.HandlerFunc(app.GetMeProfile)))
