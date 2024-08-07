@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// updates the user profile
 func (app *App) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	var req models.Register
 	jsonData := r.FormValue("json")

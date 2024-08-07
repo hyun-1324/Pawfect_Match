@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Handle the login process
 func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	var loginInfo models.Login
 

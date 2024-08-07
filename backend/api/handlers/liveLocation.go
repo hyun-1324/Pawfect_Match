@@ -9,6 +9,7 @@ import (
 	"net/http"
 )
 
+// updates the live location of the user
 func (app *App) UpdateLivelocation(w http.ResponseWriter, r *http.Request) {
 	var liveLoc models.LiveLocation
 	userId := middleware.GetUserId(r)

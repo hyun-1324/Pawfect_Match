@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// check if the user is logged in
 func (app *App) CheckLoginStatus(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("jwt_token")
 	if err != nil {

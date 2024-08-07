@@ -46,6 +46,7 @@ type App struct {
 	userStatus sync.Map
 }
 
+// handles the websocket connection
 func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -71,6 +72,7 @@ func (app *App) HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// reads messages from the client
 func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 	defer func() {
 		app.removeClientFromAllRooms(client)
@@ -199,6 +201,7 @@ func (app *App) readPump(client *Client, wg *sync.WaitGroup) {
 	}
 }
 
+// changes the data to an event
 func changeToEvent(event string, data interface{}) ([]byte, error) {
 	eventData, err := json.Marshal(data)
 	if err != nil {
@@ -271,6 +274,7 @@ func (app *App) broadcastStatusChange(userId string, status bool) {
 	}
 }
 
+// writes messages to the client
 func (app *App) writePump(client *Client, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
@@ -374,6 +378,7 @@ func (app *App) createAndJoinRoom(client *Client, roomId string) {
 	client.rooms[roomId] = true
 }
 
+// check if the user is logged in and send the user status to the client
 func (app *App) handleGetStatus(client *Client, userId string) {
 	status, ok := app.userStatus.Load(userId)
 	if !ok {
@@ -738,6 +743,7 @@ func (app *App) broadcastToRoom(messageInfo *models.Message) {
 	})
 }
 
+// get messages for a room
 func (app *App) handleGetMessages(client *Client, messageInfo models.GetMessages) {
 	canGetMessages, err := services.CanGetMessagesUsingRoomId(app.DB, messageInfo.RoomId, client.userId)
 	if err != nil {
