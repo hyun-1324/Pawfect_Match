@@ -130,6 +130,7 @@ const Recommendations = () => {
         return () => abortController.abort(); 
     }, [recommendations, isRecommendationsLoaded, isLoading, navigate]);
 
+    // Function to send location info to backend
     const sendLocation = async ({ latitude, longitude }, {signal}) => {
         const locationResponse = await fetch("http://localhost:3000/handle_live", {
             method: "PATCH",
@@ -213,7 +214,7 @@ return (
         {isLoading && !errorMessage &&
             <div className="card centered">
                 <h3>Updating your recommendations...</h3>
-                <p>This might take few seconds if you are using live location.</p>
+                <p>This might take a few seconds if you are using live location.</p>
                 <img className="loadingScreenPicture" src={`${process.env.PUBLIC_URL}/images/loadingScreenDog.png`} alt="Loading..."></img>
             </div>}
         <div className="twoColumnCard">
