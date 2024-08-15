@@ -184,18 +184,6 @@ const EditProfile = () => {
         return;
       }
 
-      if (imageSrc) {
-        const croppedImageBlob = await getCroppedImg(
-          imageSrc,
-          croppedAreaPixels
-        );
-        formData.append(
-          "profilePicture",
-          croppedImageBlob,
-          "profilePicture.png"
-        );
-      }
-
       form.age = Number(form.age);
       form.size = Number(form.size);
       form.preferred_distance = Number(form.preferred_distance);
