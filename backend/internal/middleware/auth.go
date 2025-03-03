@@ -215,3 +215,21 @@ func GetUserId(r *http.Request) string {
 	}
 	return ""
 }
+
+// GetUserIdFromRequest extracts user ID from the request for GraphQL
+func GetUserIdFromRequest(db *sql.DB, r *http.Request) string {
+	// Get the token from the cookie
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		return ""
+	}
+
+	// Check if the token is valid
+	var userId string
+	err = db.QueryRow("SELECT user_id FROM sessions WHERE token = $1", cookie.Value).Scan(&userId)
+	if err != nil {
+		return ""
+	}
+
+	return userId
+}
