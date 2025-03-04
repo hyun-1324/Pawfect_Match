@@ -19,7 +19,11 @@ func (r *bioResolver) User(ctx context.Context, obj *model.Bio) (*model.User, er
 
 // Size is the resolver for the size field.
 func (r *bioResolver) Size(ctx context.Context, obj *model.Bio) (*float64, error) {
-	panic(fmt.Errorf("not implemented: Size - size"))
+	if obj.Size == 0 {
+		return nil, nil
+	}
+	size := float64(obj.Size)
+	return &size, nil
 }
 
 // Sender is the resolver for the sender field.
@@ -76,7 +80,7 @@ func (r *mutationResolver) UpdateBio(ctx context.Context, preferredGender *strin
 
 	// Save updated bio
 	_, err = r.DB.Exec(`
-		UPDATE users_bio 
+		UPDATE biographical_data 
 		SET preferred_gender = $1, preferred_neutered = $2, preferred_distance = $3, preferred_location = $4
 		WHERE user_id = $5`,
 		bio.PreferredGender, bio.PreferredNeutered, bio.PreferredDistance, bio.PreferredLocation, userId)
@@ -149,9 +153,9 @@ func (r *queryResolver) Bio(ctx context.Context, id string) (*model.Bio, error) 
 	bio.ID = id
 
 	err := r.DB.QueryRow(`
-		SELECT preferred_gender, preferred_neutered, gender, neutered, size, 
-		energy_level, play_style, age, preferred_distance, preferred_location
-		FROM users_bio WHERE user_id = $1`, id).Scan(
+		SELECT preferred_gender, preferred_neutered, dog_gender, dog_neutered, dog_size, 
+		dog_energy_level, dog_favorite_play_style, dog_age, preferred_distance, preferred_location
+		FROM biographical_data WHERE user_id = $1`, id).Scan(
 		&bio.PreferredGender, &bio.PreferredNeutered, &bio.Gender, &bio.Neutered,
 		&bio.Size, &bio.EnergyLevel, &bio.FavoritePlayStyle, &bio.Age,
 		&bio.PreferredDistance, &bio.PreferredLocation)
