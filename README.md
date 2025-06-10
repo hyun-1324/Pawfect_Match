@@ -1,79 +1,38 @@
-# Pawfect Match
+# 🐾 Pawfect Match
 
 Pawfect match is an application that is designed for dog owners to find playmates for their dogs. App recommends profiles to each other using biographical data points, user's location and preferences. App also offers users a possibility to chat with users they are connected with.
 
-## 1. Setting up the environment
+## Live Demo
 
-Pawfect match app is run by using Docker containers. This means that Docker is the only software needed to install to start using the app.
+https://pawfectmatch.diy
 
-Docker can be installed from the website below:
+## Tech Stack
 
-```
-https://www.docker.com/get-started/
-```
+- Frontend: React, JavaScript, HTML, CSS
+- Backend: Go (Golang), Gorilla WebSocket, raw SQL queries
+- Database: PostgreSQL + PostGIS
+- DevOps: Docker, Docker Compose, , Nginx (reverse proxy)
+- Architecture: REST API + WebSocket (real-time chat), Spatial Queries with PostGIS
 
-Follow the instructions on the website to install Docker on your computer.
+## My Contribution
 
-## 2. Testing with Docker
+- Building a RESTful API and implementing real-time chat using Gorilla WebSocket
+- Designing the entire database schema (ERD) and writing raw SQL queries, including spatial queries with PostGIS
+- Developing custom JWT-based authentication and session management logic (used bcrypt for password hashing)
+- Setting up the full Docker-based development environment
+- Configuring Nginx as a reverse proxy to connect the frontend and backend
+- Closely collaborating with the frontend developer to align on API structure and UX flows
+- Additionally contributed to frontend by implementing the user profile view component
 
-The program runs in 3 containers:
+## Erd
 
-1. Backend runs in it's own Docker container on port 8080. 
-2. Frontend runs in it's own container and on port 3000.
-3. Postgres database runs in it's own container and uses port 5432.
+Entity-relationship diagram of the database schema used in Pawfect Match.
+![alt text](readmeImages/erd.png)
 
-### Commands to run the server using Docker
+## User flow
 
-Servers are run by using the commands below. Commands should be used while located in the root directory of the project. If you are a Linux user, you might need to run these commands as sudo.
-
-#### `docker compose up --build` 
-
-This command is used when building containers with new data (changing database or if there are some changes made to the code during review). This command also starts the servers. When you execute this command, it may take a few minutes to set up the Docker containers.
-
-When the process is ready, your terminal might show something similar to this:
-
-![alt text](readmeImages/image3.png)
-
-#### `docker compose up` 
-
-This command is used to start the servers using the previous data setting.
-
-#### `docker compose down -v` 
-
-This command deletes the volumes and containers previously used. Use this command if you want to remove the users you created to the database and also when changing from between empty database and mock user database. If run in another terminal while Docker is running, this command will also stop the servers.
-
-#### `docker compose down`
-
-If run from another terminal, this command stops the servers. The data you added to the database is stored.
-
-#### `ctrl` + `C`
-
-Using this keyboard combination in the terminal where the servers are running you can stop the servers. The data you added to the database is stored.
-
-#### Mock user database
-
-By default Docker is configured to use an empty database. When you want to test the program with 100 mock users, you should change volume in `docker-compose.yaml`-file to backup2. So change row 7 in the file to: 
-
-`- ./backup2:/docker-entrypoint-initdb.d`
-
-![alt text](readmeImages/image2.png)
-
-Remember to remove previous volumes with `docker compose down -v` and build the containers again with `docker compose up --build` when changing from empty database to mock user database and vice versa. Note that after changing the database setting the accounts you created to the previous database do not exist anymore. You may also want to clean up cookies from your browser after changing the database. 
-
-If you wish to sign in to a mock user's account, you can find their email-addresses and passwords in the `backup2/mock_user_data.json` file.
-
-#### Other tips for testing
-
-If you wish to sign in to multiple accounts at the same time, you should use different browsers or the same browser in incognito mode to do so. Otherwise the cookies are shared between the two windows/tabs of the same browser and user authentication is not successful for multiple users at the same time. 
-
-You can use browser's developer tools' responsive design mode to test how the app would look like on a mobile phone.
-
-The PC's browser location is not always 100% accurate. If you test the live location feature you can check what location is sent by visiting for example:  
-https://bestvpn.org/html5demos/geo/ 
-
-## 3. Interface usage
-
-When the server is up and running, go to your browser and type `localhost:3000` to the address bar and press enter. Interface is now open and you can see the login page.
+Overview of the main user journey and screen transitions in the app.
+![alt text](readmeImages/user_flow.png)
 
 ### Login
 
@@ -151,20 +110,54 @@ Edit profile page has similar structure to registration page, except users can c
 
 ![alt text](readmeImages/image11.png)
 
-## 4. Matching algorithm
+## Matching algorithm
 
 Matching algorithm calculates points for each dog pair according to these principles:
 
 - A dog is not recommended to play with another dog that is two size categories larger. Dogs with similar size get more points.
 - Dogs are not recommended in any case if they don't match each others location/gender/neuter preference
 - Dogs with similar play styles get higher recommendation points.  
-For example: lonely wolf play style get points by play style like this:   
-    - lonely wolf: +7 points   
-    - soft touch: +5 points  
-    - cheerleading: +3 points  
+  For example: lonely wolf play style get points by play style like this:
+  - lonely wolf: +7 points
+  - soft touch: +5 points
+  - cheerleading: +3 points
 - Dogs with similar energy level get more points
 - Dogs within the same age range get more points
 
+## Local Development
 
+If you'd like to run the project locally instead of using the demo link:
 
+1. Clone the repository
+2. Make sure Docker is installed
+3. Run the following:
 
+Pawfect match app is run by using Docker containers. This means that Docker is the only software needed to install to start using the app.
+
+### Commands to run the server using Docker
+
+Servers are run by using the commands below. Commands should be used while located in the root directory of the project. If you are a Linux user, you might need to run these commands as sudo.
+
+#### `docker compose up --build`
+
+This command is used when building containers with new data (changing database or if there are some changes made to the code during review). This command also starts the servers. When you execute this command, it may take a few minutes to set up the Docker containers.
+
+When the process is ready, your terminal might show something similar to this:
+
+![alt text](readmeImages/image3.png)
+
+#### `docker compose up`
+
+This command is used to start the servers using the previous data setting.
+
+#### `docker compose down -v`
+
+This command deletes the volumes and containers previously used. Use this command if you want to remove the users you created to the database and also when changing from between empty database and mock user database. If run in another terminal while Docker is running, this command will also stop the servers.
+
+#### `docker compose down`
+
+If run from another terminal, this command stops the servers. The data you added to the database is stored.
+
+#### `ctrl` + `C`
+
+Using this keyboard combination in the terminal where the servers are running you can stop the servers. The data you added to the database is stored.
