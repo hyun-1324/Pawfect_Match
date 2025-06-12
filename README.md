@@ -11,8 +11,8 @@ https://pawfectmatch.diy
 - Frontend: React, JavaScript, HTML, CSS
 - Backend: Go (Golang), Gorilla WebSocket, raw SQL queries
 - Database: PostgreSQL + PostGIS
-- DevOps: Docker, Docker Compose, , Nginx (reverse proxy)
-- Architecture: REST API + WebSocket (real-time chat), Spatial Queries with PostGIS
+- DevOps: Docker, Docker Compose, Nginx (reverse proxy)
+- Architecture: REST API + WebSocket (real-time chat)
 
 ## My Contribution
 
@@ -24,15 +24,34 @@ https://pawfectmatch.diy
 - Closely collaborating with the frontend developer to align on API structure and UX flows
 - Additionally contributed to frontend by implementing the user profile view component
 
-## Erd
+## What I Learned
+
+- Learned how to manage real-time data flow using Gorilla WebSocket, including the use of goroutines and mutexes for concurrent event handling
+- Gained hands-on experience designing spatial queries with PostGIS and trigger-based geolocation updates
+- Deepened my understanding of secure session management by implementing JWT authentication and bcrypt-based password hashing
+- Gained practical insight into HTTP-only cookies and how to deliver and validate tokens securely via custom middleware
+- Strengthened backend–frontend communication by aligning API behavior with frontend UX requirements
+- Gained hands-on experience creating responsive, component-based UIs using React
+
+## What I Would Improve
+
+- Add support for image and file sharing in the chat interface
+- Add another layer of protection by requiring verified emails and complex passwords
+- Add automated testing and a CI/CD pipeline to improve development speed and reliability
+
+## ERD
 
 Entity-relationship diagram of the database schema used in Pawfect Match.
 ![alt text](readmeImages/erd.png)
 
-## User flow
+## User Flow
 
 Overview of the main user journey and screen transitions in the app.
 ![alt text](readmeImages/user_flow.png)
+
+## App Screens & Features
+
+This project was built as a responsive web application, optimized for use across various devices including desktops, tablets, and smartphones.
 
 ### Login
 
@@ -42,7 +61,7 @@ In the login page the user has options to register as a new user or login using 
 
 ### Register
 
-In the register page new userd should give information about their dog and their preferences related to the dogs they should be matched with. Users can also choose if they want to use their live location to find matches from or pick a city from a list. After successful registration, users will be redirected back to the login page where they can login to their new account.
+In the register page new user should give information about their dog and their preferences related to the dogs they should be matched with. Users can also choose if they want to use their live location to find matches from or pick a city from a list. After successful registration, users will be redirected back to the login page where they can login to their new account.
 
 ![alt text](readmeImages/image12.png)
 
@@ -150,6 +169,12 @@ When the process is ready, your terminal might show something similar to this:
 
 This command is used to start the servers using the previous data setting.
 
+After running the project locally, you can access it at:
+
+🔗 **http://localhost:3000**
+
+The database includes approximately **100 mock user profiles** for testing the full functionality of the app.
+
 #### `docker compose down -v`
 
 This command deletes the volumes and containers previously used. Use this command if you want to remove the users you created to the database and also when changing from between empty database and mock user database. If run in another terminal while Docker is running, this command will also stop the servers.
@@ -161,3 +186,8 @@ If run from another terminal, this command stops the servers. The data you added
 #### `ctrl` + `C`
 
 Using this keyboard combination in the terminal where the servers are running you can stop the servers. The data you added to the database is stored.
+
+## License
+
+This project is licensed under the MIT License.
+See the [LICENSE](./LICENSE) file for details.
